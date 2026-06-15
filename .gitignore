@@ -1,2 +1,5 @@
-node_modules/  
-minichess.db  
+node_modules/
+minichess.db
+*.svg
+public/img/pieces/
+!public/img/pieces/*.svg
