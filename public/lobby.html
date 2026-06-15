@@ -10,6 +10,7 @@
   <nav>
     <div class="logo">♟ Mini<span>Chess</span></div>
     <div class="nav-links">
+      <a href="profile.html">Profile</a>
       <a href="leaderboard.html">Leaderboard</a>
       <div class="user-info">
         <span class="username" id="navUsername">...</span>
@@ -50,6 +51,32 @@
         <a href="leaderboard.html">View Leaderboard →</a>
       </div>
     </div>
+
+    <!-- MiniDice -->
+    <div class="lobby-card dice-card">
+      <h1>🎲 MiniDice</h1>
+      <p class="subtitle">Roll the dice — move only the piece you roll!</p>
+      <button id="findDiceBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="toggleDiceQueue()">Find Dice Match</button>
+      <div class="queue-status" id="diceQueueStatus"></div>
+    </div>
+
+    <!-- Play with a Friend -->
+    <div class="lobby-card private-room-card">
+      <h1>Play with a Friend</h1>
+      <p class="subtitle">Create a private room and share the link</p>
+
+      <button id="createRoomBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="createRoom()">Create Game</button>
+
+      <div id="roomSection" style="display: none; margin-top: 16px;">
+        <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">Share this link with your friend:</p>
+        <div class="copy-link-box">
+          <input type="text" id="roomLink" readonly>
+          <button id="copyBtn" onclick="copyRoomLink()">Copy</button>
+        </div>
+        <div id="roomStatus" style="margin-top: 10px; font-size: 13px; color: var(--green);">Waiting for friend to join...</div>
+        <button class="btn-secondary-sm" style="margin-top: 10px;" onclick="cancelRoom()">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -57,7 +84,9 @@
   <script src="js/socket.js"></script>
   <script>
     let inQueue = false;
+    let inDiceQueue = false;
     let currentUser = null;
+    let currentRoomId = null;
 
     async function init() {
       currentUser = await getCurrentUser();
@@ -75,9 +104,8 @@
 
       initSocket();
 
-      // Listen for match found
+      // Listen for match found (both regular matchmaking and private room)
       socket.on('match_found', (data) => {
-        // Store game info and redirect
         sessionStorage.setItem('gameData', JSON.stringify(data));
         window.location.href = 'game.html';
       });
@@ -88,6 +116,13 @@
 
       socket.on('queue_left', () => {
         // handled in toggleQueue
+      });
+
+      socket.on('room_cancelled', () => {
+        document.getElementById('roomSection').style.display = 'none';
+        document.getElementById('createRoomBtn').style.display = 'block';
+        currentRoomId = null;
+        showToast('Room cancelled', 'info');
       });
 
       socket.on('error', (data) => {
@@ -116,6 +151,75 @@
         document.getElementById('findMatchBtn').classList.add('searching');
         document.getElementById('queueStatus').textContent = 'Connecting...';
       }
+    }
+
+    function toggleDiceQueue() {
+      if (!socket || !socket.connected) {
+        showToast('Connecting to server...', 'info');
+        initSocket();
+        setTimeout(() => toggleDiceQueue(), 500);
+        return;
+      }
+
+      if (inDiceQueue) {
+        socket.emit('leave_dice_queue');
+        inDiceQueue = false;
+        document.getElementById('findDiceBtn').textContent = 'Find Dice Match';
+        document.getElementById('findDiceBtn').classList.remove('searching');
+        document.getElementById('diceQueueStatus').textContent = '';
+      } else {
+        socket.emit('join_dice_queue');
+        inDiceQueue = true;
+        document.getElementById('findDiceBtn').textContent = 'Cancel Search';
+        document.getElementById('findDiceBtn').classList.add('searching');
+        document.getElementById('diceQueueStatus').textContent = 'Searching for opponent...';
+      }
+    }
+
+    async function createRoom() {
+      if (!socket || !socket.connected) {
+        showToast('Connecting to server...', 'info');
+        initSocket();
+        setTimeout(() => createRoom(), 500);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/rooms/create', { method: 'POST' });
+        const data = await res.json();
+
+        if (!data.success) {
+          showToast('Failed to create room', 'error');
+          return;
+        }
+
+        currentRoomId = data.roomId;
+        const link = window.location.origin + '/join.html?room=' + data.roomId;
+        document.getElementById('roomLink').value = link;
+        document.getElementById('createRoomBtn').style.display = 'none';
+        document.getElementById('roomSection').style.display = 'block';
+        document.getElementById('roomStatus').textContent = 'Waiting for friend to join...';
+      } catch (err) {
+        showToast('Failed to create room', 'error');
+      }
+    }
+
+    function copyRoomLink() {
+      const input = document.getElementById('roomLink');
+      input.select();
+      document.execCommand('copy');
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    }
+
+    function cancelRoom() {
+      if (currentRoomId && socket) {
+        socket.emit('cancel_private_room', { roomId: currentRoomId });
+      }
+      document.getElementById('roomSection').style.display = 'none';
+      document.getElementById('createRoomBtn').style.display = 'block';
+      currentRoomId = null;
     }
 
     function showToast(message, type) {

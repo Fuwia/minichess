@@ -194,7 +194,7 @@ function getLegalMoves(state, row, col) {
       // Forward
       if (isValidSquare(fr, col) && !state.board[fr][col]) {
         if (fr === promoRank) {
-          for (const promoType of [QUEEN, ROOK, BISHOP, KNIGHT]) {
+          for (const promoType of [ROOK, BISHOP, KNIGHT]) {
             moves.push({
               from: coordsToSquare(row, col),
               to: coordsToSquare(fr, col),
@@ -206,17 +206,6 @@ function getLegalMoves(state, row, col) {
         } else {
           addMove(fr, col);
         }
-        // Double forward
-        const fr2 = row + 2 * forward;
-        if (row === homeRank && isValidSquare(fr2, col) && !state.board[fr2][col]) {
-          moves.push({
-            from: coordsToSquare(row, col),
-            to: coordsToSquare(fr2, col),
-            captured: null,
-            isEnPassant: false,
-            promotion: null
-          });
-        }
       }
       // Diagonal captures
       for (const dc of [-1, 1]) {
@@ -225,7 +214,7 @@ function getLegalMoves(state, row, col) {
         const target = state.board[fr][tc];
         if (target && target.color === opponent) {
           if (fr === promoRank) {
-            for (const promoType of [QUEEN, ROOK, BISHOP, KNIGHT]) {
+            for (const promoType of [ROOK, BISHOP, KNIGHT]) {
               moves.push({
                 from: coordsToSquare(row, col),
                 to: coordsToSquare(fr, tc),

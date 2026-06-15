@@ -263,8 +263,8 @@ function getPseudoLegalMoves(state, row, col) {
       if (isValidSquare(fr, col) && !state.board[fr][col]) {
         // Check promotion
         if (fr === promoRank) {
-          // Promotion moves
-          for (const promoType of [QUEEN, ROOK, BISHOP, KNIGHT]) {
+          // Promotion moves — Rook, Bishop, Knight only (no Queen)
+          for (const promoType of [ROOK, BISHOP, KNIGHT]) {
             moves.push({
               from: coordsToSquare(row, col),
               to: coordsToSquare(fr, col),
@@ -276,22 +276,6 @@ function getPseudoLegalMoves(state, row, col) {
           }
         } else {
           addMove(fr, col);
-        }
-        
-        // Forward two from home rank
-        const fr2 = row + 2 * forward;
-        if (row === homeRank && isValidSquare(fr2, col) && !state.board[fr2][col]) {
-          const fromSq = coordsToSquare(row, col);
-          const toSq = coordsToSquare(fr2, col);
-          moves.push({
-            from: fromSq,
-            to: toSq,
-            piece: piece,
-            captured: null,
-            isDrop: false,
-            promotion: null,
-            enPassantTarget: coordsToSquare(fr, col) // set en passant target
-          });
         }
       }
 
@@ -305,7 +289,7 @@ function getPseudoLegalMoves(state, row, col) {
         // Normal capture
         if (target && target.color === opponent) {
           if (fr === promoRank) {
-            for (const promoType of [QUEEN, ROOK, BISHOP, KNIGHT]) {
+            for (const promoType of [ROOK, BISHOP, KNIGHT]) {
               moves.push({
                 from: coordsToSquare(row, col),
                 to: coordsToSquare(fr, tc),

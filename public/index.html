@@ -47,7 +47,13 @@
       const result = await login(username, password);
 
       if (result.success) {
-        window.location.href = 'lobby.html';
+        const redirect = sessionStorage.getItem('redirectAfterLogin');
+        if (redirect) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          window.location.href = redirect;
+        } else {
+          window.location.href = 'lobby.html';
+        }
       } else {
         errorEl.textContent = result.message;
         errorEl.style.display = 'block';

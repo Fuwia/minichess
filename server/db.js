@@ -52,6 +52,31 @@ function initTables() {
       FOREIGN KEY (black_id) REFERENCES users(id)
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS friends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      friend_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (friend_id) REFERENCES users(id),
+      UNIQUE(user_id, friend_id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS private_rooms (
+      id TEXT PRIMARY KEY,
+      creator_id INTEGER NOT NULL,
+      joiner_id INTEGER,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (creator_id) REFERENCES users(id),
+      FOREIGN KEY (joiner_id) REFERENCES users(id)
+    )
+  `);
 }
 
 function saveDb() {

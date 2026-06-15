@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Join Game</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links">
+      <a href="lobby.html">Play</a>
+      <a href="profile.html">Profile</a>
+      <div class="user-info">
+        <span class="username" id="navUsername">...</span>
+        <span class="elo" id="navElo">1200</span>
+        <button class="secondary" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="join-container">
+    <div class="join-card">
+      <h1>Join Private Game</h1>
+      <div id="joinStatus" class="join-status">Checking room...</div>
+      <div id="joinError" class="join-error" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script>
+    let currentUser = null;
+
+    async function init() {
+      currentUser = await getCurrentUser();
+      if (!currentUser) {
+        // Not logged in — redirect to login, then back here
+        sessionStorage.setItem('redirectAfterLogin', window.location.href);
+        window.location.href = 'index.html';
+        return;
+      }
+
+      document.getElementById('navUsername').textContent = currentUser.username;
+      document.getElementById('navElo').textContent = currentUser.elo;
+
+      // Parse room ID from URL
+      const params = new URLSearchParams(window.location.search);
+      const roomId = params.get('room');
+
+      if (!roomId) {
+        showError('No room ID provided. Ask your friend for the correct link.');
+        return;
+      }
+
+      initSocket();
+
+      // Wait for socket to connect, then join
+      await joinRoom(roomId);
+    }
+
+    async function joinRoom(roomId) {
+      const statusEl = document.getElementById('joinStatus');
+
+      // First check if room exists via REST API
+      try {
+        const res = await fetch(`/api/rooms/${roomId}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          showError(data.message || 'Room not found or expired.');
+          return;
+        }
+
+        if (data.room && data.room.has_joiner) {
+          showError('This room already has two players.');
+          return;
+        }
+      } catch (err) {
+        showError('Failed to check room. Please try again.');
+        return;
+      }
+
+      statusEl.textContent = 'Joining game...';
+
+      // Ensure socket is connected
+      if (!socket || !socket.connected) {
+        await new Promise((resolve) => {
+          socket.on('connect', () => resolve());
+          if (socket.connected) resolve();
+        });
+      }
+
+      // Listen for match_found
+      socket.on('match_found', (data) => {
+        sessionStorage.setItem('gameData', JSON.stringify(data));
+        window.location.href = 'game.html';
+      });
+
+      // Listen for errors
+      socket.on('error', (data) => {
+        showError(data.message);
+      });
+
+      // Join via socket
+      socket.emit('join_private_room', { roomId });
+    }
+
+    function showError(message) {
+      document.getElementById('joinStatus').style.display = 'none';
+      const errorEl = document.getElementById('joinError');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+    }
+
+    init();
+  </script>
+</body>
+</html>

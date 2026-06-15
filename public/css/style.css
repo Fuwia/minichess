@@ -25,6 +25,10 @@
   --clock-bg: #0a0a1a;
   --clock-text: #e0e0e0;
   --clock-low: #ef4444;
+  /* Glassmorphism */
+  --glass-bg: rgba(20, 24, 50, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-highlight: rgba(255, 255, 255, 0.04);
 }
 
 * {
@@ -330,29 +334,34 @@ nav button.secondary:hover {
 
 .game-container {
   display: flex;
-  gap: 24px;
-  padding: 20px;
-  width: 100%;
-  max-width: 1100px;
-  min-height: calc(100vh - 70px);
-  align-items: flex-start;
   justify-content: center;
-  flex-wrap: wrap;
+  align-items: center;
+  padding: 24px 20px 32px;
+  width: 100%;
+  min-height: calc(100vh - 70px);
 }
 
-/* Board */
+/* Board wrapper — centers everything vertically */
 .board-wrapper {
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 432px;
 }
 
+/* ---- Glassmorphism header / info bar ---- */
 .board-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
   padding: 8px 14px;
-  background: var(--bg-card);
-  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  width: 100%;
 }
 
 .board-header .player-info {
@@ -383,9 +392,9 @@ nav button.secondary:hover {
 
 .board-header .turn-indicator {
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 12px;
-  background: var(--bg-input);
+  background: var(--glass-highlight);
 }
 
 .board-header .turn-indicator.active {
@@ -394,19 +403,149 @@ nav button.secondary:hover {
   font-weight: 700;
 }
 
-/* Clock */
+/* ---- Pocket Strips ---- */
+.pocket-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  width: 100%;
+  min-height: 44px;
+}
+
+.pocket-strip-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pocket-strip-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1;
+}
+
+.your-pocket {
+  border-color: rgba(233, 69, 96, 0.2);
+}
+
+.your-pocket .pocket-strip-label {
+  color: var(--accent);
+}
+
+/* Pocket pieces inside strips */
+.pocket-strip .pocket-piece {
+  font-size: 26px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.pocket-strip .pocket-piece:hover {
+  background: rgba(233, 69, 96, 0.25);
+  transform: scale(1.1);
+}
+
+.pocket-strip .pocket-piece.selected-drop {
+  background: var(--square-selected);
+  border-radius: 6px;
+}
+
+.pocket-strip .pocket-piece:active {
+  opacity: 0.7;
+  transform: scale(0.95);
+}
+
+/* ---- Moves Strip ---- */
+.moves-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  width: 100%;
+}
+
+.moves-strip-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.moves-placeholder {
+  color: var(--text-secondary);
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+/* ---- Move History (horizontal scroll) ---- */
+.move-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  flex: 1;
+  max-height: 48px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.move-history .move-pair {
+  display: flex;
+  gap: 4px;
+}
+
+.move-history .move-num {
+  color: var(--text-secondary);
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.move-history .move-white {
+  color: #fff;
+}
+
+.move-history .move-black {
+  color: #bbb;
+}
+
+/* ---- Clock ---- */
 .clock {
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 18px;
   font-weight: 700;
   padding: 6px 14px;
-  background: var(--clock-bg);
+  background: rgba(10, 10, 26, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
   color: var(--clock-text);
   min-width: 70px;
   text-align: center;
   letter-spacing: 1px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   transition: color 0.3s, border-color 0.3s;
 }
 
@@ -426,14 +565,34 @@ nav button.secondary:hover {
   to { opacity: 0.5; }
 }
 
+/* ---- Piece Images ---- */
+
+.piece-img {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pocket-strip .piece-img {
+  width: 100%;
+  height: 100%;
+}
+
+.promotion-dialog .piece-img {
+  width: 48px;
+  height: 48px;
+}
+
+/* ---- Chess Board ---- */
 .chess-board {
   display: grid;
   grid-template-columns: repeat(6, 72px);
   grid-template-rows: repeat(6, 72px);
   border: 3px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--glass-border);
 }
 
 .square {
@@ -511,13 +670,15 @@ nav button.secondary:hover {
   opacity: 0.5;
 }
 
-.pocket-piece:active {
-  opacity: 0.7;
-  transform: scale(0.95);
-}
-
+/* ---- File labels ---- */
 .rank-labels, .file-labels {
   display: flex;
+}
+
+.file-labels {
+  margin-top: 2px;
+  width: 432px;
+  justify-content: space-around;
 }
 
 .rank-labels {
@@ -528,118 +689,11 @@ nav button.secondary:hover {
   justify-content: space-around;
 }
 
-.file-labels {
-  margin-top: 2px;
-  width: 432px;
-  justify-content: space-around;
-}
-
 .rank-label, .file-label {
   font-size: 11px;
   color: var(--text-secondary);
   width: 20px;
   text-align: center;
-}
-
-/* Side panel */
-.game-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 260px;
-  max-width: 320px;
-  flex: 1;
-}
-
-.panel-card {
-  background: var(--bg-card);
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.panel-card h3 {
-  color: var(--accent);
-  font-size: 14px;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Pocket */
-.pocket {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  min-height: 40px;
-  padding: 6px;
-  background: var(--bg-input);
-  border-radius: 8px;
-}
-
-.pocket-piece {
-  font-size: 28px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.pocket-piece:hover {
-  background: rgba(233, 69, 96, 0.2);
-}
-
-.pocket-piece.selected-drop {
-  background: var(--square-selected);
-  border-radius: 4px;
-}
-
-.pocket-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-
-.pocket-empty {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-style: italic;
-  line-height: 36px;
-}
-
-/* Move history */
-.move-history {
-  max-height: 260px;
-  overflow-y: auto;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.move-history .move-pair {
-  display: flex;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.move-history .move-num {
-  width: 30px;
-  color: var(--text-secondary);
-}
-
-.move-history .move-white, .move-history .move-black {
-  width: 90px;
-}
-
-.move-history .move-white {
-  color: white;
-}
-
-.move-history .move-black {
-  color: #ccc;
 }
 
 /* Game over overlay */
@@ -806,40 +860,425 @@ nav button.secondary:hover {
   to { transform: translateX(0); opacity: 1; }
 }
 
+.toast-action {
+  padding: 4px 12px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: background 0.2s;
+}
+
+.toast-action:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* ==================== Profile Page ==================== */
+
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  width: 100%;
+  max-width: 600px;
+  gap: 16px;
+}
+
+.profile-card {
+  background: var(--bg-card);
+  padding: 30px;
+  border-radius: 16px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.profile-card h1 {
+  color: var(--accent);
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.profile-card h2 {
+  color: var(--text-primary);
+  font-size: 18px;
+  margin-bottom: 14px;
+}
+
+.profile-card .stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 6px;
+}
+
+.profile-card .stat-item {
+  text-align: center;
+}
+
+.profile-card .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.profile-card .stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Friend form */
+.friend-form {
+  display: flex;
+  gap: 8px;
+}
+
+.friend-form input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.friend-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.friend-form button,
+.btn-accent {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.friend-form button:hover,
+.btn-accent:hover {
+  background: var(--accent-hover);
+}
+
+.friend-status {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.friend-status.success { color: var(--green); }
+.friend-status.error { color: var(--red); }
+
+/* Friend list */
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.friend-item.pending {
+  border-left: 3px solid var(--accent);
+}
+
+.friend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.friend-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.friend-elo {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.empty-list {
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+}
+
+.btn-danger-sm {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger-sm:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.btn-accept-sm {
+  padding: 6px 12px;
+  background: var(--green);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-accept-sm:hover {
+  opacity: 0.85;
+}
+
+.btn-decline-sm {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-decline-sm:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.btn-secondary-sm {
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-secondary-sm:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ==================== Private Room (Lobby) ==================== */
+
+.private-room-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+}
+
+.copy-link-box {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-link-box input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.copy-link-box input:focus {
+  outline: none;
+}
+
+.copy-link-box button {
+  padding: 10px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.copy-link-box button:hover {
+  background: var(--accent-hover);
+}
+
+/* ==================== Dice Display ==================== */
+
+.dice-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  width: 100%;
+}
+
+.dice-icon {
+  font-size: 28px;
+}
+
+.dice-info {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.dice-info span {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.btn-skip {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-skip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dice-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--accent);
+}
+
+/* ==================== Join Page ==================== */
+
+.join-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 70px);
+  width: 100%;
+  padding: 20px;
+}
+
+.join-card {
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.join-card h1 {
+  color: var(--accent);
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.join-status {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.join-error {
+  color: var(--red);
+  font-size: 15px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
 /* ==================== Responsive ==================== */
 
-@media (max-width: 900px) {
-  .game-container {
-    flex-direction: column;
-    align-items: center;
+@media (max-width: 500px) {
+  .board-wrapper {
+    width: 288px;
   }
 
   .chess-board {
-    grid-template-columns: repeat(6, 56px);
-    grid-template-rows: repeat(6, 56px);
+    grid-template-columns: repeat(6, 48px);
+    grid-template-rows: repeat(6, 48px);
   }
 
   .square {
-    width: 56px;
-    height: 56px;
-    font-size: 36px;
+    width: 48px;
+    height: 48px;
+    font-size: 32px;
   }
 
-  .game-panel {
-    width: 100%;
-    max-width: 400px;
+  .file-labels {
+    width: 288px;
+  }
+
+  .board-header,
+  .pocket-strip,
+  .moves-strip {
+    padding: 6px 10px;
+  }
+
+  .pocket-strip .pocket-piece {
+    font-size: 22px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .clock {
+    font-size: 15px;
+    min-width: 58px;
+    padding: 4px 10px;
   }
 }
 
-@media (max-width: 500px) {
+@media (max-width: 360px) {
+  .board-wrapper {
+    width: 252px;
+  }
+
   .chess-board {
-    grid-template-columns: repeat(6, 46px);
-    grid-template-rows: repeat(6, 46px);
+    grid-template-columns: repeat(6, 42px);
+    grid-template-rows: repeat(6, 42px);
   }
 
   .square {
-    width: 46px;
-    height: 46px;
-    font-size: 28px;
+    width: 42px;
+    height: 42px;
+    font-size: 26px;
+  }
+
+  .file-labels {
+    width: 252px;
   }
 }

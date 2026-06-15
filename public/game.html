@@ -10,6 +10,9 @@
   <nav>
     <div class="logo">♟ Mini<span>Chess</span></div>
     <div class="nav-links">
+      <a href="lobby.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Play</a>
+      <a href="profile.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Profile</a>
+      <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
       <button class="secondary" onclick="resignGame()">Resign</button>
       <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
     </div>
@@ -17,6 +20,12 @@
 
   <div class="game-container">
     <div class="board-wrapper">
+      <!-- Opponent pocket strip -->
+      <div class="pocket-strip">
+        <span class="pocket-strip-label">Opponent's Pocket</span>
+        <div class="pocket-strip-pieces" id="opponentPocket"></div>
+      </div>
+
       <!-- Opponent info -->
       <div class="board-header">
         <div class="player-info">
@@ -28,6 +37,13 @@
         <div class="turn-indicator" id="turnIndicator">...</div>
       </div>
 
+      <!-- Dice display (hidden in standard mode) -->
+      <div class="dice-display" id="diceDisplay" style="display:none;">
+        <div class="dice-icon">🎲</div>
+        <div class="dice-info">Roll: <span id="diceRollNum">-</span> — <span id="dicePieceName">-</span></div>
+        <button id="skipBtn" class="btn-skip" style="display:none;" onclick="skipDiceTurn()">Skip Turn</button>
+      </div>
+
       <!-- Chess board -->
       <div class="chess-board" id="chessBoard"></div>
 
@@ -35,7 +51,7 @@
       <div class="file-labels" id="fileLabels"></div>
 
       <!-- Player info -->
-      <div class="board-header" style="margin-top: 10px;">
+      <div class="board-header">
         <div class="player-info">
           <span class="player-color" id="playerColorDot"></span>
           <span class="player-name" id="playerName">You</span>
@@ -43,31 +59,18 @@
         </div>
         <div class="clock" id="playerClock">2:00</div>
       </div>
-    </div>
 
-    <!-- Side panel -->
-    <div class="game-panel">
-      <!-- Black's pocket (opponent) -->
-      <div class="panel-card">
-        <div class="pocket-label">Opponent's Pocket</div>
-        <div class="pocket" id="opponentPocket">
-          <span class="pocket-empty">Empty</span>
-        </div>
+      <!-- Player pocket strip -->
+      <div class="pocket-strip your-pocket">
+        <span class="pocket-strip-label">Your Pocket</span>
+        <div class="pocket-strip-pieces" id="playerPocket"></div>
       </div>
 
-      <!-- Move History -->
-      <div class="panel-card">
-        <h3>Moves</h3>
+      <!-- Move History strip -->
+      <div class="moves-strip">
+        <span class="moves-strip-label">Moves</span>
         <div class="move-history" id="moveHistory">
-          <div style="color: var(--text-secondary);">Game starting...</div>
-        </div>
-      </div>
-
-      <!-- Player's pocket -->
-      <div class="panel-card">
-        <div class="pocket-label">Your Pocket</div>
-        <div class="pocket" id="playerPocket">
-          <span class="pocket-empty">Empty</span>
+          <span class="moves-placeholder">Game starting...</span>
         </div>
       </div>
     </div>
@@ -106,6 +109,9 @@
     let lastServerBlackTime = 120000;
     let lastTimestamp = Date.now();
     let clockInterval = null;
+    let drawOffered = false;
+    let gameMode = 'standard';
+    let currentDice = null; // { roll, pieceType, pieceName }
 
     async function init() {
       const user = await getCurrentUser();
@@ -201,6 +207,55 @@
       socket.on('error', (data) => {
         showToast(data.message, 'error');
       });
+
+      // Draw offer events
+      socket.on('draw_offered', (data) => {
+        showToast('Opponent offers a draw', 'info', [
+          { label: 'Accept', action: () => { socket.emit('accept_draw', { gameId: gameId }); } },
+          { label: 'Decline', action: () => { socket.emit('decline_draw', { gameId: gameId }); } }
+        ]);
+      });
+
+      socket.on('draw_declined', () => {
+        drawOffered = false;
+        document.getElementById('drawBtn').textContent = 'Draw';
+        showToast('Draw offer declined', 'info');
+      });
+
+      socket.on('draw_cancelled', () => {
+        showToast('Draw offer cancelled by opponent', 'info');
+      });
+
+      socket.on('draw_requested', () => {
+        // Our offer was sent, button already shows Cancel Draw
+      });
+
+      // Dice mode
+      gameMode = gameData.mode || 'standard';
+      if (gameMode === 'dice') {
+        document.getElementById('diceDisplay').style.display = 'flex';
+        document.getElementById('skipBtn').style.display = 'inline-block';
+      }
+
+      socket.on('dice_roll', (data) => {
+        currentDice = data;
+        document.getElementById('diceRollNum').textContent = data.roll;
+        document.getElementById('dicePieceName').textContent = data.pieceName;
+        if (activeColor === myColor) {
+          showToast(`🎲 Rolled ${data.roll} — must move a ${data.pieceName}`, 'info');
+        }
+      });
+
+      socket.on('dice_skip_result', (data) => {
+        if (data.skipped) {
+          showToast(`${data.skippedBy} had no valid moves — skipped`, 'info');
+        }
+      });
+    }
+
+    function skipDiceTurn() {
+      if (gameOver || gameMode !== 'dice') return;
+      socket.emit('dice_skip', { gameId: gameId });
     }
 
     function renderBoard() {
@@ -228,8 +283,7 @@
 
           const piece = boardState.board[row][col];
           if (piece) {
-            square.textContent = getPieceSymbol(piece);
-            square.style.color = piece.color === 'white' ? '#fff' : '#222';
+            square.innerHTML = getPieceSymbol(piece);
           }
 
           const sqName = coordsToSquare(row, col);
@@ -315,6 +369,12 @@
 
       // Selecting one of your own pieces
       if (piece && piece.color === myColor) {
+        // Dice mode: only allow selecting the rolled piece type
+        if (gameMode === 'dice' && currentDice && piece.type !== currentDice.pieceType) {
+          showToast(`Must move a ${currentDice.pieceName}`, 'error');
+          return;
+        }
+
         selectedSquare = { row, col };
         selectedPocketPiece = null;
         document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
@@ -335,10 +395,9 @@
       dialog.style.display = 'flex';
 
       const pieces = [
-        { type: 'q', symbol: '♛' },
-        { type: 'r', symbol: '♜' },
-        { type: 'b', symbol: '♝' },
-        { type: 'n', symbol: '♞' }
+        { type: 'r', symbol: getPieceSymbolByType('r', myColor) },
+        { type: 'b', symbol: getPieceSymbolByType('b', myColor) },
+        { type: 'n', symbol: getPieceSymbolByType('n', myColor) }
       ];
 
       dialog.innerHTML = pieces.map(p => 
@@ -388,7 +447,7 @@
       const playerPocket = document.getElementById('playerPocket');
       const myPocket = pockets[myColor] || [];
       if (myPocket.length === 0) {
-        playerPocket.innerHTML = '<span class="pocket-empty">Empty</span>';
+        playerPocket.innerHTML = '';
       } else {
         playerPocket.innerHTML = myPocket.map((type, i) => {
           const symbol = getPieceSymbolByType(type, myColor);
@@ -401,7 +460,7 @@
       const opponentPocket = document.getElementById('opponentPocket');
       const oppPocket = pockets[opponentColor] || [];
       if (oppPocket.length === 0) {
-        opponentPocket.innerHTML = '<span class="pocket-empty">Empty</span>';
+        opponentPocket.innerHTML = '';
       } else {
         opponentPocket.innerHTML = oppPocket.map(type => {
           const symbol = getPieceSymbolByType(type, opponentColor);
@@ -427,6 +486,13 @@
           }
 
           const type = el.dataset.type;
+
+          // Dice mode: only allow selecting pocket pieces matching the dice
+          if (gameMode === 'dice' && currentDice && type !== currentDice.pieceType) {
+            showToast(`Must drop a ${currentDice.pieceName}`, 'error');
+            return;
+          }
+
           if (selectedPocketPiece === type) {
             // Deselect
             selectedPocketPiece = null;
@@ -534,28 +600,61 @@
       }
     }
 
-    function showToast(message, type) {
+    // ==================== Draw Offer ====================
+
+    function toggleDraw() {
+      if (gameOver) return;
+      const btn = document.getElementById('drawBtn');
+
+      if (drawOffered) {
+        // Cancel our draw offer
+        socket.emit('cancel_draw', { gameId: gameId });
+        btn.textContent = 'Draw';
+        drawOffered = false;
+        showToast('Draw offer cancelled', 'info');
+      } else {
+        // Request draw
+        socket.emit('request_draw', { gameId: gameId });
+        btn.textContent = 'Cancel Draw';
+        drawOffered = true;
+        showToast('Draw offered — waiting...', 'info');
+      }
+    }
+
+    function showToast(message, type, actionButtons) {
       const toast = document.createElement('div');
       toast.className = 'toast ' + type;
-      toast.textContent = message;
+
+      if (actionButtons) {
+        const span = document.createElement('span');
+        span.textContent = message;
+        span.style.marginRight = '10px';
+        toast.appendChild(span);
+
+        actionButtons.forEach(btn => {
+          const b = document.createElement('button');
+          b.className = 'toast-action';
+          b.textContent = btn.label;
+          b.addEventListener('click', () => {
+            btn.action();
+            toast.remove();
+          });
+          toast.appendChild(b);
+        });
+      } else {
+        toast.textContent = message;
+      }
+
       document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 4000);
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, actionButtons ? 10000 : 4000);
     }
 
     function getPieceSymbol(piece) {
-      const symbols = {
-        k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
-        KING: '♚', QUEEN: '♛', ROOK: '♜', BISHOP: '♝', KNIGHT: '♞', PAWN: '♟'
-      };
-      const key = piece.color === 'white' ? piece.type.toUpperCase() : piece.type;
-      return symbols[piece.type] || symbols[key] || piece.type;
+      return `<img src="img/pieces/${piece.color[0]}${piece.type}.svg" class="piece-img" draggable="false">`;
     }
 
     function getPieceSymbolByType(type, color) {
-      const symbols = {
-        k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟'
-      };
-      return symbols[type] || type;
+      return `<img src="img/pieces/${color[0]}${type}.svg" class="piece-img" draggable="false">`;
     }
 
     // Sync with server clock times, restart live countdown

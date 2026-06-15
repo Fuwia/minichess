@@ -113,4 +113,142 @@ function calculateElo(winnerElo, loserElo, isDraw = false) {
   };
 }
 
-module.exports = { setDb, hashPassword, verifyPassword, registerUser, loginUser, getUserById, getUserByUsername, getLeaderboard, updateElo, calculateElo };
+// ==================== Friends ====================
+
+function sendFriendRequest(userId, friendUsername) {
+  const friend = getUserByUsername(friendUsername);
+  if (!friend) return { success: false, message: 'User not found' };
+  if (friend.id === userId) return { success: false, message: 'Cannot friend yourself' };
+
+  // Check if already friends or pending
+  const checkStmt = db.prepare(
+    'SELECT * FROM friends WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)'
+  );
+  const existing = checkStmt.getAsObject([userId, friend.id, friend.id, userId]);
+  checkStmt.free();
+
+  if (existing.id) {
+    if (existing.status === 'accepted') return { success: false, message: 'Already friends' };
+    if (existing.user_id === userId) return { success: false, message: 'Friend request already sent' };
+    // The other person already sent a request — auto-accept
+    const updateStmt = db.prepare('UPDATE friends SET status = ? WHERE id = ?');
+    updateStmt.run(['accepted', existing.id]);
+    updateStmt.free();
+    return { success: true, message: 'Friend request accepted (already pending)', friend };
+  }
+
+  const stmt = db.prepare('INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)');
+  stmt.run([userId, friend.id, 'pending']);
+  stmt.free();
+  return { success: true, message: 'Friend request sent', friend };
+}
+
+function acceptFriendRequest(userId, requestId) {
+  const stmt = db.prepare('UPDATE friends SET status = ? WHERE id = ? AND friend_id = ? AND status = ?');
+  stmt.run(['accepted', requestId, userId, 'pending']);
+  stmt.free();
+  return { success: true, message: 'Friend request accepted' };
+}
+
+function declineFriendRequest(userId, requestId) {
+  // Decline a specific pending request by its row ID
+  const stmt = db.prepare('DELETE FROM friends WHERE id = ? AND friend_id = ? AND status = ?');
+  stmt.run([requestId, userId, 'pending']);
+  stmt.free();
+  return { success: true, message: 'Request declined' };
+}
+
+function removeFriend(userId, friendId) {
+  const stmt = db.prepare(
+    'DELETE FROM friends WHERE (user_id = ? AND friend_id = ? AND status = ?) OR (user_id = ? AND friend_id = ? AND status = ?)'
+  );
+  stmt.run([userId, friendId, 'accepted', friendId, userId, 'accepted']);
+  stmt.free();
+  return { success: true, message: 'Friend removed' };
+}
+
+function getFriends(userId) {
+  const stmt = db.prepare(`
+    SELECT u.id, u.username, u.elo, f.id as friendship_id
+    FROM friends f
+    JOIN users u ON (u.id = CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END)
+    WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
+  `);
+  const results = [];
+  stmt.bind([userId, userId, userId]);
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
+}
+
+function getPendingRequests(userId) {
+  const stmt = db.prepare(`
+    SELECT f.id, u.username, u.elo
+    FROM friends f
+    JOIN users u ON u.id = f.user_id
+    WHERE f.friend_id = ? AND f.status = 'pending'
+  `);
+  const results = [];
+  stmt.bind([userId]);
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
+}
+
+// ==================== Private Rooms ====================
+
+function createPrivateRoom(creatorId) {
+  const roomId = require('uuid').v4().substring(0, 8).toUpperCase();
+  const stmt = db.prepare('INSERT INTO private_rooms (id, creator_id) VALUES (?, ?)');
+  stmt.run([roomId, creatorId]);
+  stmt.free();
+  return { roomId };
+}
+
+function getPrivateRoom(roomId) {
+  const stmt = db.prepare('SELECT * FROM private_rooms WHERE id = ?');
+  const row = stmt.getAsObject([roomId]);
+  stmt.free();
+  return row.id ? row : null;
+}
+
+function joinPrivateRoom(roomId, joinerId) {
+  const stmt = db.prepare('UPDATE private_rooms SET joiner_id = ?, is_active = 0 WHERE id = ? AND joiner_id IS NULL AND is_active = 1');
+  stmt.run([joinerId, roomId]);
+  const changes = db.getRowsModified();
+  stmt.free();
+  return changes > 0;
+}
+
+function deactivatePrivateRoom(roomId) {
+  const stmt = db.prepare('UPDATE private_rooms SET is_active = 0 WHERE id = ?');
+  stmt.run([roomId]);
+  stmt.free();
+}
+
+module.exports = {
+  setDb,
+  hashPassword,
+  verifyPassword,
+  registerUser,
+  loginUser,
+  getUserById,
+  getUserByUsername,
+  getLeaderboard,
+  updateElo,
+  calculateElo,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  removeFriend,
+  getFriends,
+  getPendingRequests,
+  createPrivateRoom,
+  getPrivateRoom,
+  joinPrivateRoom,
+  deactivatePrivateRoom
+};

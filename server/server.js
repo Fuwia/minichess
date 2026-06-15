@@ -122,6 +122,65 @@ app.get('/api/leaderboard', (req, res) => {
   res.json({ leaderboard });
 });
 
+// ==================== Friends API ====================
+
+app.post('/api/friends/request', requireAuth, (req, res) => {
+  const { friendUsername } = req.body;
+  if (!friendUsername) return res.json({ success: false, message: 'Username required' });
+  const result = auth.sendFriendRequest(req.session.userId, friendUsername);
+  res.json(result);
+});
+
+app.post('/api/friends/accept', requireAuth, (req, res) => {
+  const { requestId } = req.body;
+  if (!requestId) return res.json({ success: false, message: 'Request ID required' });
+  const result = auth.acceptFriendRequest(req.session.userId, requestId);
+  res.json(result);
+});
+
+app.post('/api/friends/decline', requireAuth, (req, res) => {
+  const { requestId } = req.body;
+  if (!requestId) return res.json({ success: false, message: 'Request ID required' });
+  const result = auth.declineFriendRequest(req.session.userId, requestId);
+  res.json(result);
+});
+
+app.post('/api/friends/remove', requireAuth, (req, res) => {
+  const { friendId } = req.body;
+  if (!friendId) return res.json({ success: false, message: 'Friend ID required' });
+  const result = auth.removeFriend(req.session.userId, friendId);
+  res.json(result);
+});
+
+app.get('/api/friends', requireAuth, (req, res) => {
+  const friends = auth.getFriends(req.session.userId);
+  const pending = auth.getPendingRequests(req.session.userId);
+  res.json({ success: true, friends, pending });
+});
+
+// ==================== Private Rooms API ====================
+
+app.post('/api/rooms/create', requireAuth, (req, res) => {
+  const { roomId } = auth.createPrivateRoom(req.session.userId);
+
+  // Store in-memory for socket matching
+  privateRooms.set(roomId, {
+    creator: { userId: req.session.userId, username: req.session.username },
+    joiner: null,
+    gameId: null
+  });
+
+  res.json({ success: true, roomId });
+});
+
+app.get('/api/rooms/:roomId', (req, res) => {
+  const room = auth.getPrivateRoom(req.params.roomId);
+  if (!room || !room.is_active) {
+    return res.json({ success: false, message: 'Room not found or expired' });
+  }
+  res.json({ success: true, room: { id: room.id, creator_id: room.creator_id, has_joiner: !!room.joiner_id } });
+});
+
 // ==================== Game State Management ====================
 
 // Active games: gameId -> game state
@@ -133,12 +192,27 @@ const socketGames = new Map(); // socketId -> { gameId, color }
 // User to socket mapping
 const userSockets = new Map(); // userId -> Set of socketIds
 
-// Matchmaker instance
+// Matchmaker instances
 const matchmaker = new Matchmaker();
+const diceMatchmaker = new Matchmaker();
+
+// Private rooms (in-memory)
+const privateRooms = new Map(); // roomId -> { creator: {userId, username}, joiner: null|{userId,username}, gameId: null|string }
 
 const INITIAL_TIME = 120000; // 2 minutes per side in ms
 
-function createGame(player1, player2) {
+// Dice piece mapping: 1=Pawn, 2=Knight, 3=Bishop, 4=Rook, 5=King
+const DICE_PIECES = [engine.PAWN, engine.KNIGHT, engine.BISHOP, engine.ROOK, engine.KING];
+
+function rollDice() {
+  return Math.floor(Math.random() * 5) + 1;
+}
+
+function diceToPieceType(roll) {
+  return DICE_PIECES[roll - 1];
+}
+
+function createGame(player1, player2, mode = 'standard') {
   const gameId = uuidv4();
   const state = engine.parseFen(INITIAL_FEN);
   
@@ -163,10 +237,41 @@ function createGame(player1, player2) {
     blackTime: INITIAL_TIME,
     lastTickTime: Date.now(),
     clockStarted: false,
+    mode: mode,
+    diceRoll: mode === 'dice' ? rollDice() : null,
   };
   
   activeGames.set(gameId, game);
   return game;
+}
+
+function emitDiceRoll(game, targetPlayerId, io) {
+  const roll = game.diceRoll;
+  const pieceType = diceToPieceType(roll);
+  const pieceNames = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', k: 'King', q: 'Queen' };
+  const pieceName = pieceNames[pieceType] || pieceType;
+  
+  const payload = { roll, pieceType, pieceName };
+
+  // Send to specific player or both
+  if (targetPlayerId) {
+    const sockets = userSockets.get(targetPlayerId);
+    if (sockets) {
+      for (const sockId of sockets) {
+        io.to(sockId).emit('dice_roll', payload);
+      }
+    }
+  } else {
+    // Send to both
+    for (const playerId of Object.values(game.players)) {
+      const sockets = userSockets.get(playerId);
+      if (sockets) {
+        for (const sockId of sockets) {
+          io.to(sockId).emit('dice_roll', payload);
+        }
+      }
+    }
+  }
 }
 
 function getGameBySocket(socketId) {
@@ -280,6 +385,68 @@ io.on('connection', (socket) => {
     }
   });
 
+  // --- Dice Matchmaking ---
+
+  socket.on('join_dice_queue', () => {
+    if (!userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    if (getGameByUserId(userId)) {
+      socket.emit('error', { message: 'You are already in a game' });
+      return;
+    }
+
+    const user = auth.getUserById(userId);
+    if (!user) return;
+
+    const match = diceMatchmaker.joinQueue({
+      socket,
+      userId,
+      username: user.username,
+      elo: user.elo
+    });
+
+    socket.emit('queue_joined', { message: 'Joined dice queue' });
+
+    if (match) {
+      const game = createGame(match.player1, match.player2, 'dice');
+
+      match.player1.socket.emit('match_found', {
+        gameId: game.id,
+        color: 'white',
+        opponent: { username: game.blackUsername, elo: game.blackElo },
+        fen: engine.toFen(game.state),
+        mode: 'dice'
+      });
+
+      match.player2.socket.emit('match_found', {
+        gameId: game.id,
+        color: 'black',
+        opponent: { username: game.whiteUsername, elo: game.whiteElo },
+        fen: engine.toFen(game.state),
+        mode: 'dice'
+      });
+
+      socketGames.set(match.player1.socket.id, { gameId: game.id, color: 'white' });
+      socketGames.set(match.player2.socket.id, { gameId: game.id, color: 'black' });
+
+      // Emit first dice roll to both players
+      emitDiceRoll(game, null, io);
+
+      console.log(`[DiceGame] Started: ${game.whiteUsername} vs ${game.blackUsername} (${game.id})`);
+    }
+  });
+
+  socket.on('leave_dice_queue', () => {
+    if (!userId) return;
+    const removed = diceMatchmaker.leaveQueue(userId);
+    if (removed) {
+      socket.emit('queue_left', { message: 'Left dice queue' });
+    }
+  });
+
   // --- Game Play ---
 
   socket.on('make_move', (data) => {
@@ -338,6 +505,24 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Dice validation
+    if (game.mode === 'dice') {
+      const diceType = diceToPieceType(game.diceRoll);
+      if (move.isDrop) {
+        if (move.pieceType !== diceType) {
+          socket.emit('error', { message: `Must drop a ${diceType.toUpperCase()}` });
+          return;
+        }
+      } else {
+        const fromCoords = engine.squareToCoords(move.from);
+        const movingPiece = state.board[fromCoords.row][fromCoords.col];
+        if (!movingPiece || movingPiece.type !== diceType) {
+          socket.emit('error', { message: `Must move a ${diceType.toUpperCase()}` });
+          return;
+        }
+      }
+    }
+
     // Start clock on first move
     if (!game.clockStarted) {
       game.clockStarted = true;
@@ -394,6 +579,12 @@ io.on('connection', (socket) => {
     if (result) {
       handleGameOver(game, result);
     }
+
+    // In dice mode, roll for next player
+    if (game.mode === 'dice' && !game.isOver) {
+      game.diceRoll = rollDice();
+      emitDiceRoll(game, null, io);
+    }
   });
 
   // --- Game: Resign ---
@@ -410,6 +601,102 @@ io.on('connection', (socket) => {
     handleGameOver(game, result);
     
     socket.emit('resigned', { message: 'You resigned' });
+  });
+
+  // --- Game: Draw Offer ---
+  socket.on('request_draw', (data) => {
+    if (!userId) return;
+    const { gameId } = data;
+    const game = activeGames.get(gameId);
+    if (!game) return;
+
+    const color = getPlayerColor(game, userId);
+    if (!color) return;
+    if (game.isOver) return;
+
+    // Store who offered the draw
+    game.drawOfferer = userId;
+
+    // Notify opponent
+    const opponentId = getOpponentId(game, userId);
+    const opponentSockets = userSockets.get(opponentId);
+    if (opponentSockets) {
+      for (const sockId of opponentSockets) {
+        io.to(sockId).emit('draw_offered', {
+          by: username,
+          gameId: game.id
+        });
+      }
+    }
+
+    socket.emit('draw_requested', { message: 'Draw offered' });
+  });
+
+  socket.on('accept_draw', (data) => {
+    if (!userId) return;
+    const { gameId } = data;
+    const game = activeGames.get(gameId);
+    if (!game) return;
+    if (game.isOver) return;
+
+    const color = getPlayerColor(game, userId);
+    if (!color) return;
+
+    // Must have a draw offer pending
+    if (!game.drawOfferer || game.drawOfferer === userId) {
+      socket.emit('error', { message: 'No draw offer to accept' });
+      return;
+    }
+
+    handleGameOver(game, 'draw');
+  });
+
+  socket.on('decline_draw', (data) => {
+    if (!userId) return;
+    const { gameId } = data;
+    const game = activeGames.get(gameId);
+    if (!game) return;
+    if (game.isOver) return;
+
+    const color = getPlayerColor(game, userId);
+    if (!color) return;
+
+    // Must have a draw offer pending
+    if (!game.drawOfferer || game.drawOfferer === userId) {
+      return;
+    }
+
+    const offererId = game.drawOfferer;
+    game.drawOfferer = null;
+
+    // Notify the offerer that the draw was declined
+    const offererSockets = userSockets.get(offererId);
+    if (offererSockets) {
+      for (const sockId of offererSockets) {
+        io.to(sockId).emit('draw_declined', { message: 'Draw offer declined' });
+      }
+    }
+  });
+
+  socket.on('cancel_draw', (data) => {
+    if (!userId) return;
+    const { gameId } = data;
+    const game = activeGames.get(gameId);
+    if (!game) return;
+    if (game.isOver) return;
+
+    if (game.drawOfferer !== userId) return;
+
+    game.drawOfferer = null;
+
+    // Notify opponent that the offer was cancelled
+    const opponentId = getOpponentId(game, userId);
+    const opponentSockets = userSockets.get(opponentId);
+    if (opponentSockets) {
+      for (const sockId of opponentSockets) {
+        io.to(sockId).emit('draw_cancelled', { message: 'Draw offer cancelled' });
+      }
+    }
   });
 
   // --- Disconnect ---
@@ -490,7 +777,7 @@ io.on('connection', (socket) => {
     const opponentColor = color === 'white' ? 'black' : 'white';
     const opponentId = game.players[opponentColor];
     
-    socket.emit('game_state', {
+    const gameStatePayload = {
       fen: engine.toFen(game.state),
       color: color,
       opponent: {
@@ -498,8 +785,161 @@ io.on('connection', (socket) => {
         elo: opponentColor === 'white' ? game.whiteElo : game.blackElo
       },
       pockets: game.state.pockets,
-      activeColor: game.state.activeColor
+      activeColor: game.state.activeColor,
+      mode: game.mode || 'standard'
+    };
+
+    socket.emit('game_state', gameStatePayload);
+
+    // In dice mode, send current dice to reconnecting player
+    if (game.mode === 'dice' && game.diceRoll) {
+      const roll = game.diceRoll;
+      const pieceType = diceToPieceType(roll);
+      const pieceNames = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', k: 'King', q: 'Queen' };
+      socket.emit('dice_roll', {
+        roll,
+        pieceType,
+        pieceName: pieceNames[pieceType] || pieceType
+      });
+    }
+  });
+
+  // --- Private Rooms ---
+
+  socket.on('join_private_room', (data) => {
+    if (!userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    const { roomId } = data;
+    const room = privateRooms.get(roomId);
+
+    if (!room) {
+      socket.emit('error', { message: 'Room not found or expired' });
+      return;
+    }
+
+    if (room.creator.userId === userId) {
+      socket.emit('error', { message: 'You created this room. Wait for a friend to join.' });
+      return;
+    }
+
+    if (room.joiner) {
+      socket.emit('error', { message: 'Room is already full' });
+      return;
+    }
+
+    // Get joiner info
+    const user = auth.getUserById(userId);
+    if (!user) return;
+
+    room.joiner = { userId, username: user.username, elo: user.elo };
+
+    // Record in DB
+    auth.joinPrivateRoom(roomId, userId);
+
+    // Create the game
+    const creatorUser = auth.getUserById(room.creator.userId);
+    const game = createGame(
+      { userId: room.creator.userId, username: room.creator.username, elo: creatorUser ? creatorUser.elo : 1200 },
+      { userId, username: user.username, elo: user.elo }
+    );
+
+    room.gameId = game.id;
+
+    // Notify creator
+    const creatorSockets = userSockets.get(room.creator.userId);
+    if (creatorSockets) {
+      for (const sockId of creatorSockets) {
+        io.to(sockId).emit('match_found', {
+          gameId: game.id,
+          color: 'white',
+          opponent: { username: game.blackUsername, elo: game.blackElo },
+          fen: engine.toFen(game.state)
+        });
+        socketGames.set(sockId, { gameId: game.id, color: 'white' });
+      }
+    }
+
+    // Notify joiner
+    socket.emit('match_found', {
+      gameId: game.id,
+      color: 'black',
+      opponent: { username: game.whiteUsername, elo: game.whiteElo },
+      fen: engine.toFen(game.state)
     });
+    socketGames.set(socket.id, { gameId: game.id, color: 'black' });
+
+    console.log(`[Room] ${room.creator.username} vs ${user.username} — Private game started (${game.id})`);
+  });
+
+  socket.on('cancel_private_room', (data) => {
+    if (!userId) return;
+    const { roomId } = data;
+    const room = privateRooms.get(roomId);
+
+    if (!room) return;
+    if (room.creator.userId !== userId) return;
+    if (room.joiner) return; // Already has a joiner, can't cancel
+
+    auth.deactivatePrivateRoom(roomId);
+    privateRooms.delete(roomId);
+    socket.emit('room_cancelled', { message: 'Room cancelled' });
+    console.log(`[Room] ${roomId} cancelled by creator`);
+  });
+
+  // --- Dice Skip ---
+
+  socket.on('dice_skip', (data) => {
+    if (!userId) return;
+    const { gameId } = data;
+    const game = activeGames.get(gameId);
+    if (!game) return;
+    if (game.mode !== 'dice') return;
+    if (game.isOver) return;
+
+    const color = getPlayerColor(game, userId);
+    if (!color) return;
+    if (game.state.activeColor !== color) return;
+
+    // Verify the player truly has no valid moves for the dice piece
+    const diceType = diceToPieceType(game.diceRoll);
+    const state = game.state;
+    const allMoves = engine.getAllLegalMoves(state);
+    const hasMoves = allMoves.some(m => {
+      if (m.isDrop) return m.pieceType === diceType;
+      const piece = state.board[engine.squareToCoords(m.from).row][engine.squareToCoords(m.from).col];
+      return piece && piece.type === diceType;
+    });
+
+    if (hasMoves) {
+      socket.emit('error', { message: 'You have valid moves — cannot skip' });
+      return;
+    }
+
+    // Auto-pass: reroll and notify both players
+    game.diceRoll = rollDice();
+
+    const payload = {
+      skipped: true,
+      skippedBy: username,
+      newRoll: game.diceRoll,
+      newPieceType: diceToPieceType(game.diceRoll)
+    };
+
+    const opponentId = getOpponentId(game, userId);
+    for (const targetId of [userId, opponentId]) {
+      const sockets = userSockets.get(targetId);
+      if (sockets) {
+        for (const sockId of sockets) {
+          io.to(sockId).emit('dice_skip_result', payload);
+        }
+      }
+    }
+
+    // Send new dice roll to both players
+    emitDiceRoll(game, null, io);
   });
 });
 
