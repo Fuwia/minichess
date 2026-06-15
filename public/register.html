@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Register</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links">
+      <a href="leaderboard.html">Leaderboard</a>
+    </div>
+  </nav>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Join the MiniChess community</p>
+      <div id="error" class="error-msg" style="display: none;"></div>
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Choose a username" required minlength="3" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Choose a password" required minlength="4">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="4">
+        </div>
+        <button type="submit" class="btn-primary">Register</button>
+      </form>
+      <p class="switch-link">Already have an account? <a href="index.html">Log In</a></p>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('error');
+      errorEl.style.display = 'none';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (password !== confirmPassword) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const result = await register(username, password);
+
+      if (result.success) {
+        window.location.href = 'lobby.html';
+      } else {
+        errorEl.textContent = result.message;
+        errorEl.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

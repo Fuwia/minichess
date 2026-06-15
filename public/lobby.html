@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Lobby</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links">
+      <a href="leaderboard.html">Leaderboard</a>
+      <div class="user-info">
+        <span class="username" id="navUsername">...</span>
+        <span class="elo" id="navElo">1200</span>
+        <button class="secondary" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="lobby-container">
+    <div class="lobby-card">
+      <h1>Find a Match</h1>
+      <p class="subtitle">MiniChess — a 6×6 Crazyhouse Variant</p>
+
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-value" id="elo">1200</div>
+          <div class="stat-label">ELO Rating</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="wins">0</div>
+          <div class="stat-label">Wins</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="losses">0</div>
+          <div class="stat-label">Losses</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="draws">0</div>
+          <div class="stat-label">Draws</div>
+        </div>
+      </div>
+
+      <button id="findMatchBtn" class="find-match-btn" onclick="toggleQueue()">Find Match</button>
+      <div class="queue-status" id="queueStatus"></div>
+
+      <div class="leaderboard-link">
+        <a href="leaderboard.html">View Leaderboard →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script>
+    let inQueue = false;
+    let currentUser = null;
+
+    async function init() {
+      currentUser = await getCurrentUser();
+      if (!currentUser) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      document.getElementById('navUsername').textContent = currentUser.username;
+      document.getElementById('navElo').textContent = currentUser.elo;
+      document.getElementById('elo').textContent = currentUser.elo;
+      document.getElementById('wins').textContent = currentUser.wins;
+      document.getElementById('losses').textContent = currentUser.losses;
+      document.getElementById('draws').textContent = currentUser.draws;
+
+      initSocket();
+
+      // Listen for match found
+      socket.on('match_found', (data) => {
+        // Store game info and redirect
+        sessionStorage.setItem('gameData', JSON.stringify(data));
+        window.location.href = 'game.html';
+      });
+
+      socket.on('queue_joined', () => {
+        document.getElementById('queueStatus').textContent = 'Searching for opponent...';
+      });
+
+      socket.on('queue_left', () => {
+        // handled in toggleQueue
+      });
+
+      socket.on('error', (data) => {
+        showToast(data.message, 'error');
+      });
+    }
+
+    function toggleQueue() {
+      if (!socket || !socket.connected) {
+        showToast('Connecting to server...', 'info');
+        initSocket();
+        setTimeout(() => toggleQueue(), 500);
+        return;
+      }
+
+      if (inQueue) {
+        socket.emit('leave_queue');
+        inQueue = false;
+        document.getElementById('findMatchBtn').textContent = 'Find Match';
+        document.getElementById('findMatchBtn').classList.remove('searching');
+        document.getElementById('queueStatus').textContent = '';
+      } else {
+        socket.emit('join_queue');
+        inQueue = true;
+        document.getElementById('findMatchBtn').textContent = 'Cancel Search';
+        document.getElementById('findMatchBtn').classList.add('searching');
+        document.getElementById('queueStatus').textContent = 'Connecting...';
+      }
+    }
+
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

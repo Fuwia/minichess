@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Leaderboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links">
+      <a href="lobby.html">Play</a>
+      <span id="navAuth"></span>
+    </div>
+  </nav>
+
+  <div class="leaderboard-container">
+    <div class="leaderboard-card">
+      <h1>🏆 Leaderboard</h1>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>ELO</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Draws</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    async function init() {
+      // Nav auth state
+      const user = await getCurrentUser();
+      const navAuth = document.getElementById('navAuth');
+      if (user) {
+        navAuth.innerHTML = `<span style="color:var(--gold);margin-right:12px;">${user.username}</span><button class="secondary" onclick="logout()">Logout</button>`;
+      } else {
+        navAuth.innerHTML = `<a href="index.html">Login</a>`;
+      }
+
+      // Fetch leaderboard
+      try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        renderLeaderboard(data.leaderboard);
+      } catch (err) {
+        document.getElementById('leaderboardBody').innerHTML =
+          '<tr><td colspan="6" style="text-align:center;color:var(--red);">Failed to load leaderboard</td></tr>';
+      }
+    }
+
+    function renderLeaderboard(leaders) {
+      const tbody = document.getElementById('leaderboardBody');
+      if (leaders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">No players yet. Be the first!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = leaders.map((p, i) => {
+        let rankClass = '';
+        if (i === 0) rankClass = 'top-1';
+        else if (i === 1) rankClass = 'top-2';
+        else if (i === 2) rankClass = 'top-3';
+
+        return `
+          <tr>
+            <td class="rank ${rankClass}">#${i + 1}</td>
+            <td><strong>${escapeHtml(p.username)}</strong></td>
+            <td>${p.elo}</td>
+            <td>${p.wins}</td>
+            <td>${p.losses}</td>
+            <td>${p.draws}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Game</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links">
+      <button class="secondary" onclick="resignGame()">Resign</button>
+      <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
+    </div>
+  </nav>
+
+  <div class="game-container">
+    <div class="board-wrapper">
+      <!-- Opponent info -->
+      <div class="board-header">
+        <div class="player-info">
+          <span class="player-color" id="opponentColorDot"></span>
+          <span class="player-name" id="opponentName">Opponent</span>
+          <span class="player-elo" id="opponentElo">1200</span>
+        </div>
+        <div class="clock" id="opponentClock">2:00</div>
+        <div class="turn-indicator" id="turnIndicator">...</div>
+      </div>
+
+      <!-- Chess board -->
+      <div class="chess-board" id="chessBoard"></div>
+
+      <!-- File labels -->
+      <div class="file-labels" id="fileLabels"></div>
+
+      <!-- Player info -->
+      <div class="board-header" style="margin-top: 10px;">
+        <div class="player-info">
+          <span class="player-color" id="playerColorDot"></span>
+          <span class="player-name" id="playerName">You</span>
+          <span class="player-elo" id="playerElo">1200</span>
+        </div>
+        <div class="clock" id="playerClock">2:00</div>
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    <div class="game-panel">
+      <!-- Black's pocket (opponent) -->
+      <div class="panel-card">
+        <div class="pocket-label">Opponent's Pocket</div>
+        <div class="pocket" id="opponentPocket">
+          <span class="pocket-empty">Empty</span>
+        </div>
+      </div>
+
+      <!-- Move History -->
+      <div class="panel-card">
+        <h3>Moves</h3>
+        <div class="move-history" id="moveHistory">
+          <div style="color: var(--text-secondary);">Game starting...</div>
+        </div>
+      </div>
+
+      <!-- Player's pocket -->
+      <div class="panel-card">
+        <div class="pocket-label">Your Pocket</div>
+        <div class="pocket" id="playerPocket">
+          <span class="pocket-empty">Empty</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promotion dialog (hidden) -->
+  <div class="promotion-dialog" id="promotionDialog" style="display: none;"></div>
+
+  <!-- Game Over overlay (hidden) -->
+  <div class="game-over-overlay" id="gameOverOverlay" style="display: none;">
+    <div class="game-over-card" id="gameOverCard"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/board.js"></script>
+  <script>
+    let gameId = null;
+    let myColor = null;
+    let boardState = null;
+    let pockets = { white: [], black: [] };
+    let activeColor = 'white';
+    let moveHistory = [];
+    let selectedSquare = null;
+    let selectedPocketPiece = null;
+    let possibleMoves = [];
+    let gameOver = false;
+    let promotionPending = null;
+    let lastServerWhiteTime = 120000;
+    let lastServerBlackTime = 120000;
+    let lastTimestamp = Date.now();
+    let clockInterval = null;
+
+    async function init() {
+      const user = await getCurrentUser();
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Get game data from session storage
+      const gameDataStr = sessionStorage.getItem('gameData');
+      if (!gameDataStr) {
+        window.location.href = 'lobby.html';
+        return;
+      }
+
+      const gameData = JSON.parse(gameDataStr);
+      gameId = gameData.gameId;
+      myColor = gameData.color;
+
+      document.getElementById('playerName').textContent = user.username + ' (You)';
+      document.getElementById('playerElo').textContent = user.elo;
+      document.getElementById('opponentName').textContent = gameData.opponent.username;
+      document.getElementById('opponentElo').textContent = gameData.opponent.elo;
+
+      // Set color dots
+      document.getElementById('playerColorDot').className = 'player-color ' + myColor;
+      document.getElementById('opponentColorDot').className = 'player-color ' + (myColor === 'white' ? 'black' : 'white');
+
+      // Parse initial FEN
+      const fen = gameData.fen;
+      boardState = parseFen(fen);
+      activeColor = boardState.activeColor;
+      pockets = boardState.pockets;
+
+      initSocket();
+
+      // Register this socket with the game (important for disconnect/reconnect)
+      socket.emit('reconnect_game', { gameId: gameId });
+
+      // Render board
+      renderBoard();
+      updatePockets();
+      updateTurnIndicator();
+      setupMoveLabels();
+
+      // Socket event handlers
+      socket.on('move_result', (data) => {
+        boardState = parseFen(data.fen);
+        activeColor = data.activeColor;
+        pockets = data.pockets;
+        moveHistory.push({
+          white: data.activeColor === 'black' ? formatMove(data.move) : null,
+          black: data.activeColor === 'white' ? formatMove(data.move) : null,
+        });
+
+        selectedSquare = null;
+        selectedPocketPiece = null;
+        possibleMoves = [];
+        promotionPending = null;
+
+        renderBoard();
+        updatePockets();
+        updateTurnIndicator();
+        updateMoveHistory();
+        syncServerTime(data.whiteTime, data.blackTime);
+
+        if (data.isCheck) {
+          showToast('Check!', 'info');
+        }
+      });
+
+      socket.on('game_over', (data) => {
+        gameOver = true;
+        showGameOver(data.result);
+      });
+
+      socket.on('opponent_disconnected', (data) => {
+        gameOver = true;
+        showToast(data.message, 'success');
+        showGameOver(myColor === 'white' ? 'white_wins' : 'black_wins');
+      });
+
+      socket.on('error', (data) => {
+        showToast(data.message, 'error');
+      });
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('chessBoard');
+      boardEl.innerHTML = '';
+
+      // Calculate last move squares
+      let lastMoveFrom = null, lastMoveTo = null;
+      if (boardState.lastMove) {
+        lastMoveFrom = boardState.lastMove.from;
+        lastMoveTo = boardState.lastMove.to;
+      }
+
+      // White sees row 5→0 (top-down), Black sees row 0→5 (reversed)
+      const isWhitePerspective = myColor === 'white';
+      for (let ri = 0; ri < 6; ri++) {
+        const row = isWhitePerspective ? 5 - ri : ri;
+        for (let ci = 0; ci < 6; ci++) {
+          const col = isWhitePerspective ? ci : 5 - ci;
+          const square = document.createElement('div');
+          const isLight = (row + col) % 2 === 0;
+          square.className = 'square ' + (isLight ? 'light' : 'dark');
+          square.dataset.row = row;
+          square.dataset.col = col;
+
+          const piece = boardState.board[row][col];
+          if (piece) {
+            square.textContent = getPieceSymbol(piece);
+            square.style.color = piece.color === 'white' ? '#fff' : '#222';
+          }
+
+          const sqName = coordsToSquare(row, col);
+
+          // Highlight selected square
+          if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
+            square.classList.add('selected');
+          }
+
+          // Mark possible moves
+          if (possibleMoves.some(m => m.to === sqName)) {
+            const move = possibleMoves.find(m => m.to === sqName);
+            if (boardState.board[row][col] !== null || move.isEnPassant) {
+              square.classList.add('possible-capture');
+            } else {
+              square.classList.add('possible-move');
+            }
+          }
+
+          // Last move highlight
+          if (lastMoveFrom === sqName || lastMoveTo === sqName) {
+            square.classList.add('last-move');
+          }
+
+          // King in check
+          if (boardState.isCheck) {
+            const king = findKing(boardState, activeColor);
+            if (king && king.row === row && king.col === col) {
+              square.classList.add('in-check');
+            }
+          }
+
+          square.addEventListener('click', () => onSquareClick(row, col));
+          boardEl.appendChild(square);
+        }
+      }
+    }
+
+    function onSquareClick(row, col) {
+      if (gameOver) return;
+      
+      const sqName = coordsToSquare(row, col);
+      const piece = boardState.board[row][col];
+
+      // If a pocket piece is selected for dropping
+      if (selectedPocketPiece) {
+        if (piece !== null) {
+          showToast('Can only drop on empty squares', 'error');
+          return;
+        }
+
+        sendDropMove(sqName);
+        selectedPocketPiece = null;
+        document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        return;
+      }
+
+      // If clicking on a possible move target
+      if (possibleMoves.some(m => m.to === sqName)) {
+        const move = possibleMoves.find(m => m.to === sqName);
+        
+        if (move.promotion) {
+          // Need to choose promotion piece
+          showPromotionDialog(move);
+          return;
+        }
+
+        sendMove(selectedSquare, { row, col }, null);
+        return;
+      }
+
+      // Selecting one of your own pieces
+      if (piece && piece.color === myColor) {
+        selectedSquare = { row, col };
+        selectedPocketPiece = null;
+        document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        possibleMoves = getLegalMoves(boardState, row, col);
+        renderBoard();
+        return;
+      }
+
+      // Clicking on opponent's piece or empty square without valid selection
+      selectedSquare = null;
+      possibleMoves = [];
+      renderBoard();
+    }
+
+    function showPromotionDialog(move) {
+      promotionPending = move;
+      const dialog = document.getElementById('promotionDialog');
+      dialog.style.display = 'flex';
+
+      const pieces = [
+        { type: 'q', symbol: '♛' },
+        { type: 'r', symbol: '♜' },
+        { type: 'b', symbol: '♝' },
+        { type: 'n', symbol: '♞' }
+      ];
+
+      dialog.innerHTML = pieces.map(p => 
+        `<div class="promo-option" data-type="${p.type}">${p.symbol}</div>`
+      ).join('');
+
+      dialog.querySelectorAll('.promo-option').forEach(el => {
+        el.addEventListener('click', () => {
+          const promoType = el.dataset.type;
+          dialog.style.display = 'none';
+          sendMove(
+            squareToCoords(promotionPending.from),
+            squareToCoords(promotionPending.to),
+            promoType
+          );
+          promotionPending = null;
+        });
+      });
+    }
+
+    function sendMove(from, to, promotion) {
+      socket.emit('make_move', {
+        gameId: gameId,
+        move: {
+          from: from ? coordsToSquare(from.row, from.col) : null,
+          to: coordsToSquare(to.row, to.col),
+          promotion: promotion,
+          isDrop: false
+        }
+      });
+    }
+
+    function sendDropMove(toSquare) {
+      socket.emit('make_move', {
+        gameId: gameId,
+        move: {
+          from: null,
+          to: toSquare,
+          pieceType: selectedPocketPiece,
+          isDrop: true
+        }
+      });
+    }
+
+    function updatePockets() {
+      // Player's pocket
+      const playerPocket = document.getElementById('playerPocket');
+      const myPocket = pockets[myColor] || [];
+      if (myPocket.length === 0) {
+        playerPocket.innerHTML = '<span class="pocket-empty">Empty</span>';
+      } else {
+        playerPocket.innerHTML = myPocket.map((type, i) => {
+          const symbol = getPieceSymbolByType(type, myColor);
+          return `<div class="pocket-piece" data-index="${i}" data-type="${type}">${symbol}</div>`;
+        }).join('');
+      }
+
+      // Opponent's pocket
+      const opponentColor = myColor === 'white' ? 'black' : 'white';
+      const opponentPocket = document.getElementById('opponentPocket');
+      const oppPocket = pockets[opponentColor] || [];
+      if (oppPocket.length === 0) {
+        opponentPocket.innerHTML = '<span class="pocket-empty">Empty</span>';
+      } else {
+        opponentPocket.innerHTML = oppPocket.map(type => {
+          const symbol = getPieceSymbolByType(type, opponentColor);
+          return `<div class="pocket-piece" style="pointer-events: none;">${symbol}</div>`;
+        }).join('');
+      }
+
+      // Add click handlers for player's pocket pieces
+      playerPocket.querySelectorAll('.pocket-piece').forEach(el => {
+        el.addEventListener('click', (e) => {
+          if (gameOver) return;
+          if (myColor !== activeColor) {
+            showToast('Not your turn', 'error');
+            return;
+          }
+
+          const type = el.dataset.type;
+          if (selectedPocketPiece === type) {
+            // Deselect
+            selectedPocketPiece = null;
+            el.classList.remove('selected-drop');
+            selectedSquare = null;
+            possibleMoves = [];
+            renderBoard();
+          } else {
+            // Select this piece type
+            selectedPocketPiece = type;
+            selectedSquare = null;
+            possibleMoves = [];
+            document.querySelectorAll('.pocket-piece.selected-drop').forEach(p => p.classList.remove('selected-drop'));
+            el.classList.add('selected-drop');
+            renderBoard();
+          }
+        });
+      });
+    }
+
+    function updateTurnIndicator() {
+      const indicator = document.getElementById('turnIndicator');
+      if (activeColor === myColor) {
+        indicator.textContent = 'Your Turn';
+        indicator.classList.add('active');
+      } else {
+        indicator.textContent = 'Opponent\'s Turn';
+        indicator.classList.remove('active');
+      }
+    }
+
+    function updateMoveHistory() {
+      const historyEl = document.getElementById('moveHistory');
+      if (moveHistory.length === 0) {
+        historyEl.innerHTML = '<div style="color: var(--text-secondary);">No moves yet</div>';
+        return;
+      }
+
+      let html = '';
+      for (let i = 0; i < moveHistory.length; i++) {
+        html += `<div class="move-pair">`;
+        html += `<span class="move-num">${i + 1}.</span>`;
+        html += `<span class="move-white">${moveHistory[i].white || ''}</span>`;
+        html += `<span class="move-black">${moveHistory[i].black || ''}</span>`;
+        html += `</div>`;
+      }
+      historyEl.innerHTML = html;
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function setupMoveLabels() {
+      const fileLabels = document.getElementById('fileLabels');
+      fileLabels.innerHTML = '';
+      for (let c = 0; c < 6; c++) {
+        const label = document.createElement('span');
+        label.className = 'file-label';
+        label.textContent = String.fromCharCode('a'.charCodeAt(0) + c);
+        fileLabels.appendChild(label);
+      }
+    }
+
+    function showGameOver(result) {
+      const overlay = document.getElementById('gameOverOverlay');
+      const card = document.getElementById('gameOverCard');
+
+      let titleText = '';
+      let titleClass = '';
+      let message = '';
+
+      if (result === 'white_wins') {
+        if (myColor === 'white') {
+          titleText = 'You Win!';
+          titleClass = 'win-text';
+        } else {
+          titleText = 'You Lose';
+          titleClass = 'lose-text';
+        }
+      } else if (result === 'black_wins') {
+        if (myColor === 'black') {
+          titleText = 'You Win!';
+          titleClass = 'win-text';
+        } else {
+          titleText = 'You Lose';
+          titleClass = 'lose-text';
+        }
+      } else {
+        titleText = 'Draw!';
+        titleClass = 'draw-text';
+      }
+
+      card.innerHTML = `
+        <h2 class="${titleClass}">${titleText}</h2>
+        <p class="elo-change">Result: ${result.replace('_', ' ')}</p>
+        <button onclick="window.location.href='lobby.html'">Back to Lobby</button>
+      `;
+
+      overlay.style.display = 'flex';
+    }
+
+    function resignGame() {
+      if (gameOver) return;
+      if (confirm('Are you sure you want to resign?')) {
+        socket.emit('resign', { gameId: gameId });
+        gameOver = true;
+      }
+    }
+
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function getPieceSymbol(piece) {
+      const symbols = {
+        k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+        KING: '♚', QUEEN: '♛', ROOK: '♜', BISHOP: '♝', KNIGHT: '♞', PAWN: '♟'
+      };
+      const key = piece.color === 'white' ? piece.type.toUpperCase() : piece.type;
+      return symbols[piece.type] || symbols[key] || piece.type;
+    }
+
+    function getPieceSymbolByType(type, color) {
+      const symbols = {
+        k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟'
+      };
+      return symbols[type] || type;
+    }
+
+    // Sync with server clock times, restart live countdown
+    function syncServerTime(whiteTime, blackTime) {
+      lastServerWhiteTime = whiteTime;
+      lastServerBlackTime = blackTime;
+      lastTimestamp = Date.now();
+
+      // Restart live tick interval
+      if (clockInterval) clearInterval(clockInterval);
+      clockInterval = setInterval(tickClock, 200);
+
+      // Initial render
+      tickClock();
+    }
+
+    // Called every 200ms to update displayed clocks
+    function tickClock() {
+      if (gameOver) {
+        if (clockInterval) clearInterval(clockInterval);
+        return;
+      }
+
+      const elapsed = Date.now() - lastTimestamp;
+      let currentWhite = lastServerWhiteTime;
+      let currentBlack = lastServerBlackTime;
+
+      if (activeColor === 'white') {
+        currentWhite = Math.max(0, lastServerWhiteTime - elapsed);
+      } else {
+        currentBlack = Math.max(0, lastServerBlackTime - elapsed);
+      }
+
+      const playerClock = document.getElementById('playerClock');
+      const opponentClock = document.getElementById('opponentClock');
+      const myTime = myColor === 'white' ? currentWhite : currentBlack;
+      const oppTime = myColor === 'white' ? currentBlack : currentWhite;
+
+      playerClock.textContent = formatClock(myTime);
+      opponentClock.textContent = formatClock(oppTime);
+
+      playerClock.classList.toggle('active-clock', activeColor === myColor);
+      opponentClock.classList.toggle('active-clock', activeColor !== myColor);
+      playerClock.classList.toggle('low-time', myTime <= 10000);
+      opponentClock.classList.toggle('low-time', oppTime <= 10000);
+    }
+
+    function formatClock(ms) {
+      const totalSec = Math.max(0, Math.ceil(ms / 1000));
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      return min + ':' + String(sec).padStart(2, '0');
+    }
+
+    function formatMove(move) {
+      if (move.isDrop) {
+        return `@${move.to}${move.pieceType.toUpperCase()}`;
+      }
+      let notation = '';
+      if (move.pieceType) {
+        notation += move.pieceType.toUpperCase();
+      }
+      if (move.captured) {
+        notation += 'x';
+      }
+      notation += move.to;
+      if (move.promotion) {
+        notation += '=' + move.promotion.toUpperCase();
+      }
+      return notation;
+    }
+
+    init();
+  </script>
+</body>
+</html>
