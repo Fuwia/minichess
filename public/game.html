@@ -85,6 +85,7 @@
   <script src="js/auth.js"></script>
   <script src="js/socket.js"></script>
   <script src="js/engine.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/board.js"></script>
   <script>
     let gameId = null;
@@ -98,6 +99,9 @@
     let possibleMoves = [];
     let gameOver = false;
     let promotionPending = null;
+    let dragFromRow = null;
+    let dragFromCol = null;
+    let dragPocketType = null;
     let lastServerWhiteTime = 120000;
     let lastServerBlackTime = 120000;
     let lastTimestamp = Date.now();
@@ -168,13 +172,23 @@
         updateMoveHistory();
         syncServerTime(data.whiteTime, data.blackTime);
 
+        // Sound effects
+        if (data.move.isDrop) {
+          SoundManager.play('drop');
+        } else if (data.move.captured) {
+          SoundManager.play('capture');
+        } else {
+          SoundManager.play('move');
+        }
         if (data.isCheck) {
+          SoundManager.play('check');
           showToast('Check!', 'info');
         }
       });
 
       socket.on('game_over', (data) => {
         gameOver = true;
+        SoundManager.play('gameover');
         showGameOver(data.result);
       });
 
@@ -219,6 +233,18 @@
           }
 
           const sqName = coordsToSquare(row, col);
+
+          // Drag support: only own pieces on your turn
+          const canDrag = !gameOver && piece && piece.color === myColor && myColor === activeColor;
+          if (canDrag) {
+            square.draggable = true;
+            square.addEventListener('dragstart', (e) => onDragStart(e, row, col));
+          }
+          // Drop target support for all squares
+          square.addEventListener('dragover', onDragOver);
+          square.addEventListener('dragenter', (e) => onDragEnter(e, row, col));
+          square.addEventListener('dragleave', (e) => onDragLeave(e, row, col));
+          square.addEventListener('drop', (e) => onDrop(e, row, col));
 
           // Highlight selected square
           if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
@@ -383,8 +409,16 @@
         }).join('');
       }
 
-      // Add click handlers for player's pocket pieces
+      // Add click and drag handlers for player's pocket pieces
       playerPocket.querySelectorAll('.pocket-piece').forEach(el => {
+        // Drag support
+        const canDragPocket = !gameOver && myColor === activeColor;
+        if (canDragPocket) {
+          el.draggable = true;
+          el.addEventListener('dragstart', (e) => onPocketDragStart(e, el.dataset.type));
+          el.addEventListener('dragend', onPocketDragEnd);
+        }
+
         el.addEventListener('click', (e) => {
           if (gameOver) return;
           if (myColor !== activeColor) {
@@ -575,6 +609,150 @@
       const sec = totalSec % 60;
       return min + ':' + String(sec).padStart(2, '0');
     }
+
+    // ==================== Drag & Drop Handlers ====================
+
+    function onDragStart(e, row, col) {
+      if (gameOver) return;
+      if (myColor !== activeColor) return;
+      const piece = boardState.board[row][col];
+      if (!piece || piece.color !== myColor) return;
+
+      dragFromRow = row;
+      dragFromCol = col;
+      dragPocketType = null;
+      selectedSquare = { row, col };
+      selectedPocketPiece = null;
+      document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+      possibleMoves = getLegalMoves(boardState, row, col);
+
+      // Update visuals without destroying DOM (renderBoard would kill the drag)
+      document.querySelectorAll('.square').forEach(s => {
+        const r = parseInt(s.dataset.row);
+        const c = parseInt(s.dataset.col);
+        // Remove all previous state classes
+        s.classList.remove('selected', 'possible-move', 'possible-capture', 'drag-origin', 'drag-over');
+        // Mark origin
+        if (r === row && c === col) {
+          s.classList.add('selected', 'drag-origin');
+        }
+        // Mark target moves
+        const sq = coordsToSquare(r, c);
+        const move = possibleMoves.find(m => m.to === sq);
+        if (move) {
+          if (boardState.board[r][c] !== null || move.isEnPassant) {
+            s.classList.add('possible-capture');
+          } else {
+            s.classList.add('possible-move');
+          }
+        }
+      });
+
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    function onDragEnter(e, row, col) {
+      e.preventDefault();
+      // Don't highlight the origin square
+      if (row === dragFromRow && col === dragFromCol) return;
+      const squares = document.querySelectorAll('.square');
+      squares.forEach(s => {
+        if (parseInt(s.dataset.row) === row && parseInt(s.dataset.col) === col) {
+          s.classList.add('drag-over');
+        }
+      });
+    }
+
+    function onDragLeave(e, row, col) {
+      const squares = document.querySelectorAll('.square');
+      squares.forEach(s => {
+        if (parseInt(s.dataset.row) === row && parseInt(s.dataset.col) === col) {
+          s.classList.remove('drag-over');
+        }
+      });
+    }
+
+    function onDrop(e, row, col) {
+      e.preventDefault();
+      // Clean up visual states
+      document.querySelectorAll('.square').forEach(s => {
+        s.classList.remove('drag-over', 'drag-origin');
+      });
+      onDragEnd(row, col);
+    }
+
+    function onDragEnd(row, col) {
+      if (gameOver) return;
+
+      if (dragPocketType !== null) {
+        // Dropping from pocket
+        const piece = boardState.board[row][col];
+        if (piece !== null) {
+          dragPocketType = null;
+          dragFromRow = null;
+          dragFromCol = null;
+          return;
+        }
+        selectedPocketPiece = dragPocketType;
+        sendDropMove(coordsToSquare(row, col));
+        selectedPocketPiece = null;
+      } else if (dragFromRow !== null) {
+        // Dragging from board
+        const sqName = coordsToSquare(row, col);
+        const move = possibleMoves.find(m => m.to === sqName);
+        if (!move) {
+          selectedSquare = null;
+          possibleMoves = [];
+          renderBoard();
+          dragFromRow = null;
+          dragFromCol = null;
+          return;
+        }
+        if (move.promotion) {
+          showPromotionDialog(move);
+          dragFromRow = null;
+          dragFromCol = null;
+          return;
+        }
+        sendMove({ row: dragFromRow, col: dragFromCol }, { row, col }, null);
+      }
+
+      selectedSquare = null;
+      possibleMoves = [];
+      dragFromRow = null;
+      dragFromCol = null;
+      dragPocketType = null;
+    }
+
+    function onPocketDragStart(e, type) {
+      if (gameOver) return;
+      if (myColor !== activeColor) return;
+      dragPocketType = type;
+      dragFromRow = null;
+      dragFromCol = null;
+      selectedSquare = null;
+      selectedPocketPiece = null;
+      possibleMoves = [];
+      document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+      // Clean up previous selection states without destroying DOM
+      document.querySelectorAll('.square').forEach(s => {
+        s.classList.remove('selected', 'possible-move', 'possible-capture', 'drag-origin', 'drag-over');
+      });
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    }
+
+    function onPocketDragEnd(e) {
+      // Cleanup if drop didn't fire
+    }
+
+    // ==================== Utilities ====================
 
     function formatMove(move) {
       if (move.isDrop) {
