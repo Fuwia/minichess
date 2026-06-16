@@ -9,14 +9,23 @@
 <body>
   <nav>
     <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links">
+    <div class="nav-links" id="navLinks">
       <a href="lobby.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Play</a>
       <a href="profile.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Profile</a>
-      <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
-      <button class="secondary" onclick="resignGame()">Resign</button>
-      <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
+      <!-- Live-mode controls (hidden in replay) -->
+      <span id="liveControls">
+        <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
+        <button class="secondary" onclick="resignGame()">Resign</button>
+        <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
+      </span>
     </div>
   </nav>
+
+  <!-- Replay badge (only visible in replay mode) -->
+  <div id="replayBanner" class="replay-banner" style="display:none;">
+    <span>📋 Replay</span>
+    <span id="replayResult"></span>
+  </div>
 
   <div class="game-container">
     <div class="board-wrapper">
@@ -112,6 +121,14 @@
     let drawOffered = false;
     let gameMode = 'standard';
     let currentDice = null; // { roll, pieceType, pieceName }
+    let isReplay = false;
+
+    // ==================== Determine Mode ====================
+
+    function getMatchIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('matchId') || null;
+    }
 
     async function init() {
       const user = await getCurrentUser();
@@ -120,9 +137,336 @@
         return;
       }
 
+      const matchId = getMatchIdFromUrl();
+
+      if (matchId) {
+        // Check the game status from the server — is it active or finished?
+        try {
+          const res = await fetch('/api/games/' + encodeURIComponent(matchId));
+          const data = await res.json();
+
+          if (data.success && data.status === 'active') {
+            // Game is still in progress — join as live mode
+            isReplay = false;
+            gameId = matchId;
+            myColor = null;
+            boardState = null;
+            initSocket();
+            setupLiveSocket(user, matchId);
+            // Live socket will send 'game_state' event with full state
+            // Render an empty board while waiting
+            boardState = { board: Array.from({ length: 6 }, () => Array(6).fill(null)), activeColor: 'white', pockets: { white: [], black: [] } };
+            pockets = boardState.pockets;
+            activeColor = boardState.activeColor;
+            renderBoard();
+            setupMoveLabels();
+            return;
+          }
+
+          if (data.success && data.status === 'finished') {
+            // Game is over — show replay
+            await initWithGameData(matchId, user, data.game);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to check game status:', err);
+        }
+
+        // Fallback: try sessionStorage (old flow for games started this session)
+        const gameDataStr = sessionStorage.getItem('gameData');
+        if (gameDataStr) {
+          const gameData = JSON.parse(gameDataStr);
+          if (gameData.gameId === matchId) {
+            await initLive(user);
+            return;
+          }
+        }
+
+        // If nothing matched, try replay as last resort
+        await initReplay(matchId, user);
+      } else {
+        // Live mode: read from sessionStorage (existing flow)
+        await initLive(user);
+      }
+    }
+
+    // Helper to render a finished game from pre-fetched data (avoids second API call)
+    async function initWithGameData(matchId, user, game) {
+      isReplay = true;
+      gameId = matchId;
+
+      // Hide live-only controls
+      const liveControls = document.getElementById('liveControls');
+      if (liveControls) liveControls.style.display = 'none';
+      gameOver = true;
+
+      // Determine color
+      if (user.id === game.white.id) {
+        myColor = 'white';
+      } else {
+        myColor = 'black';
+      }
+
+      const opponentColor = myColor === 'white' ? 'black' : 'white';
+      const opponent = game[opponentColor] || {};
+
+      document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+      document.getElementById('playerElo').textContent = (game[myColor] && game[myColor].elo) || '1200';
+      document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
+      document.getElementById('opponentElo').textContent = opponent.elo || '1200';
+      document.getElementById('playerColorDot').className = 'player-color ' + myColor;
+      document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+
+      if (game.fen) {
+        boardState = parseFen(game.fen);
+        if (boardState) {
+          pockets = boardState.pockets;
+          activeColor = boardState.activeColor;
+        }
+      } else {
+        boardState = { board: Array.from({ length: 6 }, () => Array(6).fill(null)), activeColor: 'white', pockets: { white: [], black: [] } };
+        pockets = boardState.pockets;
+      }
+
+      if (game.moves && Array.isArray(game.moves)) {
+        moveHistory = [];
+        for (let i = 0; i < game.moves.length; i += 2) {
+          moveHistory.push({
+            white: game.moves[i] ? formatMoveInline(game.moves[i]) : null,
+            black: game.moves[i + 1] ? formatMoveInline(game.moves[i + 1]) : null
+          });
+        }
+      }
+
+      renderReplayResult(game.result);
+      showBanner('Replay', 'info');
+      renderBoard();
+      updatePockets();
+      updateTurnIndicator();
+      setupMoveLabels();
+      updateMoveHistory();
+      document.getElementById('playerClock').textContent = '—';
+      document.getElementById('opponentClock').textContent = '—';
+      document.getElementById('turnIndicator').textContent = 'Finished';
+      document.getElementById('playerClock').classList.remove('active-clock', 'low-time');
+      document.getElementById('opponentClock').classList.remove('active-clock', 'low-time');
+      showReplayOverlay(game.result);
+    }
+
+    // ==================== Replay Mode ====================
+
+    async function initReplay(matchId, user) {
+      isReplay = true;
+      gameId = matchId;
+
+      // Hide live-only controls
+      const liveControls = document.getElementById('liveControls');
+      if (liveControls) liveControls.style.display = 'none';
+
+      // Disable all interactive board
+      gameOver = true;
+
+      try {
+        const res = await fetch('/api/games/' + encodeURIComponent(matchId));
+        const data = await res.json();
+
+        if (!data.success || !data.game) {
+          showBanner('Game not found', 'error');
+          document.getElementById('playerName').textContent = user.username;
+          document.getElementById('opponentName').textContent = '—';
+          renderEmptyBoard();
+          return;
+        }
+
+        const game = data.game;
+
+        // Determine which color the current user played
+        const playerWhiteId = game.white && game.white.id;
+        if (user.id === playerWhiteId) {
+          myColor = 'white';
+        } else {
+          myColor = 'black';
+        }
+
+        const opponentColor = myColor === 'white' ? 'black' : 'white';
+        const opponent = game[opponentColor] || {};
+
+        document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+        document.getElementById('playerElo').textContent = (game[myColor] && game[myColor].elo) || '1200';
+        document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
+        document.getElementById('opponentElo').textContent = opponent.elo || '1200';
+
+        // Color dots
+        document.getElementById('playerColorDot').className = 'player-color ' + myColor;
+        document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+
+        // Parse final FEN
+        if (game.fen) {
+          boardState = parseFen(game.fen);
+          if (boardState) {
+            pockets = boardState.pockets;
+            activeColor = boardState.activeColor;
+          }
+        } else {
+          boardState = { board: Array.from({ length: 6 }, () => Array(6).fill(null)), activeColor: 'white', pockets: { white: [], black: [] } };
+          pockets = boardState.pockets;
+          activeColor = boardState.activeColor;
+        }
+
+        // Parse moves for history display
+        if (game.moves && Array.isArray(game.moves)) {
+          moveHistory = [];
+          for (let i = 0; i < game.moves.length; i += 2) {
+            const whiteMove = game.moves[i] || null;
+            const blackMove = game.moves[i + 1] || null;
+            moveHistory.push({
+              white: whiteMove ? formatMoveInline(whiteMove) : null,
+              black: blackMove ? formatMoveInline(blackMove) : null
+            });
+          }
+        }
+
+        // Show result
+        renderReplayResult(game.result);
+        showBanner('Replay', 'info');
+
+        // Render
+        renderBoard();
+        updatePockets();
+        updateTurnIndicator();
+        setupMoveLabels();
+        updateMoveHistory();
+
+        // Clocks frozen at 0:00 for replay
+        document.getElementById('playerClock').textContent = '—';
+        document.getElementById('opponentClock').textContent = '—';
+        document.getElementById('turnIndicator').textContent = 'Finished';
+
+        // Disable clocks
+        document.getElementById('playerClock').classList.remove('active-clock', 'low-time');
+        document.getElementById('opponentClock').classList.remove('active-clock', 'low-time');
+
+        // Show game over overlay
+        showReplayOverlay(game.result);
+
+      } catch (err) {
+        console.error('Failed to load replay:', err);
+        showBanner('Failed to load game', 'error');
+        document.getElementById('playerName').textContent = user.username;
+        document.getElementById('opponentName').textContent = '—';
+        renderEmptyBoard();
+      }
+    }
+
+    function renderReplayResult(serverResult) {
+      // serverResult: 'white_wins', 'black_wins', or 'draw'
+      let playerResultText = '';
+      let resultClass = '';
+
+      if (serverResult === 'draw') {
+        playerResultText = 'Draw';
+        resultClass = 'draw-text';
+      } else if (serverResult === 'white_wins') {
+        if (myColor === 'white') {
+          playerResultText = 'You Won';
+          resultClass = 'win-text';
+        } else {
+          playerResultText = 'You Lost';
+          resultClass = 'lose-text';
+        }
+      } else if (serverResult === 'black_wins') {
+        if (myColor === 'black') {
+          playerResultText = 'You Won';
+          resultClass = 'win-text';
+        } else {
+          playerResultText = 'You Lost';
+          resultClass = 'lose-text';
+        }
+      }
+
+      const banner = document.getElementById('replayResult');
+      banner.textContent = playerResultText;
+      banner.className = resultClass;
+    }
+
+    function showReplayOverlay(serverResult) {
+      const overlay = document.getElementById('gameOverOverlay');
+      const card = document.getElementById('gameOverCard');
+
+      let titleText = '';
+      let titleClass = '';
+
+      if (serverResult === 'draw') {
+        titleText = 'Draw';
+        titleClass = 'draw-text';
+      } else if (serverResult === 'white_wins') {
+        titleText = myColor === 'white' ? 'You Win!' : 'You Lose';
+        titleClass = myColor === 'white' ? 'win-text' : 'lose-text';
+      } else if (serverResult === 'black_wins') {
+        titleText = myColor === 'black' ? 'You Win!' : 'You Lose';
+        titleClass = myColor === 'black' ? 'win-text' : 'lose-text';
+      }
+
+      card.innerHTML = `
+        <h2 class="${titleClass}">${titleText}</h2>
+        <p class="elo-change">Replay — ${serverResult.replace('_', ' ')}</p>
+        <button onclick="window.location.href='lobby.html'">Back to Lobby</button>
+      `;
+      overlay.style.display = 'flex';
+    }
+
+    function showBanner(text, type) {
+      const banner = document.getElementById('replayBanner');
+      banner.style.display = 'flex';
+      const span = banner.querySelector('span:first-child');
+      span.textContent = type === 'error' ? '⚠ ' + text : '📋 ' + text;
+      span.className = '';
+    }
+
+    function renderEmptyBoard() {
+      const boardEl = document.getElementById('chessBoard');
+      boardEl.innerHTML = '';
+      for (let ri = 0; ri < 6; ri++) {
+        for (let ci = 0; ci < 6; ci++) {
+          const square = document.createElement('div');
+          square.className = 'square ' + ((ri + ci) % 2 === 0 ? 'light' : 'dark');
+          boardEl.appendChild(square);
+        }
+      }
+      document.getElementById('playerPocket').innerHTML = '';
+      document.getElementById('opponentPocket').innerHTML = '';
+      document.getElementById('moveHistory').innerHTML = '<div style="color: var(--text-secondary);">No data</div>';
+    }
+
+    function formatMoveInline(move) {
+      if (!move) return '';
+      if (move.isDrop) {
+        return '@' + (move.to || '') + (move.pieceType ? move.pieceType.toUpperCase() : '');
+      }
+      let notation = '';
+      if (move.pieceType) notation += move.pieceType.toUpperCase();
+      if (move.captured) notation += 'x';
+      notation += (move.to || '');
+      if (move.promotion) notation += '=' + move.promotion.toUpperCase();
+      return notation;
+    }
+
+    // ==================== Live Mode ====================
+
+    async function initLive(user) {
+      isReplay = false;
+
       // Get game data from session storage
       const gameDataStr = sessionStorage.getItem('gameData');
       if (!gameDataStr) {
+        // Check if we have a matchId from URL — if so, try it as reconnect to active game
+        const matchId = getMatchIdFromUrl();
+        if (matchId) {
+          initSocket();
+          // Will attempt reconnect — if game not active, we get an error
+          setupLiveSocket(user, matchId);
+          return;
+        }
         window.location.href = 'lobby.html';
         return;
       }
@@ -131,6 +475,11 @@
       gameId = gameData.gameId;
       myColor = gameData.color;
 
+      // Update browser URL to include matchId for refreshability
+      if (gameId && !getMatchIdFromUrl()) {
+        history.replaceState(null, '', 'game.html?matchId=' + encodeURIComponent(gameId));
+      }
+
       document.getElementById('playerName').textContent = user.username + ' (You)';
       document.getElementById('playerElo').textContent = user.elo;
       document.getElementById('opponentName').textContent = gameData.opponent.username;
@@ -138,7 +487,8 @@
 
       // Set color dots
       document.getElementById('playerColorDot').className = 'player-color ' + myColor;
-      document.getElementById('opponentColorDot').className = 'player-color ' + (myColor === 'white' ? 'black' : 'white');
+      const opponentColor = myColor === 'white' ? 'black' : 'white';
+      document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
 
       // Parse initial FEN
       const fen = gameData.fen;
@@ -147,9 +497,7 @@
       pockets = boardState.pockets;
 
       initSocket();
-
-      // Register this socket with the game (important for disconnect/reconnect)
-      socket.emit('reconnect_game', { gameId: gameId });
+      setupLiveSocket(user, gameId);
 
       // Render board
       renderBoard();
@@ -157,26 +505,109 @@
       updateTurnIndicator();
       setupMoveLabels();
 
-      // Socket event handlers
-      socket.on('move_result', (data) => {
-        boardState = parseFen(data.fen);
-        activeColor = data.activeColor;
-        pockets = data.pockets;
-        moveHistory.push({
-          white: data.activeColor === 'black' ? formatMove(data.move) : null,
-          black: data.activeColor === 'white' ? formatMove(data.move) : null,
-        });
+      // Dice mode
+      gameMode = gameData.mode || 'standard';
+      if (gameMode === 'dice') {
+        document.getElementById('diceDisplay').style.display = 'flex';
+        document.getElementById('skipBtn').style.display = 'inline-block';
+      }
+    }
 
-        selectedSquare = null;
-        selectedPocketPiece = null;
-        possibleMoves = [];
-        promotionPending = null;
+    function setupLiveSocket(user, gId) {
+      const effectiveGameId = gId || gameId;
+
+      // Register socket with the game
+      socket.on('connect', () => {
+        if (effectiveGameId) {
+          socket.emit('reconnect_game', { gameId: effectiveGameId });
+        }
+      });
+
+      // If socket already connected, emit immediately
+      if (socket && socket.connected && effectiveGameId) {
+        socket.emit('reconnect_game', { gameId: effectiveGameId });
+      }
+
+      // Handle reconnection: server sends full game state
+      socket.on('game_state', (data) => {
+        gameId = effectiveGameId;
+        myColor = data.color;
+        isReplay = false;
+        gameOver = false;
+
+        // Update URL
+        if (!getMatchIdFromUrl()) {
+          history.replaceState(null, '', 'game.html?matchId=' + encodeURIComponent(effectiveGameId));
+        }
+
+        const boardData = parseFen(data.fen);
+        if (boardData) {
+          boardState = boardData;
+          activeColor = boardData.activeColor;
+          pockets = boardData.pockets;
+        }
+
+        document.getElementById('playerName').textContent = user.username + ' (You)';
+        document.getElementById('playerElo').textContent = user.elo;
+        document.getElementById('opponentName').textContent = data.opponent.username;
+        document.getElementById('opponentElo').textContent = data.opponent.elo;
+
+        const opponentColor = myColor === 'white' ? 'black' : 'white';
+        document.getElementById('playerColorDot').className = 'player-color ' + myColor;
+        document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+
+        gameMode = data.mode || 'standard';
+        if (gameMode === 'dice') {
+          document.getElementById('diceDisplay').style.display = 'flex';
+          document.getElementById('skipBtn').style.display = 'inline-block';
+        }
+
+        // Show live controls
+        const liveControls = document.getElementById('liveControls');
+        if (liveControls) liveControls.style.display = '';
 
         renderBoard();
         updatePockets();
         updateTurnIndicator();
+        setupMoveLabels();
         updateMoveHistory();
-        syncServerTime(data.whiteTime, data.blackTime);
+
+        // Reset clock sync
+        lastServerWhiteTime = data.whiteTime || 120000;
+        lastServerBlackTime = data.blackTime || 120000;
+        lastTimestamp = Date.now();
+        if (clockInterval) clearInterval(clockInterval);
+        clockInterval = setInterval(tickClock, 200);
+        tickClock();
+
+        selectedSquare = null;
+        selectedPocketPiece = null;
+        possibleMoves = [];
+        moveHistory = [];
+      });
+
+      // Move result
+      socket.on('move_result', (data) => {
+        animateMove(data.move, () => {
+          boardState = parseFen(data.fen);
+          activeColor = data.activeColor;
+          pockets = data.pockets;
+          moveHistory.push({
+            white: data.activeColor === 'black' ? formatMove(data.move) : null,
+            black: data.activeColor === 'white' ? formatMove(data.move) : null,
+          });
+
+          selectedSquare = null;
+          selectedPocketPiece = null;
+          possibleMoves = [];
+          promotionPending = null;
+
+          renderBoard();
+          updatePockets();
+          updateTurnIndicator();
+          updateMoveHistory();
+          syncServerTime(data.whiteTime, data.blackTime);
+        });
 
         // Sound effects
         if (data.move.isDrop) {
@@ -192,6 +623,7 @@
         }
       });
 
+      // Game over
       socket.on('game_over', (data) => {
         gameOver = true;
         SoundManager.play('gameover');
@@ -199,9 +631,13 @@
       });
 
       socket.on('opponent_disconnected', (data) => {
-        gameOver = true;
+        // Don't end the game — the server gives the opponent 20s to reconnect.
+        // Only show a notice. The actual game_over event will fire if they don't return.
+        showToast(data.message, 'info');
+      });
+
+      socket.on('opponent_reconnected', (data) => {
         showToast(data.message, 'success');
-        showGameOver(myColor === 'white' ? 'white_wins' : 'black_wins');
       });
 
       socket.on('error', (data) => {
@@ -218,7 +654,8 @@
 
       socket.on('draw_declined', () => {
         drawOffered = false;
-        document.getElementById('drawBtn').textContent = 'Draw';
+        const btn = document.getElementById('drawBtn');
+        if (btn) btn.textContent = 'Draw';
         showToast('Draw offer declined', 'info');
       });
 
@@ -227,21 +664,15 @@
       });
 
       socket.on('draw_requested', () => {
-        // Our offer was sent, button already shows Cancel Draw
+        // Our offer was sent
       });
 
-      // Dice mode
-      gameMode = gameData.mode || 'standard';
-      if (gameMode === 'dice') {
-        document.getElementById('diceDisplay').style.display = 'flex';
-        document.getElementById('skipBtn').style.display = 'inline-block';
-      }
-
+      // Dice events
       socket.on('dice_roll', (data) => {
         currentDice = data;
         document.getElementById('diceRollNum').textContent = data.roll;
         document.getElementById('dicePieceName').textContent = data.pieceName;
-        if (activeColor === myColor) {
+        if (activeColor === myColor && !gameOver) {
           showToast(`🎲 Rolled ${data.roll} — must move a ${data.pieceName}`, 'info');
         }
       });
@@ -253,8 +684,10 @@
       });
     }
 
+    // ==================== Shared Rendering ====================
+
     function skipDiceTurn() {
-      if (gameOver || gameMode !== 'dice') return;
+      if (gameOver || gameMode !== 'dice' || isReplay) return;
       socket.emit('dice_skip', { gameId: gameId });
     }
 
@@ -264,7 +697,7 @@
 
       // Calculate last move squares
       let lastMoveFrom = null, lastMoveTo = null;
-      if (boardState.lastMove) {
+      if (boardState && boardState.lastMove) {
         lastMoveFrom = boardState.lastMove.from;
         lastMoveTo = boardState.lastMove.to;
       }
@@ -281,24 +714,26 @@
           square.dataset.row = row;
           square.dataset.col = col;
 
-          const piece = boardState.board[row][col];
+          const piece = boardState && boardState.board[row] ? boardState.board[row][col] : null;
           if (piece) {
             square.innerHTML = getPieceSymbol(piece);
           }
 
           const sqName = coordsToSquare(row, col);
 
-          // Drag support: only own pieces on your turn
-          const canDrag = !gameOver && piece && piece.color === myColor && myColor === activeColor;
+          // Drag support: only own pieces on your turn, and not in replay
+          const canDrag = !gameOver && !isReplay && piece && piece.color === myColor && myColor === activeColor;
           if (canDrag) {
             square.draggable = true;
             square.addEventListener('dragstart', (e) => onDragStart(e, row, col));
           }
-          // Drop target support for all squares
-          square.addEventListener('dragover', onDragOver);
-          square.addEventListener('dragenter', (e) => onDragEnter(e, row, col));
-          square.addEventListener('dragleave', (e) => onDragLeave(e, row, col));
-          square.addEventListener('drop', (e) => onDrop(e, row, col));
+          // Drop target support (only if not replay)
+          if (!isReplay) {
+            square.addEventListener('dragover', onDragOver);
+            square.addEventListener('dragenter', (e) => onDragEnter(e, row, col));
+            square.addEventListener('dragleave', (e) => onDragLeave(e, row, col));
+            square.addEventListener('drop', (e) => onDrop(e, row, col));
+          }
 
           // Highlight selected square
           if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
@@ -308,7 +743,7 @@
           // Mark possible moves
           if (possibleMoves.some(m => m.to === sqName)) {
             const move = possibleMoves.find(m => m.to === sqName);
-            if (boardState.board[row][col] !== null || move.isEnPassant) {
+            if (boardState && boardState.board[row][col] !== null || (move && move.isEnPassant)) {
               square.classList.add('possible-capture');
             } else {
               square.classList.add('possible-move');
@@ -321,21 +756,23 @@
           }
 
           // King in check
-          if (boardState.isCheck) {
+          if (boardState && boardState.isCheck) {
             const king = findKing(boardState, activeColor);
             if (king && king.row === row && king.col === col) {
               square.classList.add('in-check');
             }
           }
 
-          square.addEventListener('click', () => onSquareClick(row, col));
+          if (!isReplay) {
+            square.addEventListener('click', () => onSquareClick(row, col));
+          }
           boardEl.appendChild(square);
         }
       }
     }
 
     function onSquareClick(row, col) {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
       
       const sqName = coordsToSquare(row, col);
       const piece = boardState.board[row][col];
@@ -358,7 +795,6 @@
         const move = possibleMoves.find(m => m.to === sqName);
         
         if (move.promotion) {
-          // Need to choose promotion piece
           showPromotionDialog(move);
           return;
         }
@@ -369,7 +805,6 @@
 
       // Selecting one of your own pieces
       if (piece && piece.color === myColor) {
-        // Dice mode: only allow selecting the rolled piece type
         if (gameMode === 'dice' && currentDice && piece.type !== currentDice.pieceType) {
           showToast(`Must move a ${currentDice.pieceName}`, 'error');
           return;
@@ -390,6 +825,7 @@
     }
 
     function showPromotionDialog(move) {
+      if (isReplay) return;
       promotionPending = move;
       const dialog = document.getElementById('promotionDialog');
       dialog.style.display = 'flex';
@@ -419,6 +855,7 @@
     }
 
     function sendMove(from, to, promotion) {
+      if (isReplay) return;
       socket.emit('make_move', {
         gameId: gameId,
         move: {
@@ -431,6 +868,7 @@
     }
 
     function sendDropMove(toSquare) {
+      if (isReplay) return;
       socket.emit('make_move', {
         gameId: gameId,
         move: {
@@ -468,9 +906,10 @@
         }).join('');
       }
 
+      if (isReplay) return;
+
       // Add click and drag handlers for player's pocket pieces
       playerPocket.querySelectorAll('.pocket-piece').forEach(el => {
-        // Drag support
         const canDragPocket = !gameOver && myColor === activeColor;
         if (canDragPocket) {
           el.draggable = true;
@@ -487,21 +926,18 @@
 
           const type = el.dataset.type;
 
-          // Dice mode: only allow selecting pocket pieces matching the dice
           if (gameMode === 'dice' && currentDice && type !== currentDice.pieceType) {
             showToast(`Must drop a ${currentDice.pieceName}`, 'error');
             return;
           }
 
           if (selectedPocketPiece === type) {
-            // Deselect
             selectedPocketPiece = null;
             el.classList.remove('selected-drop');
             selectedSquare = null;
             possibleMoves = [];
             renderBoard();
           } else {
-            // Select this piece type
             selectedPocketPiece = type;
             selectedSquare = null;
             possibleMoves = [];
@@ -515,6 +951,11 @@
 
     function updateTurnIndicator() {
       const indicator = document.getElementById('turnIndicator');
+      if (isReplay) {
+        indicator.textContent = 'Finished';
+        indicator.classList.remove('active');
+        return;
+      }
       if (activeColor === myColor) {
         indicator.textContent = 'Your Turn';
         indicator.classList.add('active');
@@ -593,27 +1034,23 @@
     }
 
     function resignGame() {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
       if (confirm('Are you sure you want to resign?')) {
         socket.emit('resign', { gameId: gameId });
         gameOver = true;
       }
     }
 
-    // ==================== Draw Offer ====================
-
     function toggleDraw() {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
       const btn = document.getElementById('drawBtn');
 
       if (drawOffered) {
-        // Cancel our draw offer
         socket.emit('cancel_draw', { gameId: gameId });
         btn.textContent = 'Draw';
         drawOffered = false;
         showToast('Draw offer cancelled', 'info');
       } else {
-        // Request draw
         socket.emit('request_draw', { gameId: gameId });
         btn.textContent = 'Cancel Draw';
         drawOffered = true;
@@ -657,26 +1094,23 @@
       return `<img src="img/pieces/${color[0]}${type}.svg" class="piece-img" draggable="false">`;
     }
 
-    // Sync with server clock times, restart live countdown
     function syncServerTime(whiteTime, blackTime) {
       lastServerWhiteTime = whiteTime;
       lastServerBlackTime = blackTime;
       lastTimestamp = Date.now();
 
-      // Restart live tick interval
       if (clockInterval) clearInterval(clockInterval);
       clockInterval = setInterval(tickClock, 200);
 
-      // Initial render
       tickClock();
     }
 
-    // Called every 200ms to update displayed clocks
     function tickClock() {
       if (gameOver) {
         if (clockInterval) clearInterval(clockInterval);
         return;
       }
+      if (isReplay) return;
 
       const elapsed = Date.now() - lastTimestamp;
       let currentWhite = lastServerWhiteTime;
@@ -709,10 +1143,10 @@
       return min + ':' + String(sec).padStart(2, '0');
     }
 
-    // ==================== Drag & Drop Handlers ====================
+    // ==================== Drag & Drop ====================
 
     function onDragStart(e, row, col) {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
       if (myColor !== activeColor) return;
       const piece = boardState.board[row][col];
       if (!piece || piece.color !== myColor) return;
@@ -725,17 +1159,13 @@
       document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
       possibleMoves = getLegalMoves(boardState, row, col);
 
-      // Update visuals without destroying DOM (renderBoard would kill the drag)
       document.querySelectorAll('.square').forEach(s => {
         const r = parseInt(s.dataset.row);
         const c = parseInt(s.dataset.col);
-        // Remove all previous state classes
         s.classList.remove('selected', 'possible-move', 'possible-capture', 'drag-origin', 'drag-over');
-        // Mark origin
         if (r === row && c === col) {
           s.classList.add('selected', 'drag-origin');
         }
-        // Mark target moves
         const sq = coordsToSquare(r, c);
         const move = possibleMoves.find(m => m.to === sq);
         if (move) {
@@ -758,7 +1188,6 @@
 
     function onDragEnter(e, row, col) {
       e.preventDefault();
-      // Don't highlight the origin square
       if (row === dragFromRow && col === dragFromCol) return;
       const squares = document.querySelectorAll('.square');
       squares.forEach(s => {
@@ -779,7 +1208,6 @@
 
     function onDrop(e, row, col) {
       e.preventDefault();
-      // Clean up visual states
       document.querySelectorAll('.square').forEach(s => {
         s.classList.remove('drag-over', 'drag-origin');
       });
@@ -787,10 +1215,9 @@
     }
 
     function onDragEnd(row, col) {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
 
       if (dragPocketType !== null) {
-        // Dropping from pocket
         const piece = boardState.board[row][col];
         if (piece !== null) {
           dragPocketType = null;
@@ -802,7 +1229,6 @@
         sendDropMove(coordsToSquare(row, col));
         selectedPocketPiece = null;
       } else if (dragFromRow !== null) {
-        // Dragging from board
         const sqName = coordsToSquare(row, col);
         const move = possibleMoves.find(m => m.to === sqName);
         if (!move) {
@@ -830,7 +1256,7 @@
     }
 
     function onPocketDragStart(e, type) {
-      if (gameOver) return;
+      if (gameOver || isReplay) return;
       if (myColor !== activeColor) return;
       dragPocketType = type;
       dragFromRow = null;
@@ -839,7 +1265,6 @@
       selectedPocketPiece = null;
       possibleMoves = [];
       document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
-      // Clean up previous selection states without destroying DOM
       document.querySelectorAll('.square').forEach(s => {
         s.classList.remove('selected', 'possible-move', 'possible-capture', 'drag-origin', 'drag-over');
       });
@@ -869,6 +1294,104 @@
         notation += '=' + move.promotion.toUpperCase();
       }
       return notation;
+    }
+
+    // ==================== Animations ====================
+
+    function getSquareCenter(squareName) {
+      const boardEl = document.getElementById('chessBoard');
+      const squares = boardEl.querySelectorAll('.square');
+      for (const s of squares) {
+        const r = parseInt(s.dataset.row);
+        const c = parseInt(s.dataset.col);
+        if (coordsToSquare(r, c) === squareName) {
+          const rect = s.getBoundingClientRect();
+          const boardRect = boardEl.getBoundingClientRect();
+          return {
+            x: rect.left - boardRect.left + rect.width / 2,
+            y: rect.top - boardRect.top + rect.height / 2,
+            rect: rect
+          };
+        }
+      }
+      return null;
+    }
+
+    function animateMove(move, callback) {
+      const boardEl = document.getElementById('chessBoard');
+      if (!boardEl || !move) {
+        callback();
+        return;
+      }
+
+      if (move.isDrop) {
+        callback();
+        setTimeout(() => {
+          const toCoords = squareToCoords(move.to);
+          const squares = boardEl.querySelectorAll('.square');
+          for (const s of squares) {
+            if (parseInt(s.dataset.row) === toCoords.row && parseInt(s.dataset.col) === toCoords.col) {
+              const img = s.querySelector('.piece-img');
+              if (img) {
+                img.classList.add('piece-drop');
+                setTimeout(() => img.classList.remove('piece-drop'), 300);
+              }
+              break;
+            }
+          }
+        }, 20);
+        return;
+      }
+
+      const fromCenter = getSquareCenter(move.from);
+      const toCenter = getSquareCenter(move.to);
+
+      if (!fromCenter || !toCenter) {
+        callback();
+        return;
+      }
+
+      const toCoords = squareToCoords(move.to);
+      const targetPiece = boardState && boardState.board[toCoords.row] ? boardState.board[toCoords.row][toCoords.col] : null;
+      if (targetPiece) {
+        const targetSquareEl = boardEl.querySelector(`.square[data-row="${toCoords.row}"][data-col="${toCoords.col}"]`);
+        if (targetSquareEl) {
+          const targetImg = targetSquareEl.querySelector('.piece-img');
+          if (targetImg) {
+            targetImg.classList.add('piece-captured');
+            setTimeout(() => {
+              if (targetImg.parentNode) targetImg.style.opacity = '0';
+            }, 100);
+          }
+        }
+      }
+
+      const ghost = document.createElement('img');
+      const movingCoords = squareToCoords(move.from);
+      const movingPiece = boardState && boardState.board[movingCoords.row] ? boardState.board[movingCoords.row][movingCoords.col] : null;
+      if (!movingPiece) {
+        callback();
+        return;
+      }
+      ghost.src = `img/pieces/${movingPiece.color[0]}${movingPiece.type}.svg`;
+      ghost.className = 'piece-ghost';
+      ghost.style.position = 'absolute';
+      ghost.style.transform = `translate(${(fromCenter.x - 24)}px, ${(fromCenter.y - 24)}px)`;
+      ghost.style.width = '48px';
+      ghost.style.height = '48px';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.zIndex = '100';
+      ghost.style.transition = 'transform 200ms ease-out';
+      boardEl.appendChild(ghost);
+
+      requestAnimationFrame(() => {
+        ghost.style.transform = `translate(${(toCenter.x - 24)}px, ${(toCenter.y - 24)}px)`;
+      });
+
+      setTimeout(() => {
+        if (ghost.parentNode) ghost.remove();
+        callback();
+      }, 220);
     }
 
     init();

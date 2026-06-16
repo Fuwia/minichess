@@ -21,6 +21,18 @@
   </nav>
 
   <div class="lobby-container">
+    <!-- Rejoin active game (hidden unless a game is in progress) -->
+    <div class="lobby-card" id="rejoinCard" style="display: none; border: 1px solid var(--accent);">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <span style="font-size: 24px;">🔁</span>
+        <div style="text-align: left;">
+          <p style="font-weight: 700; font-size: 16px;">Game in Progress</p>
+          <p style="color: var(--text-secondary); font-size: 13px;" id="rejoinInfo"></p>
+        </div>
+      </div>
+      <a id="rejoinBtn" href="#" class="find-match-btn" style="display: block; text-decoration: none; text-align: center; background: var(--accent); color: white;">Rejoin Game</a>
+    </div>
+
     <div class="lobby-card">
       <h1>Find a Match</h1>
       <p class="subtitle">MiniChess — a 6×6 Crazyhouse Variant</p>
@@ -128,6 +140,24 @@
       socket.on('error', (data) => {
         showToast(data.message, 'error');
       });
+
+      // Check if user has an active game they can rejoin
+      checkActiveGame();
+    }
+
+    async function checkActiveGame() {
+      try {
+        const res = await fetch('/api/me/active-game');
+        const data = await res.json();
+        if (data.active) {
+          document.getElementById('rejoinCard').style.display = 'block';
+          document.getElementById('rejoinInfo').textContent =
+            'vs ' + data.opponent + ' (' + data.opponentElo + ') — as ' + data.color;
+          document.getElementById('rejoinBtn').href = 'game.html?matchId=' + encodeURIComponent(data.gameId);
+        }
+      } catch (err) {
+        // Silently ignore — if the check fails, just don't show the card
+      }
     }
 
     function toggleQueue() {

@@ -116,10 +116,167 @@ app.get('/api/me', (req, res) => {
   res.json({ user });
 });
 
+// Check if the current user has an active game (for rejoin button)
+app.get('/api/me/active-game', (req, res) => {
+  if (!req.session.userId) {
+    return res.json({ active: false });
+  }
+
+  const game = getGameByUserId(req.session.userId);
+  if (game && !game.isOver) {
+    const color = getPlayerColor(game, req.session.userId);
+    const opponentColor = color === 'white' ? 'black' : 'white';
+    const opponentId = game.players[opponentColor];
+    const opponentUser = opponentId ? auth.getUserById(opponentId) : null;
+
+    res.json({
+      active: true,
+      gameId: game.id,
+      color: color,
+      opponent: opponentUser ? opponentUser.username : 'Unknown',
+      opponentElo: opponentUser ? opponentUser.elo : 1200,
+      mode: game.mode || 'standard'
+    });
+  } else {
+    res.json({ active: false });
+  }
+});
+
 // Leaderboard
 app.get('/api/leaderboard', (req, res) => {
   const leaderboard = auth.getLeaderboard();
   res.json({ leaderboard });
+});
+
+// ==================== Game History API ====================
+
+// Get a single game by its UUID — returns current status (active/finished)
+app.get('/api/games/:gameUuid', async (req, res) => {
+  const { gameUuid } = req.params;
+
+  // 1) Check if the game is still in active memory
+  const activeGame = activeGames.get(gameUuid);
+  if (activeGame) {
+    return res.json({
+      success: true,
+      status: activeGame.isOver ? 'finished' : 'active',
+      game: {
+        gameUuid: gameUuid,
+        white: { id: activeGame.whiteId, username: activeGame.whiteUsername, elo: activeGame.whiteElo },
+        black: { id: activeGame.blackId, username: activeGame.blackUsername, elo: activeGame.blackElo },
+        result: activeGame.isOver ? (activeGame.result || 'unknown') : null,
+        fen: engine.toFen(activeGame.state),
+        moves: activeGame.state.moveHistory || [],
+        createdAt: new Date().toISOString(),
+        mode: activeGame.mode || 'standard',
+        whiteTime: activeGame.whiteTime,
+        blackTime: activeGame.blackTime,
+        activeColor: activeGame.state.activeColor
+      }
+    });
+  }
+
+  // 2) Fall back to database (finished games only)
+  try {
+    const database = await getDb();
+    const stmt = database.prepare(
+      `SELECT g.*, 
+        w.username as white_username, w.elo as white_elo,
+        b.username as black_username, b.elo as black_elo
+       FROM games g
+       JOIN users w ON g.white_id = w.id
+       JOIN users b ON g.black_id = b.id
+       WHERE g.game_uuid = ?`
+    );
+    stmt.bind([gameUuid]);
+    
+    let row = null;
+    if (stmt.step()) {
+      const cols = stmt.getColumnNames();
+      row = {};
+      const values = stmt.get();
+      cols.forEach((col, i) => { row[col] = values[i]; });
+    }
+    stmt.free();
+    
+    if (!row) {
+      return res.json({ success: false, message: 'Game not found' });
+    }
+    
+    res.json({
+      success: true,
+      status: 'finished',
+      game: {
+        gameUuid: row.game_uuid,
+        white: { id: row.white_id, username: row.white_username, elo: row.white_elo },
+        black: { id: row.black_id, username: row.black_username, elo: row.black_elo },
+        result: row.result,
+        fen: row.fen_final,
+        moves: row.moves_json ? JSON.parse(row.moves_json) : [],
+        createdAt: row.created_at
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching game:', err);
+    res.json({ success: false, message: 'Failed to fetch game' });
+  }
+});
+
+// Get match history for a specific user
+app.get('/api/users/:userId/games', async (req, res) => {
+  const { userId } = req.params;
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = parseInt(req.query.offset) || 0;
+  
+  try {
+    const database = await getDb();
+    const stmt = database.prepare(
+      `SELECT g.game_uuid, g.white_id, g.black_id, g.result, g.fen_final, g.created_at,
+        w.username as white_username, w.elo as white_elo,
+        b.username as black_username, b.elo as black_elo
+       FROM games g
+       JOIN users w ON g.white_id = w.id
+       JOIN users b ON g.black_id = b.id
+       WHERE g.white_id = ? OR g.black_id = ?
+       ORDER BY g.created_at DESC
+       LIMIT ? OFFSET ?`
+    );
+    stmt.bind([userId, userId, limit, offset]);
+    
+    const games = [];
+    while (stmt.step()) {
+      const cols = stmt.getColumnNames();
+      const row = {};
+      const values = stmt.get();
+      cols.forEach((col, i) => { row[col] = values[i]; });
+      
+      const isWhite = row.white_id === parseInt(userId);
+      let playerResult;
+      if (row.result === 'draw') {
+        playerResult = 'draw';
+      } else if (row.result === 'white_wins') {
+        playerResult = isWhite ? 'win' : 'loss';
+      } else {
+        playerResult = isWhite ? 'loss' : 'win';
+      }
+      
+      games.push({
+        gameUuid: row.game_uuid,
+        result: playerResult,
+        opponent: isWhite 
+          ? { username: row.black_username, elo: row.black_elo }
+          : { username: row.white_username, elo: row.white_elo },
+        playerColor: isWhite ? 'white' : 'black',
+        createdAt: row.created_at
+      });
+    }
+    stmt.free();
+    
+    res.json({ success: true, games });
+  } catch (err) {
+    console.error('Error fetching user games:', err);
+    res.json({ success: false, message: 'Failed to fetch games' });
+  }
 });
 
 // ==================== Friends API ====================
@@ -729,25 +886,26 @@ io.on('connection', (socket) => {
             const color = gameInfo.color;
             game.connected[color] = false;
 
-            // Notify opponent
+            // Notify opponent — give them 20s for the disconnected player to rejoin
             const opponentId = getOpponentId(game, userId);
             const opponentSockets = userSockets.get(opponentId);
             if (opponentSockets) {
               for (const sockId of opponentSockets) {
                 io.to(sockId).emit('opponent_disconnected', {
-                  message: 'Your opponent disconnected. You win!',
+                  message: 'Your opponent disconnected. Waiting 20s for them to rejoin...',
                   gameId: game.id
                 });
               }
             }
 
-            // Auto-resolve after 30 seconds if they don't reconnect
-            setTimeout(() => {
-              if (activeGames.has(game.id) && !game.connected[color]) {
+            // Store disconnect timeout on game so it can be cancelled on reconnect
+            if (!game._dcTimeout) game._dcTimeout = {};
+            game._dcTimeout[color] = setTimeout(() => {
+              if (activeGames.has(game.id) && !game.connected[color] && !game.isOver) {
                 const result = color === 'white' ? 'black_wins' : 'white_wins';
                 handleGameOver(game, result);
               }
-            }, 30000);
+            }, 20000);
           }
         }
         socketGames.delete(socket.id);
@@ -774,8 +932,25 @@ io.on('connection', (socket) => {
     game.connected[color] = true;
     socketGames.set(socket.id, { gameId, color });
     
+    // Cancel pending disconnect auto-resolve timeout
+    if (game._dcTimeout && game._dcTimeout[color]) {
+      clearTimeout(game._dcTimeout[color]);
+      delete game._dcTimeout[color];
+    }
+
     const opponentColor = color === 'white' ? 'black' : 'white';
     const opponentId = game.players[opponentColor];
+
+    // Notify the waiting opponent that the player reconnected
+    const opponentSocks = userSockets.get(opponentId);
+    if (opponentSocks) {
+      for (const sockId of opponentSocks) {
+        io.to(sockId).emit('opponent_reconnected', {
+          message: 'Your opponent reconnected!',
+          gameId: game.id
+        });
+      }
+    }
     
     const gameStatePayload = {
       fen: engine.toFen(game.state),
@@ -786,7 +961,9 @@ io.on('connection', (socket) => {
       },
       pockets: game.state.pockets,
       activeColor: game.state.activeColor,
-      mode: game.mode || 'standard'
+      mode: game.mode || 'standard',
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime
     };
 
     socket.emit('game_state', gameStatePayload);
@@ -972,7 +1149,9 @@ setInterval(() => {
 // ==================== Game Over Handler ====================
 
 function handleGameOver(game, result) {
+  if (game.isOver) return; // Already processed — prevent double-save and duplicate ELO updates
   game.isOver = true;
+  game.result = result;
   console.log(`[Game] Over: ${game.id} | Result: ${result}`);
 
   // Notify both players
@@ -1000,20 +1179,19 @@ function handleGameOver(game, result) {
     auth.updateElo(game.blackId, elos.loserNew, 'draw');
   }
 
-  // Save game to database
-  const db = auth.getDb ? null : null; // we need to get db, but auth.setDb was called
-  // We'll use getDb from db module
-  const { getDb } = require('./db');
-  getDb().then(database => {
+  // Save game to database (store UUID so clients can look it up later)
+  const { getDb: loadDb } = require('./db');
+  loadDb().then(database => {
     const stmt = database.prepare(
-      'INSERT INTO games (white_id, black_id, result, fen_final, moves_json) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO games (game_uuid, white_id, black_id, result, fen_final, moves_json) VALUES (?, ?, ?, ?, ?, ?)'
     );
     stmt.run([
+      game.id,
       game.whiteId,
       game.blackId,
       result,
       engine.toFen(game.state),
-      JSON.stringify(game.state.moveHistory)
+      JSON.stringify(game.state.moveHistory || [])
     ]);
     stmt.free();
     saveDb();

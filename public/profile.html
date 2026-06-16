@@ -68,6 +68,14 @@
       </div>
     </div>
 
+    <!-- Match History -->
+    <div class="profile-card" id="matchHistoryCard">
+      <h2>Match History</h2>
+      <div id="matchHistoryList">
+        <div class="empty-list">No games played yet. Play your first match!</div>
+      </div>
+    </div>
+
     <!-- Play with Friend link -->
     <div class="profile-card" style="text-align: center;">
       <p style="margin-bottom: 10px; color: var(--text-secondary);">Already have friends? Go to the lobby to start a private game.</p>
@@ -103,6 +111,7 @@
       document.getElementById('draws').textContent = currentUser.draws || '0';
 
       await loadFriends();
+      await loadMatchHistory();
     }
 
     function showGlobalError(msg) {
@@ -278,7 +287,79 @@
       return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#39;');
     }
 
+    async function loadMatchHistory() {
+      try {
+        const res = await fetch('/api/users/' + currentUser.id + '/games');
+        if (!res.ok) throw new Error('Server returned ' + res.status);
+        const data = await res.json();
+
+        if (!data || !data.success) {
+          document.getElementById('matchHistoryList').innerHTML =
+            '<div class="empty-list" style="color: var(--red);">⚠ Could not load match history.</div>';
+          return;
+        }
+
+        if (!data.games || data.games.length === 0) {
+          document.getElementById('matchHistoryList').innerHTML =
+            '<div class="empty-list">No games played yet. Play your first match!</div>';
+          return;
+        }
+
+        let html = '';
+        data.games.forEach((g, i) => {
+          let resultClass = '';
+          let resultLabel = '';
+          if (g.result === 'win') {
+            resultClass = 'match-win';
+            resultLabel = 'Win';
+          } else if (g.result === 'loss') {
+            resultClass = 'match-loss';
+            resultLabel = 'Loss';
+          } else {
+            resultClass = 'match-draw';
+            resultLabel = 'Draw';
+          }
+
+          html += `
+            <a href="game.html?matchId=${escapeAttr(g.gameUuid)}" class="match-row">
+              <div class="match-result ${resultClass}">${resultLabel}</div>
+              <div class="match-info">
+                <span class="match-opponent">vs ${escapeText(g.opponent.username)} (${g.opponent.elo || '1200'})</span>
+                <span class="match-color">as ${g.playerColor}</span>
+              </div>
+              <div class="match-date">${formatDate(g.createdAt)}</div>
+            </a>`;
+        });
+
+        document.getElementById('matchHistoryList').innerHTML = html;
+      } catch (err) {
+        console.error('Failed to load match history:', err);
+        document.getElementById('matchHistoryList').innerHTML =
+          '<div class="empty-list" style="color: var(--red);">⚠ Failed to load match history.</div>';
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - d;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return diffDays + 'd ago';
+        return d.toLocaleDateString();
+      } catch (e) {
+        return dateStr;
+      }
+    }
+
+    function escapeAttr(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&').replace(/"/g, '"').replace(/</g, '<').replace(/>/g, '>');
+    }
+
     init();
   </script>
 </body>
-</html>

@@ -42,6 +42,7 @@ function initTables() {
   db.run(`
     CREATE TABLE IF NOT EXISTS games (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      game_uuid TEXT UNIQUE,
       white_id INTEGER NOT NULL,
       black_id INTEGER NOT NULL,
       result TEXT NOT NULL,
@@ -52,6 +53,20 @@ function initTables() {
       FOREIGN KEY (black_id) REFERENCES users(id)
     )
   `);
+
+  // Add game_uuid column if upgrading from older schema.
+  // sql.js does not support UNIQUE in ALTER TABLE, so we add the column
+  // first and then create a unique index separately.
+  try {
+    db.run('ALTER TABLE games ADD COLUMN game_uuid TEXT');
+  } catch (e) {
+    // Column already exists — safe to ignore
+  }
+  try {
+    db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_games_uuid ON games(game_uuid)');
+  } catch (e) {
+    // Index already exists — safe to ignore
+  }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS friends (

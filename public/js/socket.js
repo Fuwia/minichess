@@ -7,11 +7,7 @@ let socket = null;
 function initSocket() {
   if (socket && socket.connected) return;
 
-  const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:3000'
-    : 'http://194.146.47.167:3000';
-
-  socket = io(socketUrl, {
+  socket = io({
     transports: ['websocket', 'polling'],
     withCredentials: true
   });

@@ -584,6 +584,32 @@ nav button.secondary:hover {
   height: 48px;
 }
 
+/* ---- Piece Animations ---- */
+
+.piece-ghost {
+  will-change: transform;
+}
+
+.piece-captured {
+  animation: captureShrink 150ms ease-in forwards;
+}
+
+@keyframes captureShrink {
+  0% { transform: scale(1); opacity: 1; }
+  60% { transform: scale(0.3); opacity: 0.3; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+.piece-drop {
+  animation: dropIn 250ms ease-out;
+}
+
+@keyframes dropIn {
+  0% { transform: scale(0) translateY(-16px); opacity: 0; }
+  60% { transform: scale(1.15) translateY(4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
 /* ---- Chess Board ---- */
 .chess-board {
   display: grid;
@@ -1219,6 +1245,97 @@ nav button.secondary:hover {
   padding: 12px;
   background: rgba(239, 68, 68, 0.1);
   border-radius: 8px;
+}
+
+/* ==================== Replay Banner ==================== */
+
+.replay-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 432px;
+  padding: 8px 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  margin: 12px auto 0;
+  font-size: 14px;
+  color: var(--gold);
+}
+
+.replay-banner .win-text { color: var(--green); font-weight: 700; }
+.replay-banner .lose-text { color: var(--red); font-weight: 700; }
+.replay-banner .draw-text { color: var(--gold); font-weight: 700; }
+
+/* ==================== Match History (Profile) ==================== */
+
+.match-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.match-row:hover {
+  background: rgba(233, 69, 96, 0.08);
+}
+
+.match-result {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.match-win {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--green);
+}
+
+.match-loss {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--red);
+}
+
+.match-draw {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--gold);
+}
+
+.match-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.match-opponent {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.match-color {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.match-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* ==================== Responsive ==================== */
