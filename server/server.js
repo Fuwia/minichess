@@ -511,6 +511,14 @@ const userSockets = new Map(); // userId -> Set of socketIds
 const matchmaker = new Matchmaker();
 const diceMatchmaker = new Matchmaker();
 
+function broadcastQueueCounts() {
+  io.emit('queue_update', {
+    standard: matchmaker.getQueueSize(),
+    dice: diceMatchmaker.getQueueSize(),
+    online: userSockets.size
+  });
+}
+
 // Private rooms (in-memory)
 const privateRooms = new Map(); // roomId -> { creator: {userId, username}, joiner: null|{userId,username}, gameId: null|string }
 
@@ -638,7 +646,17 @@ io.on('connection', (socket) => {
       userSockets.set(userId, new Set());
     }
     userSockets.get(userId).add(socket.id);
+    broadcastQueueCounts();
   }
+
+  // --- Queue count request (for SPA re-entry) ---
+  socket.on('request_queue_counts', () => {
+    socket.emit('queue_update', {
+      standard: matchmaker.getQueueSize(),
+      dice: diceMatchmaker.getQueueSize(),
+      online: userSockets.size
+    });
+  });
 
   // --- Matchmaking ---
 
@@ -665,6 +683,7 @@ io.on('connection', (socket) => {
     });
 
     socket.emit('queue_joined', { message: 'Joined queue' });
+    broadcastQueueCounts();
 
     if (match) {
       // Start a new game
@@ -701,6 +720,7 @@ io.on('connection', (socket) => {
     if (removed) {
       socket.emit('queue_left', { message: 'Left queue' });
     }
+    broadcastQueueCounts();
   });
 
   // --- Dice Matchmaking ---
@@ -727,6 +747,7 @@ io.on('connection', (socket) => {
     });
 
     socket.emit('queue_joined', { message: 'Joined dice queue' });
+    broadcastQueueCounts();
 
     if (match) {
       const game = createGame(match.player1, match.player2, 'dice');
@@ -763,6 +784,7 @@ io.on('connection', (socket) => {
     if (removed) {
       socket.emit('queue_left', { message: 'Left dice queue' });
     }
+    broadcastQueueCounts();
   });
 
   // --- Game Play ---
@@ -1031,6 +1053,7 @@ io.on('connection', (socket) => {
     // Remove from matchmaking
     if (userId) {
       matchmaker.leaveQueue(userId);
+      diceMatchmaker.leaveQueue(userId);
 
       // Remove from user sockets tracking
       const sockets = userSockets.get(userId);
@@ -1040,6 +1063,7 @@ io.on('connection', (socket) => {
           userSockets.delete(userId);
         }
       }
+      broadcastQueueCounts();
 
       // Handle game disconnect only if user has no other active sockets
       // (Prevents false disconnect trigger when navigating from lobby → game)

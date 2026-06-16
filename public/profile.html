@@ -321,9 +321,12 @@
   </div>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
+<script src="js/socket.js"></script>
 <script>
+(function() {
   let currentUser = null;
   let profileUser = null;
   let isOwnProfile = false;
@@ -560,7 +563,16 @@
   function escapeText(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#39;'); }
   function escapeAttr(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/"/g,'"').replace(/</g,'<').replace(/>/g,'>'); }
 
+  window.loadMatchHistoryPage = loadMatchHistoryPage;
+  window.uploadAvatar = uploadAvatar;
+  window.sendFriendRequestTo = sendFriendRequestTo;
+  window.addFriend = addFriend;
+  window.acceptRequest = acceptRequest;
+  window.declineRequest = declineRequest;
+  window.removeFriend = removeFriend;
+
   init();
+})();
 </script>
 </body>
 </html>

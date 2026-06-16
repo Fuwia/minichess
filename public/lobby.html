@@ -769,8 +769,8 @@
           <div class="mp-title">Find a Match</div>
           <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
         </div>
-        <div class="online-indicator">
-          <span class="online-dot"></span> Online
+        <div class="online-indicator" id="onlineIndicator">
+          <span class="online-dot"></span> Online <span id="queueCountText"></span>
         </div>
       </div>
       <div class="mp-actions">
@@ -819,6 +819,7 @@
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
 <script>
+(function() {
   // ========== State ==========
   let inQueue = false;
   let inDiceQueue = false;
@@ -900,6 +901,13 @@
     initSocket();
     setupSocketListeners();
     checkActiveGame();
+    if (socket && socket.connected) {
+      socket.emit('request_queue_counts');
+    } else {
+      socket.on('connect', function() {
+        socket.emit('request_queue_counts');
+      });
+    }
   }
 
   function setupSocketListeners() {
@@ -910,6 +918,15 @@
 
     socket.on('queue_joined', () => {
       document.getElementById('queueStatus').textContent = 'Searching for an opponent...';
+    });
+
+    socket.on('queue_update', (data) => {
+      const online = data.online || 0;
+      const queueing = (data.standard || 0) + (data.dice || 0);
+      const el = document.getElementById('queueCountText');
+      if (el) {
+        el.textContent = '— ' + online + ' online' + (queueing > 0 ? ' — ' + queueing + ' queueing' : '');
+      }
     });
 
     socket.on('error', (data) => {
@@ -1043,7 +1060,18 @@
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
   }
 
+
+  // Expose onclick handlers to window
+  window.toggleQueue = toggleQueue;
+  window.toggleDiceQueue = toggleDiceQueue;
+  window.startBotGame = startBotGame;
+  window.createRoom = createRoom;
+  window.copyRoomLink = copyRoomLink;
+  window.cancelRoom = cancelRoom;
+  window.selectBot = selectBot;
+
   init();
+})();
 </script>
 </body>
 </html>
