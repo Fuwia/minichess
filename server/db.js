@@ -37,13 +37,24 @@ function initTables() {
       draws INTEGER DEFAULT 0,
       avatar_url TEXT,
       last_avatar_change TEXT,
+      is_admin INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
 
-  // Add avatar columns if upgrading from older schema
+  // Add columns if upgrading from older schema
   try { db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT'); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN last_avatar_change TEXT'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0'); } catch (e) { }
+  
+  // Grant admin to user "Fuwia" if they exist
+  const grantStmt = db.prepare('UPDATE users SET is_admin = 1 WHERE username = ? AND is_admin = 0');
+  grantStmt.run(['Fuwia']);
+  const changes = db.getRowsModified();
+  grantStmt.free();
+  if (changes > 0) {
+    console.log('[DB] Granted admin privileges to Fuwia');
+  }
   
   db.run(`
     CREATE TABLE IF NOT EXISTS games (

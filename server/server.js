@@ -144,6 +144,14 @@ app.get('/api/me/active-game', (req, res) => {
   }
 });
 
+// Check if current user is admin
+app.get('/api/me/admin', (req, res) => {
+  if (!req.session.userId) {
+    return res.json({ isAdmin: false });
+  }
+  res.json({ isAdmin: auth.isAdmin(req.session.userId) });
+});
+
 // Leaderboard
 app.get('/api/leaderboard', (req, res) => {
   const leaderboard = auth.getLeaderboard();
@@ -430,6 +438,59 @@ app.get('/api/rooms/:roomId', (req, res) => {
   res.json({ success: true, room: { id: room.id, creator_id: room.creator_id, has_joiner: !!room.joiner_id } });
 });
 
+// ==================== Admin API ====================
+
+// Middleware to check admin access for API routes
+function requireAdmin(req, res, next) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  if (!auth.isAdmin(req.session.userId)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+// Get all users (admin only)
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const users = auth.getAllUsers();
+  res.json({ success: true, users });
+});
+
+// Delete a user (admin only)
+app.delete('/api/admin/users/:userId', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  
+  // Don't allow deleting yourself
+  if (userId === req.session.userId) {
+    return res.json({ success: false, message: 'Cannot delete your own admin account' });
+  }
+  
+  const deleted = auth.deleteUser(userId);
+  if (deleted) {
+    res.json({ success: true, message: 'User deleted' });
+  } else {
+    res.json({ success: false, message: 'User not found' });
+  }
+});
+
+// Reset a single user's stats (admin only)
+app.post('/api/admin/users/:userId/reset-stats', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const result = auth.resetUserStats(userId);
+  if (result) {
+    res.json({ success: true, message: 'User stats reset' });
+  } else {
+    res.json({ success: false, message: 'User not found' });
+  }
+});
+
+// Reset all stats (admin only)
+app.post('/api/admin/reset-stats', requireAdmin, (req, res) => {
+  auth.resetAllStats();
+  res.json({ success: true, message: 'All stats have been reset' });
+});
+
 // ==================== Game State Management ====================
 
 // Active games: gameId -> game state
@@ -449,6 +510,7 @@ const diceMatchmaker = new Matchmaker();
 const privateRooms = new Map(); // roomId -> { creator: {userId, username}, joiner: null|{userId,username}, gameId: null|string }
 
 const INITIAL_TIME = 120000; // 2 minutes per side in ms
+const INCREMENT_TIME = 5000; // 5 seconds increment per move
 
 // Dice piece mapping: 1=Pawn, 2=Knight, 3=Bishop, 4=Rook, 5=King
 const DICE_PIECES = [engine.PAWN, engine.KNIGHT, engine.BISHOP, engine.ROOK, engine.KING];
@@ -604,17 +666,19 @@ io.on('connection', (socket) => {
       const game = createGame(match.player1, match.player2);
 
       // Notify both players
+      const whiteUser = auth.getUserById(game.whiteId);
+      const blackUser = auth.getUserById(game.blackId);
       match.player1.socket.emit('match_found', {
         gameId: game.id,
         color: 'white',
-        opponent: { username: game.blackUsername, elo: game.blackElo },
+        opponent: { username: game.blackUsername, elo: game.blackElo, avatarUrl: blackUser ? blackUser.avatar_url : null },
         fen: engine.toFen(game.state)
       });
 
       match.player2.socket.emit('match_found', {
         gameId: game.id,
         color: 'black',
-        opponent: { username: game.whiteUsername, elo: game.whiteElo },
+        opponent: { username: game.whiteUsername, elo: game.whiteElo, avatarUrl: whiteUser ? whiteUser.avatar_url : null },
         fen: engine.toFen(game.state)
       });
 
@@ -784,8 +848,10 @@ io.on('connection', (socket) => {
     game.lastTickTime = now;
     if (color === 'white') {
       game.whiteTime = Math.max(0, game.whiteTime - elapsed);
+      game.whiteTime += INCREMENT_TIME;
     } else {
       game.blackTime = Math.max(0, game.blackTime - elapsed);
+      game.blackTime += INCREMENT_TIME;
     }
 
     // Apply the move
@@ -1044,12 +1110,14 @@ io.on('connection', (socket) => {
       }
     }
     
+    const opponentUserObj = opponentId ? auth.getUserById(opponentId) : null;
     const gameStatePayload = {
       fen: engine.toFen(game.state),
       color: color,
       opponent: {
         username: opponentColor === 'white' ? game.whiteUsername : game.blackUsername,
-        elo: opponentColor === 'white' ? game.whiteElo : game.blackElo
+        elo: opponentColor === 'white' ? game.whiteElo : game.blackElo,
+        avatarUrl: opponentUserObj ? opponentUserObj.avatar_url : null
       },
       pockets: game.state.pockets,
       activeColor: game.state.activeColor,

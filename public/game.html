@@ -39,6 +39,8 @@
       <div class="board-header">
         <div class="player-info">
           <span class="player-color" id="opponentColorDot"></span>
+          <img id="opponentAvatar" class="board-avatar" src="" alt="" style="display:none;">
+          <div id="opponentAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
           <span class="player-name" id="opponentName">Opponent</span>
           <span class="player-elo" id="opponentElo">1200</span>
         </div>
@@ -63,6 +65,8 @@
       <div class="board-header">
         <div class="player-info">
           <span class="player-color" id="playerColorDot"></span>
+          <img id="playerAvatar" class="board-avatar" src="" alt="" style="display:none;">
+          <div id="playerAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
           <span class="player-name" id="playerName">You</span>
           <span class="player-elo" id="playerElo">1200</span>
         </div>
@@ -484,6 +488,8 @@
       document.getElementById('playerElo').textContent = user.elo;
       document.getElementById('opponentName').textContent = gameData.opponent.username;
       document.getElementById('opponentElo').textContent = gameData.opponent.elo;
+      setBoardAvatar('player', user.avatar_url, user.username);
+      setBoardAvatar('opponent', gameData.opponent.avatarUrl, gameData.opponent.username);
 
       // Set color dots
       document.getElementById('playerColorDot').className = 'player-color ' + myColor;
@@ -551,6 +557,8 @@
         document.getElementById('playerElo').textContent = user.elo;
         document.getElementById('opponentName').textContent = data.opponent.username;
         document.getElementById('opponentElo').textContent = data.opponent.elo;
+        setBoardAvatar('player', user.avatar_url, user.username);
+        setBoardAvatar('opponent', data.opponent.avatarUrl, data.opponent.username);
 
         const opponentColor = myColor === 'white' ? 'black' : 'white';
         document.getElementById('playerColorDot').className = 'player-color ' + myColor;
@@ -590,6 +598,7 @@
       socket.on('move_result', (data) => {
         animateMove(data.move, () => {
           boardState = parseFen(data.fen);
+          boardState.isCheck = data.isCheck;
           activeColor = data.activeColor;
           pockets = data.pockets;
           moveHistory.push({
@@ -947,6 +956,21 @@
           }
         });
       });
+    }
+
+    function setBoardAvatar(prefix, avatarUrl, username) {
+      const img = document.getElementById(prefix + 'Avatar');
+      const placeholder = document.getElementById(prefix + 'AvatarPlaceholder');
+      if (!img || !placeholder) return;
+      if (avatarUrl) {
+        img.src = avatarUrl;
+        img.style.display = '';
+        placeholder.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        placeholder.style.display = '';
+        placeholder.textContent = (username || '?').charAt(0).toUpperCase();
+      }
     }
 
     function updateTurnIndicator() {

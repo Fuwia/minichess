@@ -236,6 +236,51 @@ function deactivatePrivateRoom(roomId) {
   stmt.free();
 }
 
+// ==================== Admin ====================
+
+function isAdmin(userId) {
+  const stmt = db.prepare('SELECT is_admin FROM users WHERE id = ?');
+  const row = stmt.getAsObject([userId]);
+  stmt.free();
+  return row && row.is_admin === 1;
+}
+
+function getAllUsers() {
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, is_admin FROM users ORDER BY id ASC');
+  const results = [];
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
+}
+
+function deleteUser(userId) {
+  // Remove all related data for this user
+  db.run('DELETE FROM games WHERE white_id = ? OR black_id = ?', [userId, userId]);
+  db.run('DELETE FROM friends WHERE user_id = ? OR friend_id = ?', [userId, userId]);
+  db.run('DELETE FROM private_rooms WHERE creator_id = ? OR joiner_id = ?', [userId, userId]);
+  
+  const stmt = db.prepare('DELETE FROM users WHERE id = ?');
+  stmt.run([userId]);
+  const changes = db.getRowsModified();
+  stmt.free();
+  return changes > 0;
+}
+
+function resetAllStats() {
+  db.run('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0');
+  return true;
+}
+
+function resetUserStats(userId) {
+  const stmt = db.prepare('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0 WHERE id = ?');
+  stmt.run([userId]);
+  const changes = db.getRowsModified();
+  stmt.free();
+  return changes > 0;
+}
+
 module.exports = {
   setDb,
   hashPassword,
@@ -257,5 +302,10 @@ module.exports = {
   createPrivateRoom,
   getPrivateRoom,
   joinPrivateRoom,
-  deactivatePrivateRoom
+  deactivatePrivateRoom,
+  isAdmin,
+  getAllUsers,
+  deleteUser,
+  resetAllStats,
+  resetUserStats
 };

@@ -347,7 +347,7 @@ nav button.secondary:hover {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  width: 432px;
+  width: 504px;
 }
 
 /* ---- Glassmorphism header / info bar ---- */
@@ -388,6 +388,30 @@ nav button.secondary:hover {
 .board-header .player-elo {
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.board-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  flex-shrink: 0;
+}
+
+.board-avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid var(--accent);
+  flex-shrink: 0;
 }
 
 .board-header .turn-indicator {
@@ -613,8 +637,8 @@ nav button.secondary:hover {
 /* ---- Chess Board ---- */
 .chess-board {
   display: grid;
-  grid-template-columns: repeat(6, 72px);
-  grid-template-rows: repeat(6, 72px);
+  grid-template-columns: repeat(6, 84px);
+  grid-template-rows: repeat(6, 84px);
   border: 3px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
@@ -622,14 +646,14 @@ nav button.secondary:hover {
 }
 
 .square {
-  width: 72px;
-  height: 72px;
+  width: 84px;
+  height: 84px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   position: relative;
-  font-size: 48px;
+  font-size: 56px;
   user-select: none;
   transition: background 0.15s;
 }
@@ -703,7 +727,7 @@ nav button.secondary:hover {
 
 .file-labels {
   margin-top: 2px;
-  width: 432px;
+  width: 504px;
   justify-content: space-around;
 }
 
@@ -711,7 +735,7 @@ nav button.secondary:hover {
   flex-direction: column;
   position: absolute;
   left: -20px;
-  height: 432px;
+  height: 504px;
   justify-content: space-around;
 }
 

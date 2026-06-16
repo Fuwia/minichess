@@ -76,7 +76,7 @@
         return `
           <tr>
             <td class="rank ${rankClass}">#${i + 1}</td>
-            <td><strong>${escapeHtml(p.username)}</strong></td>
+            <td><a href="profile.html?username=${encodeURIComponent(p.username)}" style="color: var(--accent); text-decoration: none; font-weight: 600;">${escapeHtml(p.username)}</a></td>
             <td>${p.elo}</td>
             <td>${p.wins}</td>
             <td>${p.losses}</td>

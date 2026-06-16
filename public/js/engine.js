@@ -248,5 +248,126 @@ function getLegalMoves(state, row, col) {
       break;
   }
 
-  return moves;
+  // Filter out moves that would leave own king in check
+  return moves.filter(m => isMoveLegalForClient(state, m));
+}
+
+/**
+ * Check if a square is attacked by pieces of attackerColor
+ */
+function isSquareAttacked(state, row, col, attackerColor) {
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      const piece = state.board[r][c];
+      if (!piece || piece.color !== attackerColor) continue;
+
+      // For each attacker piece, check if it can reach (row, col)
+      if (r === row && c === col) continue;
+
+      const dr = row - r;
+      const dc = col - c;
+
+      switch (piece.type) {
+        case PAWN: {
+          const pawnForward = attackerColor === WHITE ? 1 : -1;
+          // Pawns attack diagonally forward
+          if (dr === pawnForward && Math.abs(dc) === 1) return true;
+          break;
+        }
+        case KNIGHT:
+          if ((Math.abs(dr) === 2 && Math.abs(dc) === 1) || (Math.abs(dr) === 1 && Math.abs(dc) === 2)) return true;
+          break;
+        case KING:
+          if (Math.abs(dr) <= 1 && Math.abs(dc) <= 1) return true;
+          break;
+        case ROOK:
+          if (dr === 0 || dc === 0) {
+            // Check line of sight
+            let blocked = false;
+            let sr = r, sc = c;
+            const stepR = dr === 0 ? 0 : (dr > 0 ? 1 : -1);
+            const stepC = dc === 0 ? 0 : (dc > 0 ? 1 : -1);
+            let cr = r + stepR, cc = c + stepC;
+            while (cr !== row || cc !== col) {
+              if (state.board[cr][cc]) { blocked = true; break; }
+              cr += stepR;
+              cc += stepC;
+            }
+            if (!blocked) return true;
+          }
+          break;
+        case BISHOP:
+          if (Math.abs(dr) === Math.abs(dc) && dr !== 0) {
+            let blocked = false;
+            const stepR = dr > 0 ? 1 : -1;
+            const stepC = dc > 0 ? 1 : -1;
+            let cr = r + stepR, cc = c + stepC;
+            while (cr !== row || cc !== col) {
+              if (state.board[cr][cc]) { blocked = true; break; }
+              cr += stepR;
+              cc += stepC;
+            }
+            if (!blocked) return true;
+          }
+          break;
+        case QUEEN:
+          if (dr === 0 || dc === 0 || (Math.abs(dr) === Math.abs(dc) && dr !== 0)) {
+            let blocked = false;
+            const stepR = dr === 0 ? 0 : (dr > 0 ? 1 : -1);
+            const stepC = dc === 0 ? 0 : (dc > 0 ? 1 : -1);
+            let cr = r + stepR, cc = c + stepC;
+            while (cr !== row || cc !== col) {
+              if (state.board[cr][cc]) { blocked = true; break; }
+              cr += stepR;
+              cc += stepC;
+            }
+            if (!blocked) return true;
+          }
+          break;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Simulate a move on a board copy and check if own king is in check after
+ */
+function isMoveLegalForClient(state, move) {
+  // Deep copy board
+  const boardCopy = state.board.map(row => row.map(cell => cell ? { type: cell.type, color: cell.color } : null));
+
+  const from = squareToCoords(move.from);
+  const to = squareToCoords(move.to);
+  const movingPiece = boardCopy[from.row][from.col];
+
+  // Make the move on the copy
+  boardCopy[to.row][to.col] = movingPiece;
+  boardCopy[from.row][from.col] = null;
+
+  // Handle en passant capture
+  if (move.isEnPassant) {
+    const capturedRow = from.row;
+    boardCopy[capturedRow][to.col] = null;
+  }
+
+  // Find own king after the move
+  const ownColor = movingPiece.color;
+  let kingRow = -1, kingCol = -1;
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      const p = boardCopy[r][c];
+      if (p && p.type === KING && p.color === ownColor) {
+        kingRow = r; kingCol = c;
+        r = 6; break; // break outer
+      }
+    }
+  }
+
+  if (kingRow === -1) return true; // Shouldn't happen, but safe
+
+  // Check if opponent attacks the king
+  const opponentColor = ownColor === WHITE ? BLACK : WHITE;
+  const tempState = { board: boardCopy };
+  return !isSquareAttacked(tempState, kingRow, kingCol, opponentColor);
 }

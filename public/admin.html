@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess - Admin Panel</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .admin-container {
+      max-width: 900px;
+      margin: 100px auto 40px;
+      padding: 0 20px;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .admin-header h1 {
+      color: var(--text-primary);
+      font-size: 28px;
+    }
+    .admin-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-danger {
+      background: #e74c3c;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .btn-danger:hover { background: #c0392b; }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .admin-table th, .admin-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color, #333);
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    .admin-table th {
+      background: var(--bg-tertiary, #1a1a2e);
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .admin-table tr:hover td {
+      background: rgba(255,255,255,0.03);
+    }
+    .admin-badge {
+      display: inline-block;
+      background: #f39c12;
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .btn-delete {
+      background: transparent;
+      border: 1px solid #e74c3c;
+      color: #e74c3c;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .btn-reset {
+      background: transparent;
+      border: 1px solid #f39c12;
+      color: #f39c12;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 6px;
+      transition: all 0.2s;
+    }
+    .btn-reset:hover {
+      background: #f39c12;
+      color: #000;
+    }
+    .btn-delete:hover {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .toast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      z-index: 9999;
+      animation: toastIn 0.3s ease;
+    }
+    .toast-success { background: #27ae60; }
+    .toast-error { background: #e74c3c; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .access-denied {
+      text-align: center;
+      margin-top: 150px;
+      color: var(--text-secondary);
+    }
+    .access-denied h2 { font-size: 24px; margin-bottom: 10px; }
+    .access-denied p { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">♟ Mini<span>Chess</span></div>
+    <div class="nav-links" id="navLinks">
+      <a href="lobby.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Play</a>
+      <a href="profile.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Profile</a>
+    </div>
+  </nav>
+
+  <div class="admin-container" id="adminContainer">
+    <div id="loading" style="text-align:center;color:var(--text-secondary);">Loading...</div>
+    
+    <div id="accessDenied" style="display:none;" class="access-denied">
+      <h2>Access Denied</h2>
+      <p>You do not have admin privileges.</p>
+      <a href="lobby.html" style="color: var(--accent);">Back to Lobby</a>
+    </div>
+
+    <div id="adminContent" style="display:none;">
+      <div class="admin-header">
+        <h1>Admin Panel</h1>
+        <div class="admin-actions">
+          <button class="btn-danger" onclick="resetAllStats()">Reset All Stats</button>
+        </div>
+      </div>
+      <table class="admin-table" id="userTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Elo</th>
+            <th>W / L / D</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script>
+    let currentUserId = null;
+
+    async function init() {
+      const user = await getCurrentUser();
+      if (!user) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUserId = user.id;
+
+      try {
+        const res = await fetch('/api/me/admin');
+        const data = await res.json();
+        
+        if (!data.isAdmin) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('accessDenied').style.display = 'block';
+          return;
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('adminContent').style.display = 'block';
+        loadUsers();
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Failed to load.';
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/admin/users');
+        const data = await res.json();
+        renderUsers(data.users);
+      } catch (err) {
+        showToast('Failed to load users', 'error');
+      }
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('userTableBody');
+      tbody.innerHTML = users.map(u => {
+        const isAdmin = u.is_admin === 1;
+        const isSelf = u.id === currentUserId;
+        return `
+          <tr>
+            <td>${u.id}</td>
+            <td>${esc(u.username)}${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</td>
+            <td>${u.elo}</td>
+            <td>${u.wins} / ${u.losses} / ${u.draws}</td>
+            <td>${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
+            <td>
+              ${isSelf 
+                ? '<span style="color: var(--text-secondary); font-size: 12px;">You</span>' 
+                : `<button class="btn-reset" onclick="resetUserStats(${u.id}, '${esc(u.username)}')">Reset Stats</button>
+                   <button class="btn-delete" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>`
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function esc(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function deleteUser(userId, username) {
+      if (!confirm(`Are you sure you want to delete "${username}"? This will remove all their data permanently.`)) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/users/' + userId, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('User deleted', 'success');
+          loadUsers();
+        } else {
+          showToast(data.message || 'Failed to delete user', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to delete user', 'error');
+      }
+    }
+
+    async function resetUserStats(userId, username) {
+      if (!confirm(`Reset stats for "${username}"? Elo → 1200, W/L/D → 0.`)) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/users/' + userId + '/reset-stats', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Stats reset for ' + username, 'success');
+          loadUsers();
+        } else {
+          showToast(data.message || 'Failed to reset stats', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to reset stats', 'error');
+      }
+    }
+
+    async function resetAllStats() {
+      if (!confirm('Are you sure you want to reset ALL stats? This will set everyone\'s Elo to 1200 and wins/losses/draws to 0. This cannot be undone.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/reset-stats', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('All stats have been reset', 'success');
+          loadUsers();
+        } else {
+          showToast(data.message || 'Failed to reset stats', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to reset stats', 'error');
+      }
+    }
+
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
