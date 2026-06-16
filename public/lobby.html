@@ -3,298 +3,1047 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess - Lobby</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>MiniChess — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --gold-glow: rgba(210,153,29,0.25);
+      --red-soft: #f85149;
+      --accent-purple: #7c3aed;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --difficulty-green: #3fb950;
+      --difficulty-lime: #84cc16;
+      --difficulty-yellow: #eab308;
+      --difficulty-orange: #f97316;
+      --difficulty-red: #ef4444;
+      --difficulty-purple: #a855f7;
+      --difficulty-neon: #22d3ee;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ========== Layout Grid ========== */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      grid-template-rows: 1fr;
+      min-height: 100vh;
+      width: 100%;
+      gap: 0;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      background: #111318;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      padding: 0 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 4px;
+    }
+
+    .sidebar-logo .logo-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-logo .logo-text {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--emerald);
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-logo .logo-text span {
+      color: var(--text-bright);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 0 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      justify-content: flex-start;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 8px;
+      margin: 0;
+      line-height: 1;
+      min-height: 38px;
+      border-radius: 8px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-nav a:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-bright);
+    }
+    .sidebar-nav a.active {
+      background: rgba(63,185,80,0.12);
+      color: var(--emerald);
+      font-weight: 600;
+    }
+
+    .sidebar-nav a .nav-icon {
+      font-size: 18px;
+      width: 22px;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    .sidebar-footer {
+      padding: 16px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .sidebar-footer .user-mini {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-footer .user-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--emerald);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+      overflow: hidden;
+      object-fit: cover;
+    }
+
+    .sidebar-footer .user-avatar-img {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .sidebar-footer .user-elo-sm {
+      font-size: 11px;
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .sidebar-footer .sidebar-stats {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-footer .sidebar-stat {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 5px 4px;
+      text-align: center;
+    }
+
+    .sidebar-footer .sidebar-stat .sb-val {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .sidebar-footer .sidebar-stat .sb-lbl {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+
+    .sidebar-footer .logout-btn {
+      width: 100%;
+      padding: 7px 12px;
+      background: transparent;
+      border: 1px solid var(--border-glass);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-footer .logout-btn:hover {
+      border-color: var(--red-soft);
+      color: var(--red-soft);
+    }
+
+    /* ========== MAIN CONTENT ========== */
+    .main-content {
+      padding: 28px 32px;
+      overflow-y: auto;
+      max-height: 100vh;
+      transition: opacity 180ms ease;
+    }
+
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-track { background: transparent; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--border-glass); border-radius: 3px; }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* ===== Multiplayer Zone ===== */
+    .multiplayer-zone {
+      background: var(--glass-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 28px;
+      backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .multiplayer-zone::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 60%, rgba(63,185,80,0.04), transparent 60%),
+                  radial-gradient(circle at 70% 40%, rgba(123,58,237,0.03), transparent 60%);
+      pointer-events: none;
+    }
+
+    .multiplayer-zone .mp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .multiplayer-zone .mp-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .multiplayer-zone .mp-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .online-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(63,185,80,0.08);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--emerald);
+    }
+
+    .online-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      animation: onlinePulse 2s infinite;
+    }
+
+    @keyframes onlinePulse {
+      0%, 100% { box-shadow: 0 0 0 0 var(--emerald-glow); }
+      50% { box-shadow: 0 0 0 8px transparent; }
+    }
+
+    .mp-actions {
+      display: flex;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-play {
+      flex: 0 1 auto;
+      max-width: 480px;
+      padding: 18px 28px;
+      background: var(--emerald);
+      color: #000;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.3px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-play:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px var(--emerald-glow);
+    }
+
+    .btn-play.searching {
+      background: var(--red-soft);
+      color: #fff;
+      animation: searchingPulse 1.5s infinite;
+    }
+
+    @keyframes searchingPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(248,81,73,0.4); }
+      50% { box-shadow: 0 0 0 16px transparent; }
+    }
+
+    .btn-play-dice {
+      padding: 18px 24px;
+      background: rgba(6,182,212,0.1);
+      border: 1px solid rgba(6,182,212,0.3);
+      border-radius: 14px;
+      color: var(--accent-cyan);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-play-dice:hover {
+      background: rgba(6,182,212,0.18);
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-play-dice.searching {
+      background: rgba(248,81,73,0.1);
+      border-color: var(--red-soft);
+      color: var(--red-soft);
+      animation: searchingPulse 1.5s infinite;
+    }
+
+    .mp-queue-status {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-dim);
+      position: relative;
+      z-index: 1;
+      min-height: 20px;
+    }
+
+    /* ===== Rejoin Card ===== */
+    .rejoin-card {
+      background: rgba(63,185,80,0.06);
+      border: 1px solid rgba(63,185,80,0.2);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .rejoin-card .rejoin-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rejoin-card .rejoin-icon {
+      font-size: 28px;
+    }
+
+    .rejoin-card .rejoin-text {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .rejoin-card .rejoin-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .rejoin-card .rejoin-link {
+      padding: 10px 22px;
+      background: var(--emerald);
+      color: #000;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .rejoin-card .rejoin-link:hover {
+      box-shadow: 0 4px 16px var(--emerald-glow);
+    }
+
+    /* ===== Singleplayer / Bot Zone ===== */
+    .bot-zone {
+      margin-bottom: 28px;
+    }
+
+    .bot-zone .zone-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .bot-zone .zone-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .bot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 12px;
+    }
+
+    .bot-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bot-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .bot-card.selected {
+      border-color: var(--emerald);
+      box-shadow: 0 0 0 1px var(--emerald), 0 8px 24px rgba(63,185,80,0.15);
+    }
+
+    .bot-card .bot-diff-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .diff-toddler { background: rgba(99,102,241,0.18); color: #818cf8; }
+    .diff-novice { background: rgba(59,130,246,0.18); color: #60a5fa; }
+    .diff-apprentice { background: rgba(6,182,212,0.18); color: #22d3ee; }
+    .diff-casual { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .diff-amateur { background: rgba(132,204,22,0.18); color: #a3e635; }
+    .diff-club_player { background: rgba(234,179,8,0.18); color: #facc15; }
+    .diff-intermediate { background: rgba(249,115,22,0.18); color: #fb923c; }
+    .diff-advanced { background: rgba(239,68,68,0.18); color: #f87171; }
+    .diff-expert { background: rgba(168,85,247,0.18); color: #c084fc; }
+    .diff-master { background: rgba(34,211,238,0.18); color: #22d3ee; }
+
+    .bot-card .bot-name {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--text-bright);
+    }
+
+    .bot-card .bot-elo {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .bot-card .bot-depth {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .bot-zone .bot-play-btn {
+      margin-top: 18px;
+      max-width: 480px;
+      padding: 16px 24px;
+      background: var(--accent-purple);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: -0.2px;
+    }
+
+    .bot-zone .bot-play-btn:hover {
+      background: #8b5cf6;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+    }
+
+    /* ===== Private Room Zone ===== */
+    .friends-zone {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 28px 32px;
+    }
+
+    .friends-zone .fz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .friends-zone .fz-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .btn-create-room {
+      padding: 12px 22px;
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-create-room:hover {
+      background: #4f8ef7;
+      box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+    }
+
+    .room-share-box {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .room-share-box input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: var(--text-bright);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .room-share-box button {
+      padding: 12px 20px;
+      background: var(--surface3);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      color: var(--text-bright);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .room-share-box button:hover {
+      background: var(--emerald);
+      color: #000;
+      border-color: var(--emerald);
+    }
+
+    .room-status-text {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--emerald);
+    }
+
+    .btn-cancel-room {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border-glass);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-cancel-room:hover {
+      border-color: var(--red-soft);
+      color: var(--red-soft);
+    }
+
+
+    /* ========== Toast ========== */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 14px 22px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      animation: toastIn 0.3s ease;
+      backdrop-filter: blur(12px);
+      font-family: 'Inter', sans-serif;
+    }
+    .toast.info { background: rgba(59,130,246,0.9); }
+    .toast.success { background: rgba(34,197,94,0.9); }
+    .toast.error { background: rgba(248,81,73,0.9); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 1100px) {
+      .dashboard {
+        grid-template-columns: 200px 1fr 260px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+        flex-direction: row;
+        padding: 12px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .right-sidebar { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+      .bot-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links">
-      <a href="profile.html">Profile</a>
-      <a href="leaderboard.html">Leaderboard</a>
-      <div class="user-info">
-        <span class="username" id="navUsername">...</span>
-        <span class="elo" id="navElo">1200</span>
-        <button class="secondary" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </nav>
 
-  <div class="lobby-container">
-    <!-- Rejoin active game (hidden unless a game is in progress) -->
-    <div class="lobby-card" id="rejoinCard" style="display: none; border: 1px solid var(--accent);">
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-        <span style="font-size: 24px;">🔁</span>
-        <div style="text-align: left;">
-          <p style="font-weight: 700; font-size: 16px;">Game in Progress</p>
-          <p style="color: var(--text-secondary); font-size: 13px;" id="rejoinInfo"></p>
+<div class="dashboard">
+  <!-- ========== LEFT SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img class="logo-img" src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" class="active" id="navPlay">
+        <span class="nav-icon">▶</span> Play
+      </a>
+      <a href="leaderboard.html" id="navLeaderboard">
+        <span class="nav-icon">🏆</span> Leaderboard
+      </a>
+      <a href="profile.html" id="navProfile">
+        <span class="nav-icon">👤</span> Profile
+      </a>
+      <a href="admin.html" id="navAdmin" style="display:none;">
+        <span class="nav-icon">⚙</span> Admin
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
         </div>
       </div>
-      <a id="rejoinBtn" href="#" class="find-match-btn" style="display: block; text-decoration: none; text-align: center; background: var(--accent); color: white;">Rejoin Game</a>
-    </div>
-
-    <div class="lobby-card">
-      <h1>Find a Match</h1>
-      <p class="subtitle">MiniChess — a 6×6 Crazyhouse Variant</p>
-
-      <div class="stats">
-        <div class="stat-item">
-          <div class="stat-value" id="elo">1200</div>
-          <div class="stat-label">ELO Rating</div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win">
+          <div class="sb-val" id="sbWins">0</div>
+          <div class="sb-lbl">W</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-value" id="wins">0</div>
-          <div class="stat-label">Wins</div>
+        <div class="sidebar-stat sb-loss">
+          <div class="sb-val" id="sbLosses">0</div>
+          <div class="sb-lbl">L</div>
         </div>
-        <div class="stat-item">
-          <div class="stat-value" id="losses">0</div>
-          <div class="stat-label">Losses</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="draws">0</div>
-          <div class="stat-label">Draws</div>
+        <div class="sidebar-stat sb-draw">
+          <div class="sb-val" id="sbDraws">0</div>
+          <div class="sb-lbl">D</div>
         </div>
       </div>
-
-      <button id="findMatchBtn" class="find-match-btn" onclick="toggleQueue()">Find Match</button>
-      <div class="queue-status" id="queueStatus"></div>
-
-      <div class="leaderboard-link">
-        <a href="leaderboard.html">View Leaderboard →</a>
-      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
     </div>
+  </aside>
 
-    <!-- MiniDice -->
-    <div class="lobby-card dice-card">
-      <h1>🎲 MiniDice</h1>
-      <p class="subtitle">Roll the dice — move only the piece you roll!</p>
-      <button id="findDiceBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="toggleDiceQueue()">Find Dice Match</button>
-      <div class="queue-status" id="diceQueueStatus"></div>
-    </div>
-
-    <!-- Play vs Computer -->
-    <div class="lobby-card bot-card">
-      <h1>🤖 Play vs Computer</h1>
-      <p class="subtitle">Practice against an AI opponent</p>
-      <div class="bot-options" style="margin-bottom: 16px;">
-        <select id="botDifficulty" style="padding: 10px 14px; background: var(--bg-tertiary, #1a1a2e); color: var(--text-primary); border: 1px solid var(--border-color, #333); border-radius: 6px; font-size: 14px; width: 100%;">
-          <option value="toddler">Toddler (600 ELO)</option>
-          <option value="novice">Novice (750 ELO)</option>
-          <option value="apprentice">Apprentice (900 ELO)</option>
-          <option value="casual">Casual (1050 ELO)</option>
-          <option value="amateur" selected>Amateur (1200 ELO)</option>
-          <option value="club_player">Club Player (1350 ELO)</option>
-          <option value="intermediate">Intermediate (1500 ELO)</option>
-          <option value="advanced">Advanced (1700 ELO)</option>
-          <option value="expert">Expert (1900 ELO)</option>
-          <option value="master">Master (2100 ELO)</option>
-        </select>
-      </div>
-      <button id="botPlayBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="startBotGame()">Play vs Computer</button>
-    </div>
-
-    <!-- Play with a Friend -->
-    <div class="lobby-card private-room-card">
-      <h1>Play with a Friend</h1>
-      <p class="subtitle">Create a private room and share the link</p>
-
-      <button id="createRoomBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="createRoom()">Create Game</button>
-
-      <div id="roomSection" style="display: none; margin-top: 16px;">
-        <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 8px;">Share this link with your friend:</p>
-        <div class="copy-link-box">
-          <input type="text" id="roomLink" readonly>
-          <button id="copyBtn" onclick="copyRoomLink()">Copy</button>
+  <!-- ========== MAIN CONTENT ========== -->
+  <main class="main-content" id="mainContent">
+    <!-- Active game rejoin -->
+    <div id="rejoinCard" class="rejoin-card" style="display:none;">
+      <div class="rejoin-info">
+        <span class="rejoin-icon">🔁</span>
+        <div>
+          <div class="rejoin-text">Game in Progress</div>
+          <div class="rejoin-sub" id="rejoinInfo"></div>
         </div>
-        <div id="roomStatus" style="margin-top: 10px; font-size: 13px; color: var(--green);">Waiting for friend to join...</div>
-        <button class="btn-secondary-sm" style="margin-top: 10px;" onclick="cancelRoom()">Cancel</button>
       </div>
+      <a id="rejoinBtn" href="#" class="rejoin-link">Rejoin Game</a>
     </div>
-  </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/socket.js"></script>
-  <script>
-    let inQueue = false;
-    let inDiceQueue = false;
-    let currentUser = null;
-    let currentRoomId = null;
+    <!-- Multiplayer Zone -->
+    <div class="section-title">Multiplayer</div>
+    <section class="multiplayer-zone">
+      <div class="mp-header">
+        <div>
+          <div class="mp-title">Find a Match</div>
+          <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
+        </div>
+        <div class="online-indicator">
+          <span class="online-dot"></span> Online
+        </div>
+      </div>
+      <div class="mp-actions">
+        <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
+          Find Match
+        </button>
+        <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
+          🎲 MiniDice
+        </button>
+      </div>
+      <div class="mp-queue-status" id="queueStatus"></div>
+      <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
+    </section>
 
-    async function init() {
-      currentUser = await getCurrentUser();
-      if (!currentUser) {
-        window.location.href = 'index.html';
-        return;
-      }
+    <!-- Singleplayer / Bot Zone -->
+    <div class="section-title">Singleplayer — vs Computer</div>
+    <section class="bot-zone">
+      <div class="bot-grid" id="botGrid"></div>
+      <button id="botPlayBtn" class="bot-play-btn" onclick="startBotGame()">
+        🤖 Play vs <span id="selectedBotName">Amateur</span>
+      </button>
+    </section>
 
-      document.getElementById('navUsername').textContent = currentUser.username;
-      document.getElementById('navElo').textContent = currentUser.elo;
-      document.getElementById('elo').textContent = currentUser.elo;
-      document.getElementById('wins').textContent = currentUser.wins;
-      document.getElementById('losses').textContent = currentUser.losses;
-      document.getElementById('draws').textContent = currentUser.draws;
+    <!-- Private Room Zone -->
+    <div class="section-title">Play with a Friend</div>
+    <section class="friends-zone">
+      <div class="fz-header">
+        <div class="fz-title">Private Room</div>
+        <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()">➕ Create Room</button>
+      </div>
+      <div id="roomSection" style="display:none;">
+        <div class="room-share-box">
+          <input type="text" id="roomLink" readonly placeholder="Generating room link...">
+          <button onclick="copyRoomLink()">Copy</button>
+        </div>
+        <div class="room-status-text" id="roomStatus">Waiting for friend to join...</div>
+        <button class="btn-cancel-room" onclick="cancelRoom()">Cancel Room</button>
+      </div>
+    </section>
+  </main>
 
-      initSocket();
+</div>
 
-      // Listen for match found (both regular matchmaking and private room)
-      socket.on('match_found', (data) => {
-        sessionStorage.setItem('gameData', JSON.stringify(data));
-        window.location.href = 'game.html';
-      });
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script src="js/socket.js"></script>
+<script>
+  // ========== State ==========
+  let inQueue = false;
+  let inDiceQueue = false;
+  let currentUser = null;
+  let currentRoomId = null;
+  let selectedBot = 'amateur';
 
-      socket.on('queue_joined', () => {
-        document.getElementById('queueStatus').textContent = 'Searching for opponent...';
-      });
+  // ========== Bot Profiles ==========
+  const BOT_PROFILES = [
+    { id:'toddler',      name:'Toddler',      elo:600,  depth:1, diffClass:'diff-toddler' },
+    { id:'novice',       name:'Novice',       elo:750,  depth:1, diffClass:'diff-novice' },
+    { id:'apprentice',   name:'Apprentice',   elo:900,  depth:1, diffClass:'diff-apprentice' },
+    { id:'casual',       name:'Casual',       elo:1050, depth:2, diffClass:'diff-casual' },
+    { id:'amateur',      name:'Amateur',      elo:1200, depth:2, diffClass:'diff-amateur' },
+    { id:'club_player',  name:'Club Player',  elo:1350, depth:2, diffClass:'diff-club_player' },
+    { id:'intermediate', name:'Intermediate', elo:1500, depth:2, diffClass:'diff-intermediate' },
+    { id:'advanced',     name:'Advanced',     elo:1700, depth:3, diffClass:'diff-advanced' },
+    { id:'expert',       name:'Expert',       elo:1900, depth:3, diffClass:'diff-expert' },
+    { id:'master',       name:'Master',       elo:2100, depth:4, diffClass:'diff-master' },
+  ];
 
-      socket.on('queue_left', () => {
-        // handled in toggleQueue
-      });
+  function renderBotGrid() {
+    const grid = document.getElementById('botGrid');
+    grid.innerHTML = BOT_PROFILES.map(b => `
+      <div class="bot-card ${selectedBot === b.id ? 'selected' : ''}"
+           onclick="selectBot('${b.id}')" data-bot="${b.id}">
+        <span class="bot-diff-badge ${b.diffClass}">${b.name}</span>
+        <div class="bot-name">${b.name}</div>
+        <div class="bot-elo">${b.elo} ELO</div>
+        <div class="bot-depth">Depth ${b.depth}</div>
+      </div>
+    `).join('');
+  }
 
-      socket.on('room_cancelled', () => {
-        document.getElementById('roomSection').style.display = 'none';
-        document.getElementById('createRoomBtn').style.display = 'block';
-        currentRoomId = null;
-        showToast('Room cancelled', 'info');
-      });
+  function selectBot(id) {
+    selectedBot = id;
+    const bot = BOT_PROFILES.find(b => b.id === id);
+    document.getElementById('selectedBotName').textContent = bot ? bot.name : 'Amateur';
+    renderBotGrid();
+  }
 
-      socket.on('error', (data) => {
-        showToast(data.message, 'error');
-      });
-
-      // Check if user has an active game they can rejoin
-      checkActiveGame();
+  // ========== Init ==========
+  async function init() {
+    currentUser = await getCurrentUser();
+    if (!currentUser) {
+      window.location.href = 'index.html';
+      return;
     }
 
-    async function checkActiveGame() {
-      try {
-        const res = await fetch('/api/me/active-game');
-        const data = await res.json();
-        if (data.active) {
-          document.getElementById('rejoinCard').style.display = 'block';
-          document.getElementById('rejoinInfo').textContent =
-            'vs ' + data.opponent + ' (' + data.opponentElo + ') — as ' + data.color;
-          document.getElementById('rejoinBtn').href = 'game.html?matchId=' + encodeURIComponent(data.gameId);
+    // Sidebar
+    document.getElementById('sidebarUsername').textContent = currentUser.username;
+    document.getElementById('sidebarElo').textContent = currentUser.elo;
+
+    // Avatar: show profile picture if available, else fallback initial
+    if (currentUser.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (currentUser.username || '?').charAt(0).toUpperCase();
+    }
+
+    // Compact sidebar stats
+    document.getElementById('sbWins').textContent = currentUser.wins || 0;
+    document.getElementById('sbLosses').textContent = currentUser.losses || 0;
+    document.getElementById('sbDraws').textContent = currentUser.draws || 0;
+
+    // Check admin
+    fetch('/api/me/admin')
+      .then(r => r.json())
+      .then(d => {
+        if (d.isAdmin) {
+          document.getElementById('navAdmin').style.display = 'flex';
         }
-      } catch (err) {
-        // Silently ignore — if the check fails, just don't show the card
-      }
-    }
+      })
+      .catch(() => {});
 
-    function toggleQueue() {
-      if (!socket || !socket.connected) {
-        showToast('Connecting to server...', 'info');
-        initSocket();
-        setTimeout(() => toggleQueue(), 500);
-        return;
-      }
+    renderBotGrid();
+    initSocket();
+    setupSocketListeners();
+    checkActiveGame();
+  }
 
-      if (inQueue) {
-        socket.emit('leave_queue');
-        inQueue = false;
-        document.getElementById('findMatchBtn').textContent = 'Find Match';
-        document.getElementById('findMatchBtn').classList.remove('searching');
-        document.getElementById('queueStatus').textContent = '';
-      } else {
-        socket.emit('join_queue');
-        inQueue = true;
-        document.getElementById('findMatchBtn').textContent = 'Cancel Search';
-        document.getElementById('findMatchBtn').classList.add('searching');
-        document.getElementById('queueStatus').textContent = 'Connecting...';
-      }
-    }
+  function setupSocketListeners() {
+    socket.on('match_found', (data) => {
+      sessionStorage.setItem('gameData', JSON.stringify(data));
+      window.location.href = 'game.html';
+    });
 
-    function toggleDiceQueue() {
-      if (!socket || !socket.connected) {
-        showToast('Connecting to server...', 'info');
-        initSocket();
-        setTimeout(() => toggleDiceQueue(), 500);
-        return;
-      }
+    socket.on('queue_joined', () => {
+      document.getElementById('queueStatus').textContent = 'Searching for an opponent...';
+    });
 
-      if (inDiceQueue) {
-        socket.emit('leave_dice_queue');
-        inDiceQueue = false;
-        document.getElementById('findDiceBtn').textContent = 'Find Dice Match';
-        document.getElementById('findDiceBtn').classList.remove('searching');
-        document.getElementById('diceQueueStatus').textContent = '';
-      } else {
-        socket.emit('join_dice_queue');
-        inDiceQueue = true;
-        document.getElementById('findDiceBtn').textContent = 'Cancel Search';
-        document.getElementById('findDiceBtn').classList.add('searching');
-        document.getElementById('diceQueueStatus').textContent = 'Searching for opponent...';
-      }
-    }
+    socket.on('error', (data) => {
+      showToast(data.message, 'error');
+    });
 
-    async function createRoom() {
-      if (!socket || !socket.connected) {
-        showToast('Connecting to server...', 'info');
-        initSocket();
-        setTimeout(() => createRoom(), 500);
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/rooms/create', { method: 'POST' });
-        const data = await res.json();
-
-        if (!data.success) {
-          showToast('Failed to create room', 'error');
-          return;
-        }
-
-        currentRoomId = data.roomId;
-        const link = window.location.origin + '/join.html?room=' + data.roomId;
-        document.getElementById('roomLink').value = link;
-        document.getElementById('createRoomBtn').style.display = 'none';
-        document.getElementById('roomSection').style.display = 'block';
-        document.getElementById('roomStatus').textContent = 'Waiting for friend to join...';
-      } catch (err) {
-        showToast('Failed to create room', 'error');
-      }
-    }
-
-    function copyRoomLink() {
-      const input = document.getElementById('roomLink');
-      input.select();
-      document.execCommand('copy');
-      const btn = document.getElementById('copyBtn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-    }
-
-    function cancelRoom() {
-      if (currentRoomId && socket) {
-        socket.emit('cancel_private_room', { roomId: currentRoomId });
-      }
+    socket.on('room_cancelled', () => {
       document.getElementById('roomSection').style.display = 'none';
-      document.getElementById('createRoomBtn').style.display = 'block';
+      document.getElementById('createRoomBtn').style.display = 'inline-block';
       currentRoomId = null;
-    }
+      showToast('Room cancelled', 'info');
+    });
+  }
 
-    function startBotGame() {
-      if (!socket || !socket.connected) {
-        showToast('Connecting to server...', 'info');
-        initSocket();
-        setTimeout(() => startBotGame(), 500);
-        return;
+  async function checkActiveGame() {
+    try {
+      const res = await fetch('/api/me/active-game');
+      const data = await res.json();
+      if (data.active) {
+        const card = document.getElementById('rejoinCard');
+        card.style.display = 'flex';
+        document.getElementById('rejoinInfo').textContent =
+          'vs ' + data.opponent + ' (' + data.opponentElo + ') — as ' + data.color;
+        document.getElementById('rejoinBtn').href = 'game.html?matchId=' + encodeURIComponent(data.gameId);
       }
+    } catch (err) { /* ignore */ }
+  }
 
-      const difficulty = document.getElementById('botDifficulty').value;
-      socket.emit('start_bot_game', { difficulty });
-      showToast('Starting game vs Computer...', 'info');
+  // ========== Matchmaking ==========
+  function toggleQueue() {
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server...', 'info');
+      initSocket();
+      setTimeout(() => toggleQueue(), 500);
+      return;
     }
-
-    function showToast(message, type) {
-      const toast = document.createElement('div');
-      toast.className = 'toast ' + type;
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 4000);
+    if (inQueue) {
+      socket.emit('leave_queue');
+      inQueue = false;
+      document.getElementById('findMatchBtn').textContent = 'Find Match';
+      document.getElementById('findMatchBtn').classList.remove('searching');
+      document.getElementById('queueStatus').textContent = '';
+    } else {
+      socket.emit('join_queue');
+      inQueue = true;
+      document.getElementById('findMatchBtn').textContent = 'Cancel Search';
+      document.getElementById('findMatchBtn').classList.add('searching');
+      document.getElementById('queueStatus').textContent = 'Searching for an opponent...';
     }
+  }
 
-    init();
-  </script>
+  function toggleDiceQueue() {
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server...', 'info');
+      initSocket();
+      setTimeout(() => toggleDiceQueue(), 500);
+      return;
+    }
+    if (inDiceQueue) {
+      socket.emit('leave_dice_queue');
+      inDiceQueue = false;
+      document.getElementById('findDiceBtn').textContent = '🎲 MiniDice';
+      document.getElementById('findDiceBtn').classList.remove('searching');
+      document.getElementById('diceQueueStatus').textContent = '';
+    } else {
+      socket.emit('join_dice_queue');
+      inDiceQueue = true;
+      document.getElementById('findDiceBtn').textContent = 'Cancel';
+      document.getElementById('findDiceBtn').classList.add('searching');
+      document.getElementById('diceQueueStatus').textContent = 'Searching for dice opponent...';
+    }
+  }
+
+  // ========== Bot Game ==========
+  function startBotGame() {
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server...', 'info');
+      initSocket();
+      setTimeout(() => startBotGame(), 500);
+      return;
+    }
+    socket.emit('start_bot_game', { difficulty: selectedBot });
+    showToast('Starting game vs Computer...', 'info');
+  }
+
+  // ========== Private Rooms ==========
+  async function createRoom() {
+    if (!socket || !socket.connected) {
+      showToast('Connecting to server...', 'info');
+      initSocket();
+      setTimeout(() => createRoom(), 500);
+      return;
+    }
+    try {
+      const res = await fetch('/api/rooms/create', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) { showToast('Failed to create room', 'error'); return; }
+      currentRoomId = data.roomId;
+      const link = window.location.origin + '/join.html?room=' + data.roomId;
+      document.getElementById('roomLink').value = link;
+      document.getElementById('createRoomBtn').style.display = 'none';
+      document.getElementById('roomSection').style.display = 'block';
+      document.getElementById('roomStatus').textContent = 'Waiting for friend to join...';
+    } catch (err) {
+      showToast('Failed to create room', 'error');
+    }
+  }
+
+  function copyRoomLink() {
+    const input = document.getElementById('roomLink');
+    input.select();
+    document.execCommand('copy');
+    showToast('Link copied!', 'success');
+  }
+
+  function cancelRoom() {
+    if (currentRoomId && socket) {
+      socket.emit('cancel_private_room', { roomId: currentRoomId });
+    }
+    document.getElementById('roomSection').style.display = 'none';
+    document.getElementById('createRoomBtn').style.display = 'inline-block';
+    currentRoomId = null;
+  }
+
+  // ========== Toast ==========
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'info');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+  }
+
+  init();
+</script>
 </body>
 </html>

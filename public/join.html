@@ -3,119 +3,322 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess - Join Game</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>MiniChess — Join</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --red-soft: #f85149;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      background: #111318;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 10;
+    }
+    .sidebar-logo { padding: 0 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; }
+    .sidebar-nav { flex: 1; padding: 0 6px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 0; line-height: 1;
+      min-height: 38px; border-radius: 8px; color: var(--text-dim); text-decoration: none;
+      font-size: 15px; font-weight: 500; transition: all 0.2s ease;
+    }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text-bright); }
+    .sidebar-nav a.active { background: rgba(63,185,80,0.12); color: var(--emerald); font-weight: 600; }
+    .sidebar-nav a .nav-icon { font-size: 18px; width: 22px; text-align: center; opacity: 0.8; }
+    .sidebar-footer {
+      padding: 16px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .sidebar-footer .user-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-footer .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--emerald); color: #000;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-footer .user-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-footer .user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+    .sidebar-footer .user-elo-sm { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .sidebar-footer .sidebar-stats { display: flex; gap: 6px; margin-bottom: 10px; }
+    .sidebar-footer .sidebar-stat { flex: 1; background: var(--surface2); border-radius: 6px; padding: 5px 4px; text-align: center; }
+    .sidebar-footer .sidebar-stat .sb-val { font-size: 14px; font-weight: 700; }
+    .sidebar-footer .sidebar-stat .sb-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+    .sidebar-footer .logout-btn {
+      width: 100%; padding: 7px 12px; background: transparent; border: 1px solid var(--glass-border);
+      border-radius: 8px; color: var(--text-dim); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+      padding: 28px 32px;
+      overflow-y: auto;
+      max-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 180ms ease;
+    }
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+    .join-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 440px;
+      width: 100%;
+      backdrop-filter: blur(12px);
+    }
+    .join-card h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .join-status {
+      font-size: 15px;
+      color: var(--text-dim);
+      margin-top: 16px;
+      padding: 14px 20px;
+      background: rgba(63,185,80,0.06);
+      border-radius: 10px;
+      border: 1px solid rgba(63,185,80,0.15);
+    }
+    .join-status.loading {
+      color: var(--accent-cyan);
+      border-color: rgba(6,182,212,0.2);
+      background: rgba(6,182,212,0.05);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .join-error {
+      font-size: 14px;
+      color: var(--red-soft);
+      margin-top: 16px;
+      padding: 12px 18px;
+      background: rgba(248,81,73,0.08);
+      border: 1px solid rgba(248,81,73,0.2);
+      border-radius: 10px;
+      display: none;
+    }
+    .join-card .btn-back {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 10px 24px;
+      background: var(--emerald);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .join-card .btn-back:hover {
+      box-shadow: 0 4px 16px var(--emerald-glow);
+    }
+
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; padding: 12px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; display: none; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links">
-      <a href="lobby.html">Play</a>
-      <a href="profile.html">Profile</a>
-      <div class="user-info">
-        <span class="username" id="navUsername">...</span>
-        <span class="elo" id="navElo">1200</span>
-        <button class="secondary" onclick="logout()">Logout</button>
-      </div>
-    </div>
-  </nav>
 
-  <div class="join-container">
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
+        </div>
+      </div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
     <div class="join-card">
       <h1>Join Private Game</h1>
-      <div id="joinStatus" class="join-status">Checking room...</div>
-      <div id="joinError" class="join-error" style="display: none;"></div>
+      <div id="joinStatus" class="join-status loading">Checking room...</div>
+      <div id="joinError" class="join-error"></div>
+      <a href="lobby.html" class="btn-back" id="btnBack" style="display:none;">Back to Lobby</a>
     </div>
-  </div>
+  </main>
+</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/socket.js"></script>
-  <script>
-    let currentUser = null;
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script src="js/socket.js"></script>
+<script>
+  let currentUser = null;
 
-    async function init() {
-      currentUser = await getCurrentUser();
-      if (!currentUser) {
-        // Not logged in — redirect to login, then back here
-        sessionStorage.setItem('redirectAfterLogin', window.location.href);
-        window.location.href = 'index.html';
-        return;
-      }
-
-      document.getElementById('navUsername').textContent = currentUser.username;
-      document.getElementById('navElo').textContent = currentUser.elo;
-
-      // Parse room ID from URL
-      const params = new URLSearchParams(window.location.search);
-      const roomId = params.get('room');
-
-      if (!roomId) {
-        showError('No room ID provided. Ask your friend for the correct link.');
-        return;
-      }
-
-      initSocket();
-
-      // Wait for socket to connect, then join
-      await joinRoom(roomId);
+  async function init() {
+    currentUser = await getCurrentUser();
+    if (!currentUser) {
+      sessionStorage.setItem('redirectAfterLogin', window.location.href);
+      window.location.href = 'index.html';
+      return;
     }
 
-    async function joinRoom(roomId) {
-      const statusEl = document.getElementById('joinStatus');
+    document.getElementById('sidebarUsername').textContent = currentUser.username;
+    document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (currentUser.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (currentUser.username || '?').charAt(0).toUpperCase();
+    }
+    document.getElementById('sbWins').textContent = currentUser.wins || 0;
+    document.getElementById('sbLosses').textContent = currentUser.losses || 0;
+    document.getElementById('sbDraws').textContent = currentUser.draws || 0;
 
-      // First check if room exists via REST API
-      try {
-        const res = await fetch(`/api/rooms/${roomId}`);
-        const data = await res.json();
+    fetch('/api/me/admin').then(r => r.json()).then(d => {
+      if (d.isAdmin) {
+        const nav = document.getElementById('navProfile').parentNode;
+        const a = document.createElement('a');
+        a.href = 'admin.html';
+        a.id = 'navAdmin';
+        a.innerHTML = '<span class="nav-icon">⚙</span> Admin';
+        nav.appendChild(a);
+      }
+    }).catch(() => {});
 
-        if (!data.success) {
-          showError(data.message || 'Room not found or expired.');
-          return;
-        }
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get('room');
 
-        if (data.room && data.room.has_joiner) {
-          showError('This room already has two players.');
-          return;
-        }
-      } catch (err) {
-        showError('Failed to check room. Please try again.');
+    if (!roomId) {
+      showError('No room ID provided. Ask your friend for the correct link.');
+      return;
+    }
+
+    initSocket();
+    await joinRoom(roomId);
+  }
+
+  async function joinRoom(roomId) {
+    const statusEl = document.getElementById('joinStatus');
+
+    try {
+      const res = await fetch(`/api/rooms/${roomId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        showError(data.message || 'Room not found or expired.');
         return;
       }
 
-      statusEl.textContent = 'Joining game...';
-
-      // Ensure socket is connected
-      if (!socket || !socket.connected) {
-        await new Promise((resolve) => {
-          socket.on('connect', () => resolve());
-          if (socket.connected) resolve();
-        });
+      if (data.room && data.room.has_joiner) {
+        showError('This room already has two players.');
+        return;
       }
+    } catch (err) {
+      showError('Failed to check room. Please try again.');
+      return;
+    }
 
-      // Listen for match_found
-      socket.on('match_found', (data) => {
-        sessionStorage.setItem('gameData', JSON.stringify(data));
-        window.location.href = 'game.html';
+    statusEl.textContent = 'Joining game...';
+
+    if (!socket || !socket.connected) {
+      await new Promise((resolve) => {
+        socket.on('connect', () => resolve());
+        if (socket.connected) resolve();
       });
-
-      // Listen for errors
-      socket.on('error', (data) => {
-        showError(data.message);
-      });
-
-      // Join via socket
-      socket.emit('join_private_room', { roomId });
     }
 
-    function showError(message) {
-      document.getElementById('joinStatus').style.display = 'none';
-      const errorEl = document.getElementById('joinError');
-      errorEl.textContent = message;
-      errorEl.style.display = 'block';
-    }
+    socket.on('match_found', (data) => {
+      sessionStorage.setItem('gameData', JSON.stringify(data));
+      window.location.href = 'game.html';
+    });
 
-    init();
-  </script>
+    socket.on('error', (data) => {
+      showError(data.message);
+    });
+
+    socket.emit('join_private_room', { roomId });
+  }
+
+  function showError(message) {
+    document.getElementById('joinStatus').style.display = 'none';
+    const errorEl = document.getElementById('joinError');
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+    document.getElementById('btnBack').style.display = 'inline-block';
+  }
+
+  init();
+</script>
 </body>
 </html>

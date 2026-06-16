@@ -3,23 +3,180 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess - Leaderboard</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>MiniChess — Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --gold-glow: rgba(210,153,29,0.25);
+      --red-soft: #f85149;
+      --accent-purple: #7c3aed;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* ===== SIDEBAR (same as lobby) ===== */
+    .sidebar {
+      background: #111318;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 10;
+    }
+    .sidebar-logo { padding: 0 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; }
+    .sidebar-nav { flex: 1; padding: 0 6px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 0; line-height: 1;
+      min-height: 38px; border-radius: 8px; color: var(--text-dim); text-decoration: none;
+      font-size: 15px; font-weight: 500; transition: all 0.2s ease;
+    }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text-bright); }
+    .sidebar-nav a.active { background: rgba(63,185,80,0.12); color: var(--emerald); font-weight: 600; }
+    .sidebar-nav a .nav-icon { font-size: 18px; width: 22px; text-align: center; opacity: 0.8; }
+    .sidebar-footer { padding: 16px 16px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .sidebar-footer .user-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-footer .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--emerald); color: #000;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-footer .user-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-footer .user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+    .sidebar-footer .user-elo-sm { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .sidebar-footer .sidebar-stats { display: flex; gap: 6px; margin-bottom: 10px; }
+    .sidebar-footer .sidebar-stat { flex: 1; background: var(--surface2); border-radius: 6px; padding: 5px 4px; text-align: center; }
+    .sidebar-footer .sidebar-stat .sb-val { font-size: 14px; font-weight: 700; }
+    .sidebar-footer .sidebar-stat .sb-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+    .sidebar-footer .logout-btn {
+      width: 100%; padding: 7px 12px; background: transparent; border: 1px solid var(--glass-border);
+      border-radius: 8px; color: var(--text-dim); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content { padding: 28px 32px; overflow-y: auto; max-height: 100vh; transition: opacity 180ms ease; }
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+    .page-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; }
+
+    .lb-card {
+      background: var(--glass-surface); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 24px 28px;
+    }
+    .lb-table { width: 100%; border-collapse: collapse; }
+    .lb-table th, .lb-table td { padding: 12px 14px; text-align: left; font-size: 14px; }
+    .lb-table th {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); border-bottom: 1px solid var(--border-subtle);
+    }
+    .lb-table td { border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-dim); }
+    .lb-table tr:hover td { background: rgba(255,255,255,0.02); color: var(--text-bright); }
+
+    .lb-rank { font-weight: 700; font-size: 15px; color: var(--text-muted); }
+    .lb-rank.top-1 { color: #ffd700; font-size: 18px; }
+    .lb-rank.top-2 { color: #c0c0c0; font-size: 17px; }
+    .lb-rank.top-3 { color: #cd7f32; font-size: 16px; }
+
+    .lb-name { font-weight: 600; color: var(--text-bright); }
+    .lb-name a { color: var(--accent-cyan); text-decoration: none; transition: color 0.2s; }
+    .lb-name a:hover { color: #67e8f9; }
+
+    .lb-elo { color: var(--gold); font-weight: 700; }
+
+    .toast {
+      position: fixed; top: 24px; right: 24px; padding: 14px 22px; border-radius: 12px;
+      color: #fff; font-size: 14px; font-weight: 500; z-index: 9999;
+      animation: toastIn 0.3s ease; backdrop-filter: blur(12px);
+    }
+    .toast.info { background: rgba(59,130,246,0.9); }
+    .toast.success { background: rgba(34,197,94,0.9); }
+    .toast.error { background: rgba(248,81,73,0.9); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; padding: 12px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; display: none; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links">
-      <a href="lobby.html">Play</a>
-      <a href="profile.html">Profile</a>
-      <span id="navAuth"></span>
-    </div>
-  </nav>
 
-  <div class="leaderboard-container">
-    <div class="leaderboard-card">
-      <h1>🏆 Leaderboard</h1>
-      <table class="leaderboard-table">
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+      <a href="leaderboard.html" class="active" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
+        </div>
+      </div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="page-title">🏆 Leaderboard</div>
+    <div class="lb-card">
+      <table class="lb-table">
         <thead>
           <tr>
             <th>Rank</th>
@@ -31,68 +188,73 @@
           </tr>
         </thead>
         <tbody id="leaderboardBody">
-          <tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading...</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Loading...</td></tr>
         </tbody>
       </table>
     </div>
-  </div>
+  </main>
+</div>
 
-  <script src="js/auth.js"></script>
-  <script>
-    async function init() {
-      // Nav auth state
-      const user = await getCurrentUser();
-      const navAuth = document.getElementById('navAuth');
-      if (user) {
-        navAuth.innerHTML = `<span style="color:var(--gold);margin-right:12px;">${user.username}</span><button class="secondary" onclick="logout()">Logout</button>`;
-      } else {
-        navAuth.innerHTML = `<a href="index.html">Login</a>`;
-      }
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script>
+  async function init() {
+    const user = await getCurrentUser();
+    if (!user) { window.location.href = 'index.html'; return; }
 
-      // Fetch leaderboard
-      try {
-        const res = await fetch('/api/leaderboard');
-        const data = await res.json();
-        renderLeaderboard(data.leaderboard);
-      } catch (err) {
-        document.getElementById('leaderboardBody').innerHTML =
-          '<tr><td colspan="6" style="text-align:center;color:var(--red);">Failed to load leaderboard</td></tr>';
-      }
+    document.getElementById('sidebarUsername').textContent = user.username;
+    document.getElementById('sidebarElo').textContent = user.elo;
+    if (user.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = user.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (user.username || '?').charAt(0).toUpperCase();
     }
+    document.getElementById('sbWins').textContent = user.wins || 0;
+    document.getElementById('sbLosses').textContent = user.losses || 0;
+    document.getElementById('sbDraws').textContent = user.draws || 0;
 
-    function renderLeaderboard(leaders) {
-      const tbody = document.getElementById('leaderboardBody');
-      if (leaders.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">No players yet. Be the first!</td></tr>';
-        return;
-      }
+    fetch('/api/me/admin').then(r => r.json()).then(d => {
+      if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
+    }).catch(() => {});
 
-      tbody.innerHTML = leaders.map((p, i) => {
-        let rankClass = '';
-        if (i === 0) rankClass = 'top-1';
-        else if (i === 1) rankClass = 'top-2';
-        else if (i === 2) rankClass = 'top-3';
-
-        return `
-          <tr>
-            <td class="rank ${rankClass}">#${i + 1}</td>
-            <td><a href="profile.html?username=${encodeURIComponent(p.username)}" style="color: var(--accent); text-decoration: none; font-weight: 600;">${escapeHtml(p.username)}</a></td>
-            <td>${p.elo}</td>
-            <td>${p.wins}</td>
-            <td>${p.losses}</td>
-            <td>${p.draws}</td>
-          </tr>
-        `;
-      }).join('');
+    try {
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      renderLeaderboard(data.leaderboard);
+    } catch (err) {
+      document.getElementById('leaderboardBody').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;color:var(--red-soft);padding:24px;">Failed to load leaderboard</td></tr>';
     }
+  }
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+  function renderLeaderboard(leaders) {
+    const tbody = document.getElementById('leaderboardBody');
+    if (!leaders || leaders.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">No players yet. Be the first!</td></tr>';
+      return;
     }
+    tbody.innerHTML = leaders.map((p, i) => {
+      let rankClass = '';
+      if (i === 0) rankClass = 'top-1';
+      else if (i === 1) rankClass = 'top-2';
+      else if (i === 2) rankClass = 'top-3';
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      return `<tr>
+        <td class="lb-rank ${rankClass}">${medal} #${i + 1}</td>
+        <td class="lb-name"><a href="profile.html?username=${encodeURIComponent(p.username)}">${esc(p.username)}</a></td>
+        <td class="lb-elo">${p.elo}</td>
+        <td>${p.wins}</td>
+        <td>${p.losses}</td>
+        <td>${p.draws}</td>
+      </tr>`;
+    }).join('');
+  }
 
-    init();
-  </script>
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  init();
+</script>
 </body>
 </html>

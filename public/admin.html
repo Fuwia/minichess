@@ -3,305 +3,357 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess - Admin Panel</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>MiniChess — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    .admin-container {
-      max-width: 900px;
-      margin: 100px auto 40px;
-      padding: 0 20px;
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --gold-glow: rgba(210,153,29,0.25);
+      --red-soft: #f85149;
+      --accent-purple: #7c3aed;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
     }
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    .admin-header h1 {
-      color: var(--text-primary);
-      font-size: 28px;
-    }
-    .admin-actions {
-      display: flex;
-      gap: 12px;
-    }
-    .btn-danger {
-      background: #e74c3c;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .btn-danger:hover { background: #c0392b; }
-    .admin-table {
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 100vh;
       width: 100%;
-      border-collapse: collapse;
-      background: var(--bg-secondary);
-      border-radius: 8px;
-      overflow: hidden;
     }
-    .admin-table th, .admin-table td {
-      padding: 12px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-color, #333);
-      color: var(--text-primary);
-      font-size: 14px;
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      background: #111318;
+      border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      z-index: 10;
     }
+    .sidebar-logo { padding: 0 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; }
+    .sidebar-nav { flex: 1; padding: 0 6px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 0; line-height: 1;
+      min-height: 38px; border-radius: 8px; color: var(--text-dim); text-decoration: none;
+      font-size: 15px; font-weight: 500; transition: all 0.2s ease;
+    }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text-bright); }
+    .sidebar-nav a.active { background: rgba(63,185,80,0.12); color: var(--emerald); font-weight: 600; }
+    .sidebar-nav a .nav-icon { font-size: 18px; width: 22px; text-align: center; opacity: 0.8; }
+    .sidebar-footer {
+      padding: 16px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .sidebar-footer .user-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-footer .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--emerald); color: #000;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-footer .user-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-footer .user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+    .sidebar-footer .user-elo-sm { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .sidebar-footer .sidebar-stats { display: flex; gap: 6px; margin-bottom: 10px; }
+    .sidebar-footer .sidebar-stat { flex: 1; background: var(--surface2); border-radius: 6px; padding: 5px 4px; text-align: center; }
+    .sidebar-footer .sidebar-stat .sb-val { font-size: 14px; font-weight: 700; }
+    .sidebar-footer .sidebar-stat .sb-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+    .sidebar-footer .logout-btn {
+      width: 100%; padding: 7px 12px; background: transparent; border: 1px solid var(--glass-border);
+      border-radius: 8px; color: var(--text-dim); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content { padding: 28px 32px; overflow-y: auto; max-height: 100vh; transition: opacity 180ms ease; }
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px;
+    }
+    .page-header h1 { font-size: 24px; font-weight: 700; }
+
+    .card {
+      background: var(--glass-surface); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 24px 28px; overflow-x: auto;
+    }
+
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table th, .admin-table td { padding: 12px 14px; text-align: left; font-size: 14px; }
     .admin-table th {
-      background: var(--bg-tertiary, #1a1a2e);
-      font-weight: 600;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-muted); border-bottom: 1px solid var(--border-subtle);
     }
-    .admin-table tr:hover td {
-      background: rgba(255,255,255,0.03);
+    .admin-table td { border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-dim); }
+    .admin-table tr:hover td { background: rgba(255,255,255,0.02); color: var(--text-bright); }
+
+    .badge-admin {
+      display: inline-block; background: rgba(210,153,29,0.15); color: var(--gold);
+      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 6px;
+      border: 1px solid rgba(210,153,29,0.2);
     }
-    .admin-badge {
-      display: inline-block;
-      background: #f39c12;
-      color: #000;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-left: 6px;
+
+    .btn-danger {
+      background: transparent; border: 1px solid var(--red-soft); color: var(--red-soft);
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-family: inherit; transition: all 0.2s;
     }
-    .btn-delete {
-      background: transparent;
-      border: 1px solid #e74c3c;
-      color: #e74c3c;
-      padding: 6px 14px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
+    .btn-danger:hover { background: var(--red-soft); color: #fff; }
     .btn-reset {
-      background: transparent;
-      border: 1px solid #f39c12;
-      color: #f39c12;
-      padding: 6px 14px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      margin-right: 6px;
-      transition: all 0.2s;
+      background: transparent; border: 1px solid var(--gold); color: var(--gold);
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-family: inherit; margin-right: 6px; transition: all 0.2s;
     }
-    .btn-reset:hover {
-      background: #f39c12;
-      color: #000;
+    .btn-reset:hover { background: var(--gold); color: #000; }
+    .btn-reset-all {
+      padding: 10px 20px; background: var(--red-soft); color: #fff; border: none;
+      border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
+      font-family: inherit; transition: all 0.2s;
     }
-    .btn-delete:hover {
-      background: #e74c3c;
-      color: #fff;
-    }
-    .toast {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 14px;
-      z-index: 9999;
-      animation: toastIn 0.3s ease;
-    }
-    .toast-success { background: #27ae60; }
-    .toast-error { background: #e74c3c; }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
+    .btn-reset-all:hover { background: #ff6b6b; box-shadow: 0 4px 12px rgba(248,81,73,0.3); }
+
     .access-denied {
-      text-align: center;
-      margin-top: 150px;
-      color: var(--text-secondary);
+      text-align: center; padding: 80px 20px; color: var(--text-dim);
     }
-    .access-denied h2 { font-size: 24px; margin-bottom: 10px; }
-    .access-denied p { font-size: 16px; }
+    .access-denied h2 { font-size: 24px; margin-bottom: 10px; color: var(--red-soft); }
+    .access-denied a { color: var(--accent-cyan); text-decoration: none; font-weight: 600; }
+    .access-denied a:hover { color: #67e8f9; }
+
+    .toast {
+      position: fixed; top: 24px; right: 24px; padding: 14px 22px; border-radius: 12px;
+      color: #fff; font-size: 14px; font-weight: 500; z-index: 9999;
+      animation: toastIn 0.3s ease; backdrop-filter: blur(12px);
+    }
+    .toast-success { background: rgba(34,197,94,0.9); }
+    .toast-error { background: rgba(248,81,73,0.9); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; padding: 12px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; display: none; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+    }
   </style>
 </head>
 <body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links" id="navLinks">
-      <a href="lobby.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Play</a>
-      <a href="profile.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Profile</a>
-    </div>
-  </nav>
 
-  <div class="admin-container" id="adminContainer">
-    <div id="loading" style="text-align:center;color:var(--text-secondary);">Loading...</div>
-    
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="admin.html" id="navAdmin"><span class="nav-icon">⚙</span> Admin</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
+        </div>
+      </div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div id="loading" style="text-align:center;color:var(--text-dim);padding:60px;">Loading...</div>
+
     <div id="accessDenied" style="display:none;" class="access-denied">
       <h2>Access Denied</h2>
       <p>You do not have admin privileges.</p>
-      <a href="lobby.html" style="color: var(--accent);">Back to Lobby</a>
+      <br>
+      <a href="lobby.html">Back to Lobby</a>
     </div>
 
     <div id="adminContent" style="display:none;">
-      <div class="admin-header">
-        <h1>Admin Panel</h1>
-        <div class="admin-actions">
-          <button class="btn-danger" onclick="resetAllStats()">Reset All Stats</button>
-        </div>
+      <div class="page-header">
+        <h1>⚙ Admin Panel</h1>
+        <button class="btn-reset-all" onclick="resetAllStats()">Reset All Stats</button>
       </div>
-      <table class="admin-table" id="userTable">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Elo</th>
-            <th>W / L / D</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
+      <div class="card">
+        <table class="admin-table" id="userTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Elo</th>
+              <th>W / L / D</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </main>
+</div>
 
-  <script src="js/auth.js"></script>
-  <script>
-    let currentUserId = null;
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script>
+  let currentUserId = null;
+  let currentUser = null;
 
-    async function init() {
-      const user = await getCurrentUser();
-      if (!user) {
-        window.location.href = 'index.html';
-        return;
-      }
-      currentUserId = user.id;
+  async function init() {
+    currentUser = await getCurrentUser();
+    if (!currentUser) { window.location.href = 'index.html'; return; }
+    currentUserId = currentUser.id;
 
-      try {
-        const res = await fetch('/api/me/admin');
-        const data = await res.json();
-        
-        if (!data.isAdmin) {
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('accessDenied').style.display = 'block';
-          return;
-        }
+    document.getElementById('sidebarUsername').textContent = currentUser.username;
+    document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (currentUser.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (currentUser.username || '?').charAt(0).toUpperCase();
+    }
+    document.getElementById('sbWins').textContent = currentUser.wins || 0;
+    document.getElementById('sbLosses').textContent = currentUser.losses || 0;
+    document.getElementById('sbDraws').textContent = currentUser.draws || 0;
 
+    // Set active nav
+    document.getElementById('navAdmin').classList.add('active');
+
+    try {
+      const res = await fetch('/api/me/admin');
+      const data = await res.json();
+
+      if (!data.isAdmin) {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('adminContent').style.display = 'block';
-        loadUsers();
-      } catch (err) {
-        document.getElementById('loading').textContent = 'Failed to load.';
-      }
-    }
-
-    async function loadUsers() {
-      try {
-        const res = await fetch('/api/admin/users');
-        const data = await res.json();
-        renderUsers(data.users);
-      } catch (err) {
-        showToast('Failed to load users', 'error');
-      }
-    }
-
-    function renderUsers(users) {
-      const tbody = document.getElementById('userTableBody');
-      tbody.innerHTML = users.map(u => {
-        const isAdmin = u.is_admin === 1;
-        const isSelf = u.id === currentUserId;
-        return `
-          <tr>
-            <td>${u.id}</td>
-            <td>${esc(u.username)}${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</td>
-            <td>${u.elo}</td>
-            <td>${u.wins} / ${u.losses} / ${u.draws}</td>
-            <td>${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
-            <td>
-              ${isSelf 
-                ? '<span style="color: var(--text-secondary); font-size: 12px;">You</span>' 
-                : `<button class="btn-reset" onclick="resetUserStats(${u.id}, '${esc(u.username)}')">Reset Stats</button>
-                   <button class="btn-delete" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>`
-              }
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function esc(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    async function deleteUser(userId, username) {
-      if (!confirm(`Are you sure you want to delete "${username}"? This will remove all their data permanently.`)) {
+        document.getElementById('accessDenied').style.display = 'block';
         return;
       }
-      
-      try {
-        const res = await fetch('/api/admin/users/' + userId, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          showToast('User deleted', 'success');
-          loadUsers();
-        } else {
-          showToast(data.message || 'Failed to delete user', 'error');
-        }
-      } catch (err) {
-        showToast('Failed to delete user', 'error');
-      }
-    }
 
-    async function resetUserStats(userId, username) {
-      if (!confirm(`Reset stats for "${username}"? Elo → 1200, W/L/D → 0.`)) {
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/admin/users/' + userId + '/reset-stats', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Stats reset for ' + username, 'success');
-          loadUsers();
-        } else {
-          showToast(data.message || 'Failed to reset stats', 'error');
-        }
-      } catch (err) {
-        showToast('Failed to reset stats', 'error');
-      }
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('adminContent').style.display = 'block';
+      loadUsers();
+    } catch (err) {
+      document.getElementById('loading').textContent = 'Failed to load.';
     }
+  }
 
-    async function resetAllStats() {
-      if (!confirm('Are you sure you want to reset ALL stats? This will set everyone\'s Elo to 1200 and wins/losses/draws to 0. This cannot be undone.')) {
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/admin/reset-stats', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          showToast('All stats have been reset', 'success');
-          loadUsers();
-        } else {
-          showToast(data.message || 'Failed to reset stats', 'error');
-        }
-      } catch (err) {
-        showToast('Failed to reset stats', 'error');
-      }
+  async function loadUsers() {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      renderUsers(data.users);
+    } catch (err) {
+      showToast('Failed to load users', 'error');
     }
+  }
 
-    function showToast(message, type) {
-      const toast = document.createElement('div');
-      toast.className = 'toast toast-' + type;
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
-    }
+  function renderUsers(users) {
+    const tbody = document.getElementById('userTableBody');
+    tbody.innerHTML = users.map(u => {
+      const isAdmin = u.is_admin === 1;
+      const isSelf = u.id === currentUserId;
+      return `<tr>
+        <td>${u.id}</td>
+        <td>${esc(u.username)}${isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}</td>
+        <td style="color:var(--gold);font-weight:700;">${u.elo}</td>
+        <td>${u.wins} / ${u.losses} / ${u.draws}</td>
+        <td>${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
+        <td>${isSelf
+          ? '<span style="color:var(--text-muted);font-size:12px;">You</span>'
+          : `<button class="btn-reset" onclick="resetUserStats(${u.id}, '${esc(u.username)}')">Reset</button>
+             <button class="btn-danger" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>`}</td>
+      </tr>`;
+    }).join('');
+  }
 
-    init();
-  </script>
+  function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function deleteUser(userId, username) {
+    if (!confirm(`Are you sure you want to delete "${username}"? This will remove all their data permanently.`)) return;
+    try {
+      const res = await fetch('/api/admin/users/' + userId, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { showToast('User deleted', 'success'); loadUsers(); }
+      else { showToast(data.message || 'Failed to delete user', 'error'); }
+    } catch (err) { showToast('Failed to delete user', 'error'); }
+  }
+
+  async function resetUserStats(userId, username) {
+    if (!confirm(`Reset stats for "${username}"? Elo → 1200, W/L/D → 0.`)) return;
+    try {
+      const res = await fetch('/api/admin/users/' + userId + '/reset-stats', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast('Stats reset for ' + username, 'success'); loadUsers(); }
+      else { showToast(data.message || 'Failed to reset stats', 'error'); }
+    } catch (err) { showToast('Failed to reset stats', 'error'); }
+  }
+
+  async function resetAllStats() {
+    if (!confirm('Are you sure you want to reset ALL stats? This will set everyone\'s Elo to 1200 and wins/losses/draws to 0. This cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/admin/reset-stats', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast('All stats have been reset', 'success'); loadUsers(); }
+      else { showToast(data.message || 'Failed to reset stats', 'error'); }
+    } catch (err) { showToast('Failed to reset stats', 'error'); }
+  }
+
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+  }
+
+  init();
+</script>
 </body>
 </html>

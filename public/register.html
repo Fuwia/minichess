@@ -3,67 +3,212 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess - Register</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>MiniChess — Register</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --red-soft: #f85149;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    .auth-wrapper {
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+    }
+
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .auth-logo img {
+      max-height: 150px;
+      object-fit: contain;
+    }
+
+    .auth-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 32px;
+      backdrop-filter: blur(12px);
+    }
+    .auth-card h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .auth-card .subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    .error-msg {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid rgba(248,81,73,0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--red-soft);
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: none;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      color: var(--text-bright);
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--emerald);
+      box-shadow: 0 0 0 3px rgba(63,185,80,0.12);
+    }
+    .form-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px 24px;
+      background: var(--emerald);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.2px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .btn-submit:hover {
+      box-shadow: 0 4px 20px var(--emerald-glow);
+      transform: translateY(-1px);
+    }
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .switch-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+    .switch-link a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .switch-link a:hover {
+      color: #67e8f9;
+    }
+  </style>
 </head>
 <body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links">
-      <a href="leaderboard.html">Leaderboard</a>
-    </div>
-  </nav>
 
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1>Create Account</h1>
-      <p class="subtitle">Join the MiniChess community</p>
-      <div id="error" class="error-msg" style="display: none;"></div>
-      <form id="registerForm">
-        <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" name="username" placeholder="Choose a username" required minlength="3" maxlength="20">
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Choose a password" required minlength="4">
-        </div>
-        <div class="form-group">
-          <label for="confirmPassword">Confirm Password</label>
-          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="4">
-        </div>
-        <button type="submit" class="btn-primary">Register</button>
-      </form>
-      <p class="switch-link">Already have an account? <a href="index.html">Log In</a></p>
-    </div>
+<div class="auth-wrapper">
+  <div class="auth-logo">
+    <img src="img/logo.png" alt="MiniChess" style="width:100%;" onerror="this.style.display='none'">
   </div>
 
-  <script src="js/auth.js"></script>
-  <script>
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errorEl = document.getElementById('error');
-      errorEl.style.display = 'none';
+  <div class="auth-card">
+    <h1>Create Account</h1>
+    <p class="subtitle">Join the MiniChess community</p>
+    <div id="error" class="error-msg"></div>
+    <form id="registerForm">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Choose a username" required minlength="3" maxlength="20" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Choose a password" required minlength="4" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="4" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn-submit">Register</button>
+    </form>
+    <p class="switch-link">Already have an account? <a href="index.html">Log In</a></p>
+  </div>
+</div>
 
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirmPassword').value;
+<script src="js/auth.js"></script>
+<script>
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('error');
+    errorEl.style.display = 'none';
 
-      if (password !== confirmPassword) {
-        errorEl.textContent = 'Passwords do not match';
-        errorEl.style.display = 'block';
-        return;
-      }
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
-      const result = await register(username, password);
+    if (password !== confirmPassword) {
+      errorEl.textContent = 'Passwords do not match';
+      errorEl.style.display = 'block';
+      return;
+    }
 
-      if (result.success) {
-        window.location.href = 'lobby.html';
-      } else {
-        errorEl.textContent = result.message;
-        errorEl.style.display = 'block';
-      }
-    });
-  </script>
+    const result = await register(username, password);
+
+    if (result.success) {
+      window.location.href = 'lobby.html';
+    } else {
+      errorEl.textContent = result.message;
+      errorEl.style.display = 'block';
+    }
+  });
+</script>
 </body>
 </html>
