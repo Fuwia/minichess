@@ -3,6 +3,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
 const { getDb, saveDb } = require('./db');
@@ -148,6 +150,83 @@ app.get('/api/leaderboard', (req, res) => {
   res.json({ leaderboard });
 });
 
+// ==================== Avatar Upload ====================
+
+const avatarStorage = multer.diskStorage({
+  destination: path.join(__dirname, '..', 'public', 'img', 'avatars'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, 'user_' + req.session.userId + '_' + Date.now() + ext);
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, allowed.includes(ext));
+  }
+});
+
+app.post('/api/me/avatar', requireAuth, avatarUpload.single('avatar'), (req, res) => {
+  if (!req.file) {
+    return res.json({ success: false, message: 'No file uploaded or invalid type.' });
+  }
+
+  const user = auth.getUserById(req.session.userId);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+
+  // Check 30-second cooldown
+  if (user.last_avatar_change) {
+    const lastChange = new Date(user.last_avatar_change + 'Z').getTime();
+    const now = Date.now();
+    if (now - lastChange < 30000) {
+      // Delete the just-uploaded file since it won't be used
+      fs.unlink(req.file.path, () => {});
+      const remaining = Math.ceil((30000 - (now - lastChange)) / 1000);
+      return res.json({ success: false, message: 'Please wait ' + remaining + 's before changing avatar again.' });
+    }
+  }
+
+  // Delete old avatar file if it exists
+  if (user.avatar_url) {
+    const oldPath = path.join(__dirname, '..', 'public', user.avatar_url);
+    fs.unlink(oldPath, () => {});
+  }
+
+  // Save relative path to DB
+  const avatarUrl = 'img/avatars/' + req.file.filename;
+  auth.updateAvatar(req.session.userId, avatarUrl);
+
+  res.json({ success: true, avatarUrl: avatarUrl });
+});
+
+// Get a user's profile by username (public)
+app.get('/api/users/by-username/:username', (req, res) => {
+  const user = auth.getUserByUsername(req.params.username);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+  // Don't expose password_hash
+  res.json({
+    success: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      elo: user.elo,
+      wins: user.wins,
+      losses: user.losses,
+      draws: user.draws,
+      createdAt: user.created_at,
+      avatarUrl: user.avatar_url || null
+    }
+  });
+});
+
 // ==================== Game History API ====================
 
 // Get a single game by its UUID — returns current status (active/finished)
@@ -222,14 +301,27 @@ app.get('/api/games/:gameUuid', async (req, res) => {
   }
 });
 
-// Get match history for a specific user
+// Get match history for a specific user (with pagination)
 app.get('/api/users/:userId/games', async (req, res) => {
   const { userId } = req.params;
-  const limit = parseInt(req.query.limit) || 50;
+  const limit = parseInt(req.query.limit) || 10;
   const offset = parseInt(req.query.offset) || 0;
   
   try {
     const database = await getDb();
+    
+    // Get total count first
+    const countStmt = database.prepare(
+      'SELECT COUNT(*) as total FROM games WHERE white_id = ? OR black_id = ?'
+    );
+    countStmt.bind([userId, userId]);
+    let total = 0;
+    if (countStmt.step()) {
+      total = countStmt.getAsObject().total;
+    }
+    countStmt.free();
+    
+    // Get paginated games
     const stmt = database.prepare(
       `SELECT g.game_uuid, g.white_id, g.black_id, g.result, g.fen_final, g.created_at,
         w.username as white_username, w.elo as white_elo,
@@ -272,7 +364,7 @@ app.get('/api/users/:userId/games', async (req, res) => {
     }
     stmt.free();
     
-    res.json({ success: true, games });
+    res.json({ success: true, games, total });
   } catch (err) {
     console.error('Error fetching user games:', err);
     res.json({ success: false, message: 'Failed to fetch games' });
@@ -1195,6 +1287,23 @@ function handleGameOver(game, result) {
     ]);
     stmt.free();
     saveDb();
+
+    // Auto-cleanup: keep only the last 300 games per player (30 pages × 10/page)
+    try {
+      database.run(`
+        DELETE FROM games WHERE id IN (
+          SELECT id FROM (SELECT id FROM games WHERE white_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 300)
+        )
+      `, [game.whiteId]);
+      database.run(`
+        DELETE FROM games WHERE id IN (
+          SELECT id FROM (SELECT id FROM games WHERE black_id = ? ORDER BY created_at DESC LIMIT -1 OFFSET 300)
+        )
+      `, [game.blackId]);
+      saveDb();
+    } catch (cleanupErr) {
+      // Ignore cleanup errors — non-critical
+    }
   }).catch(err => {
     console.error('Failed to save game to DB:', err);
   });

@@ -21,129 +21,276 @@
   </nav>
 
   <div class="profile-container">
-    <!-- User stats -->
-    <div class="profile-card">
-      <h1 id="profileTitle">My Profile</h1>
-      <div class="stats">
-        <div class="stat-item">
-          <div class="stat-value" id="elo">1200</div>
-          <div class="stat-label">ELO Rating</div>
+    <!-- Profile Header (unified — same for own + public) -->
+    <div class="profile-header">
+      <div class="profile-header-left">
+        <div class="profile-avatar-wrapper" id="avatarWrapper">
+          <img id="profileAvatar" class="profile-avatar" src="" alt="" style="display:none;">
+          <div id="profileAvatarPlaceholder" class="profile-avatar-placeholder">?</div>
+          <!-- Upload overlay (own profile only) -->
+          <label id="avatarUploadLabel" for="avatarFileInput" class="avatar-upload-btn" title="Change photo">📷</label>
+          <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(event)">
         </div>
-        <div class="stat-item">
-          <div class="stat-value" id="wins">0</div>
-          <div class="stat-label">Wins</div>
+        <div class="profile-header-info">
+          <h1 class="profile-username" id="profileUsername">—</h1>
+          <div class="profile-elo-badge">
+            <span class="profile-elo-value" id="profileElo">1200</span>
+            <span class="profile-elo-label">ELO</span>
+          </div>
+          <div class="profile-member-since" id="profileMemberSince"></div>
         </div>
-        <div class="stat-item">
-          <div class="stat-value" id="losses">0</div>
-          <div class="stat-label">Losses</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="draws">0</div>
-          <div class="stat-label">Draws</div>
-        </div>
+      </div>
+      <div class="profile-header-actions" id="profileActions">
+        <!-- Filled dynamically: Edit Photo (own) or Send Friend Request (public) -->
       </div>
     </div>
 
-    <!-- Add Friend -->
-    <div class="profile-card">
-      <h2>Add Friend</h2>
-      <div class="friend-form">
-        <input type="text" id="friendUsername" placeholder="Enter username...">
-        <button id="addFriendBtn" onclick="addFriend()">Send Request</button>
+    <!-- Stats Row -->
+    <div class="profile-stats-grid">
+      <div class="profile-stat-box">
+        <div class="profile-stat-value wins-color" id="profileWins">0</div>
+        <div class="profile-stat-label">Wins</div>
       </div>
-      <div id="addFriendStatus" class="friend-status"></div>
+      <div class="profile-stat-box">
+        <div class="profile-stat-value losses-color" id="profileLosses">0</div>
+        <div class="profile-stat-label">Losses</div>
+      </div>
+      <div class="profile-stat-box">
+        <div class="profile-stat-value draws-color" id="profileDraws">0</div>
+        <div class="profile-stat-label">Draws</div>
+      </div>
+      <div class="profile-stat-box">
+        <div class="profile-stat-value" id="profileWinRate">—%</div>
+        <div class="profile-stat-label">Win Rate</div>
+      </div>
     </div>
 
-    <!-- Pending Requests -->
-    <div class="profile-card" id="pendingCard" style="display: none;">
-      <h2>Pending Requests</h2>
-      <div id="pendingList"></div>
-    </div>
+    <!-- Friends & Pending (own profile only) -->
+    <div id="ownProfileSections" style="display:none;">
+      <div class="friends-grid">
+        <!-- Left: Friends list -->
+        <div class="profile-card friends-card-col" id="friendsCard">
+          <h2>Friends</h2>
+          <div id="friendsList">
+            <div class="empty-list">No friends yet.</div>
+          </div>
+        </div>
+        <!-- Right column -->
+        <div class="friends-right-col">
+          <div class="profile-card friends-card-compact">
+            <h2>Add Friend</h2>
+            <div class="friend-form">
+              <input type="text" id="friendUsername" placeholder="Enter username...">
+              <button id="addFriendBtn" onclick="addFriend()">Send Request</button>
+            </div>
+            <div id="addFriendStatus" class="friend-status"></div>
+          </div>
 
-    <!-- Friends List -->
-    <div class="profile-card" id="friendsCard">
-      <h2>Friends</h2>
-      <div id="friendsList">
-        <div class="empty-list">No friends yet. Add one above!</div>
+          <div class="profile-card friends-card-compact" id="pendingCard" style="display: none;">
+            <h2>Pending</h2>
+            <div id="pendingList"></div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Match History -->
     <div class="profile-card" id="matchHistoryCard">
-      <h2>Match History</h2>
+      <h2>Game History</h2>
       <div id="matchHistoryList">
-        <div class="empty-list">No games played yet. Play your first match!</div>
+        <div class="empty-list">No games played yet.</div>
       </div>
+      <div id="matchPagination" class="match-pagination" style="display: none;"></div>
     </div>
+  </div>
 
-    <!-- Play with Friend link -->
-    <div class="profile-card" style="text-align: center;">
-      <p style="margin-bottom: 10px; color: var(--text-secondary);">Already have friends? Go to the lobby to start a private game.</p>
-      <a href="lobby.html" class="btn-accent">Go to Lobby →</a>
-    </div>
+  <!-- Cooldown overlay -->
+  <div id="avatarCooldownOverlay" class="avatar-cooldown-overlay" style="display:none;">
+    <div>⏳ <span id="cooldownSeconds">30</span>s</div>
   </div>
 
   <script src="js/auth.js"></script>
   <script>
     let currentUser = null;
+    let profileUser = null;
+    let isOwnProfile = false;
+    let matchPage = 0;
+    let matchTotal = 0;
+    let avatarCooldownRemaining = 0;
+    let avatarCooldownInterval = null;
+    const MATCH_PAGE_SIZE = 10;
+
+    function getUsernameFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('username') || null;
+    }
 
     async function init() {
       try {
         currentUser = await getCurrentUser();
-        if (!currentUser) {
-          window.location.href = 'index.html';
-          return;
-        }
+        if (!currentUser) { window.location.href = 'index.html'; return; }
       } catch (err) {
         document.getElementById('navUsername').textContent = 'Error';
-        document.getElementById('navElo').textContent = '--';
-        document.getElementById('profileTitle').textContent = 'Profile';
-        showGlobalError('Failed to load profile. Check your connection and refresh.');
         return;
       }
 
       document.getElementById('navUsername').textContent = currentUser.username || 'Unknown';
       document.getElementById('navElo').textContent = currentUser.elo || '1200';
-      document.getElementById('profileTitle').textContent = (currentUser.username || 'My') + "'s Profile";
-      document.getElementById('elo').textContent = currentUser.elo || '1200';
-      document.getElementById('wins').textContent = currentUser.wins || '0';
-      document.getElementById('losses').textContent = currentUser.losses || '0';
-      document.getElementById('draws').textContent = currentUser.draws || '0';
 
-      await loadFriends();
-      await loadMatchHistory();
-    }
+      const urlUsername = getUsernameFromUrl();
 
-    function showGlobalError(msg) {
-      const card = document.getElementById('friendsCard') || document.querySelector('.profile-card');
-      if (card) {
-        const err = document.createElement('div');
-        err.className = 'friend-status error';
-        err.textContent = msg;
-        err.style.marginBottom = '12px';
-        card.insertBefore(err, card.firstChild);
+      if (!urlUsername || urlUsername.toLowerCase() === currentUser.username.toLowerCase()) {
+        // Own profile
+        isOwnProfile = true;
+        profileUser = currentUser;
+        document.getElementById('ownProfileSections').style.display = '';
+        document.getElementById('avatarUploadLabel').style.display = '';
+        document.getElementById('avatarFileInput').style.display = 'none';
+
+        renderProfileHeader(currentUser.username, currentUser.elo, currentUser.avatar_url, currentUser.created_at);
+        updateStats(currentUser.wins, currentUser.losses, currentUser.draws);
+        await loadFriends();
+        await loadMatchHistoryPage(0);
+      } else {
+        // Public profile
+        isOwnProfile = false;
+        document.getElementById('ownProfileSections').style.display = 'none';
+        document.getElementById('avatarUploadLabel').style.display = 'none';
+
+        try {
+          const res = await fetch('/api/users/by-username/' + encodeURIComponent(urlUsername));
+          const data = await res.json();
+          if (!data.success || !data.user) {
+            document.getElementById('profileUsername').textContent = 'User Not Found';
+            document.getElementById('matchHistoryList').innerHTML = '<div class="empty-list" style="color: var(--red);">User not found.</div>';
+            return;
+          }
+          profileUser = data.user;
+          renderProfileHeader(profileUser.username, profileUser.elo, profileUser.avatarUrl, profileUser.createdAt);
+          updateStats(profileUser.wins || 0, profileUser.losses || 0, profileUser.draws || 0);
+
+          // Action: send friend request button
+          document.getElementById('profileActions').innerHTML = `
+            <button class="btn-accent" onclick="sendFriendRequestTo('${escapeAttr(profileUser.username)}')">👥 Add Friend</button>`;
+        } catch (err) {
+          document.getElementById('matchHistoryList').innerHTML = '<div class="empty-list" style="color: var(--red);">Failed to load profile.</div>';
+          return;
+        }
+        await loadMatchHistoryPage(0);
       }
     }
+
+    function renderProfileHeader(username, elo, avatarUrl, createdAt) {
+      document.getElementById('profileUsername').textContent = username || '—';
+      document.getElementById('profileElo').textContent = elo || '1200';
+
+      const avatarEl = document.getElementById('profileAvatar');
+      const placeholderEl = document.getElementById('profileAvatarPlaceholder');
+      if (avatarUrl) {
+        avatarEl.src = avatarUrl;
+        avatarEl.style.display = '';
+        placeholderEl.style.display = 'none';
+      } else {
+        avatarEl.style.display = 'none';
+        placeholderEl.style.display = '';
+        placeholderEl.textContent = (username || '?').charAt(0).toUpperCase();
+      }
+
+      if (createdAt) {
+        try {
+          const d = new Date(createdAt.replace(' ', 'T'));
+          document.getElementById('profileMemberSince').textContent = 'Member since ' + d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        } catch (e) { document.getElementById('profileMemberSince').textContent = ''; }
+      }
+    }
+
+    function updateStats(wins, losses, draws) {
+      wins = wins || 0; losses = losses || 0; draws = draws || 0;
+      document.getElementById('profileWins').textContent = wins;
+      document.getElementById('profileLosses').textContent = losses;
+      document.getElementById('profileDraws').textContent = draws;
+      const total = wins + losses + draws;
+      const rate = total > 0 ? Math.round((wins / total) * 100) : 0;
+      document.getElementById('profileWinRate').textContent = rate + '%';
+    }
+
+    // ==================== Avatar Upload ====================
+
+    async function uploadAvatar(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      try {
+        const res = await fetch('/api/me/avatar', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('profileAvatar').src = data.avatarUrl + '?t=' + Date.now();
+          document.getElementById('profileAvatar').style.display = '';
+          document.getElementById('profileAvatarPlaceholder').style.display = 'none';
+        } else if (data.message && data.message.includes('wait')) {
+          // Cooldown active
+          const seconds = parseInt(data.message.match(/\d+/)?.[0]) || 30;
+          startCooldown(seconds);
+        } else {
+          alert(data.message || 'Upload failed');
+        }
+      } catch (err) {
+        alert('Upload failed. Check your connection.');
+      }
+      e.target.value = '';
+    }
+
+    function startCooldown(seconds) {
+      avatarCooldownRemaining = seconds;
+      const overlay = document.getElementById('avatarCooldownOverlay');
+      const span = document.getElementById('cooldownSeconds');
+      span.textContent = seconds;
+      overlay.style.display = 'flex';
+      document.getElementById('avatarUploadLabel').style.pointerEvents = 'none';
+      document.getElementById('avatarUploadLabel').style.opacity = '0.4';
+      if (avatarCooldownInterval) clearInterval(avatarCooldownInterval);
+      avatarCooldownInterval = setInterval(() => {
+        avatarCooldownRemaining--;
+        span.textContent = avatarCooldownRemaining;
+        if (avatarCooldownRemaining <= 0) {
+          clearInterval(avatarCooldownInterval);
+          avatarCooldownInterval = null;
+          overlay.style.display = 'none';
+          document.getElementById('avatarUploadLabel').style.pointerEvents = '';
+          document.getElementById('avatarUploadLabel').style.opacity = '';
+        }
+      }, 1000);
+    }
+
+    async function sendFriendRequestTo(username) {
+      try {
+        const res = await fetch('/api/friends/request', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ friendUsername: escapeText(username) })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message || 'Friend request sent!');
+        } else {
+          alert(data.message || 'Failed to send request.');
+        }
+      } catch (err) { alert('Failed to send request.'); }
+    }
+
+    // ==================== Friends (own profile only) ====================
 
     async function loadFriends() {
       try {
         const res = await fetch('/api/friends');
         if (!res.ok) throw new Error('Server returned ' + res.status);
         const data = await res.json();
-
-        if (!data || !data.success) {
-          document.getElementById('friendsList').innerHTML =
-            '<div class="empty-list" style="color: var(--red);">⚠ Could not load friends — try refreshing.</div>';
-          return;
-        }
-
+        if (!data || !data.success) return;
         renderFriends(data.friends || []);
         renderPending(data.pending || []);
-      } catch (err) {
-        console.error('Failed to load friends:', err);
-        document.getElementById('friendsList').innerHTML =
-          '<div class="empty-list" style="color: var(--red);">⚠ Failed to load friends. Check your connection.</div>';
-      }
+      } catch (err) { console.error('Failed to load friends:', err); }
     }
 
     function renderFriends(friends) {
@@ -152,18 +299,16 @@
         container.innerHTML = '<div class="empty-list">No friends yet. Add one above!</div>';
         return;
       }
-
       container.innerHTML = '';
       friends.forEach(f => {
         const item = document.createElement('div');
         item.className = 'friend-item';
         item.innerHTML = `
           <div class="friend-info">
-            <span class="friend-name">${escapeText(f.username)}</span>
+            <a href="profile.html?username=${encodeURIComponent(escapeText(f.username))}" class="friend-name-link">${escapeText(f.username)}</a>
             <span class="friend-elo">${f.elo || '1200'} ELO</span>
           </div>
-          <button class="btn-danger-sm" data-friend-id="${f.id}">Remove</button>
-        `;
+          <button class="btn-danger-sm" data-friend-id="${f.id}">Remove</button>`;
         item.querySelector('.btn-danger-sm').addEventListener('click', () => removeFriend(f.id));
         container.appendChild(item);
       });
@@ -172,12 +317,7 @@
     function renderPending(pending) {
       const card = document.getElementById('pendingCard');
       const container = document.getElementById('pendingList');
-
-      if (!pending || pending.length === 0) {
-        card.style.display = 'none';
-        return;
-      }
-
+      if (!pending || pending.length === 0) { card.style.display = 'none'; return; }
       card.style.display = 'block';
       container.innerHTML = '';
       pending.forEach(p => {
@@ -191,8 +331,7 @@
           <div style="display:flex;gap:6px;">
             <button class="btn-accept-sm" data-request-id="${p.id}">Accept</button>
             <button class="btn-decline-sm" data-request-id="${p.id}">Decline</button>
-          </div>
-        `;
+          </div>`;
         item.querySelector('.btn-accept-sm').addEventListener('click', () => acceptRequest(p.id));
         item.querySelector('.btn-decline-sm').addEventListener('click', () => declineRequest(p.id));
         container.appendChild(item);
@@ -202,164 +341,70 @@
     async function addFriend() {
       const username = document.getElementById('friendUsername').value.trim();
       const statusEl = document.getElementById('addFriendStatus');
-
-      if (!username) {
-        statusEl.textContent = 'Enter a username';
-        statusEl.className = 'friend-status error';
-        return;
-      }
-
-      if (username === currentUser.username) {
-        statusEl.textContent = "You can't friend yourself";
-        statusEl.className = 'friend-status error';
-        return;
-      }
-
-      statusEl.textContent = 'Sending...';
-      statusEl.className = 'friend-status';
-
+      if (!username) { statusEl.textContent = 'Enter a username'; statusEl.className = 'friend-status error'; return; }
+      if (username === currentUser.username) { statusEl.textContent = "You can't friend yourself"; statusEl.className = 'friend-status error'; return; }
+      statusEl.textContent = 'Sending...'; statusEl.className = 'friend-status';
       try {
         const res = await fetch('/api/friends/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ friendUsername: username })
         });
-        if (!res.ok) throw new Error('Server error ' + res.status);
         const data = await res.json();
-
         if (data.success) {
-          statusEl.textContent = data.message || 'Request sent!';
-          statusEl.className = 'friend-status success';
+          statusEl.textContent = data.message || 'Request sent!'; statusEl.className = 'friend-status success';
           document.getElementById('friendUsername').value = '';
           await loadFriends();
-        } else {
-          statusEl.textContent = data.message || 'Failed';
-          statusEl.className = 'friend-status error';
-        }
-      } catch (err) {
-        statusEl.textContent = 'Network error — try again';
-        statusEl.className = 'friend-status error';
-      }
+        } else { statusEl.textContent = data.message || 'Failed'; statusEl.className = 'friend-status error'; }
+      } catch (err) { statusEl.textContent = 'Network error — try again'; statusEl.className = 'friend-status error'; }
     }
 
-    async function acceptRequest(requestId) {
+    async function acceptRequest(id) { try { await fetch('/api/friends/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: id }) }); await loadFriends(); } catch (e) {} }
+    async function declineRequest(id) { try { await fetch('/api/friends/decline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestId: id }) }); await loadFriends(); } catch (e) {} }
+    async function removeFriend(id) { if (!confirm('Remove this friend?')) return; try { await fetch('/api/friends/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ friendId: id }) }); await loadFriends(); } catch (e) {} }
+
+    // ==================== Match History ====================
+
+    async function loadMatchHistoryPage(page) {
+      matchPage = page;
+      const offset = page * MATCH_PAGE_SIZE;
+      const userId = profileUser ? profileUser.id : currentUser.id;
       try {
-        const res = await fetch('/api/friends/accept', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId })
-        });
-        if (res.ok) await loadFriends();
-      } catch (err) {
-        console.error('Accept failed:', err);
-      }
-    }
-
-    async function declineRequest(requestId) {
-      try {
-        const res = await fetch('/api/friends/decline', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestId })
-        });
-        if (res.ok) await loadFriends();
-      } catch (err) {
-        console.error('Decline failed:', err);
-      }
-    }
-
-    async function removeFriend(friendId) {
-      if (!confirm('Remove this friend?')) return;
-      try {
-        const res = await fetch('/api/friends/remove', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ friendId })
-        });
-        if (res.ok) await loadFriends();
-      } catch (err) {
-        console.error('Remove failed:', err);
-      }
-    }
-
-    function escapeText(str) {
-      if (!str) return '';
-      return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#39;');
-    }
-
-    async function loadMatchHistory() {
-      try {
-        const res = await fetch('/api/users/' + currentUser.id + '/games');
+        const res = await fetch('/api/users/' + userId + '/games?limit=' + MATCH_PAGE_SIZE + '&offset=' + offset);
         if (!res.ok) throw new Error('Server returned ' + res.status);
         const data = await res.json();
-
-        if (!data || !data.success) {
-          document.getElementById('matchHistoryList').innerHTML =
-            '<div class="empty-list" style="color: var(--red);">⚠ Could not load match history.</div>';
-          return;
-        }
-
-        if (!data.games || data.games.length === 0) {
-          document.getElementById('matchHistoryList').innerHTML =
-            '<div class="empty-list">No games played yet. Play your first match!</div>';
-          return;
-        }
-
+        if (!data || !data.success) { document.getElementById('matchHistoryList').innerHTML = '<div class="empty-list" style="color: var(--red);">⚠ Could not load history.</div>'; document.getElementById('matchPagination').style.display = 'none'; return; }
+        matchTotal = data.total || 0;
+        if (!data.games || data.games.length === 0) { document.getElementById('matchHistoryList').innerHTML = '<div class="empty-list">No games played yet.</div>'; document.getElementById('matchPagination').style.display = 'none'; return; }
         let html = '';
-        data.games.forEach((g, i) => {
-          let resultClass = '';
-          let resultLabel = '';
-          if (g.result === 'win') {
-            resultClass = 'match-win';
-            resultLabel = 'Win';
-          } else if (g.result === 'loss') {
-            resultClass = 'match-loss';
-            resultLabel = 'Loss';
-          } else {
-            resultClass = 'match-draw';
-            resultLabel = 'Draw';
-          }
-
-          html += `
-            <a href="game.html?matchId=${escapeAttr(g.gameUuid)}" class="match-row">
-              <div class="match-result ${resultClass}">${resultLabel}</div>
-              <div class="match-info">
-                <span class="match-opponent">vs ${escapeText(g.opponent.username)} (${g.opponent.elo || '1200'})</span>
-                <span class="match-color">as ${g.playerColor}</span>
-              </div>
-              <div class="match-date">${formatDate(g.createdAt)}</div>
-            </a>`;
+        data.games.forEach(g => {
+          let rc = '', rl = '';
+          if (g.result === 'win') { rc = 'match-win'; rl = 'Win'; } else if (g.result === 'loss') { rc = 'match-loss'; rl = 'Loss'; } else { rc = 'match-draw'; rl = 'Draw'; }
+          html += `<a href="game.html?matchId=${escapeAttr(g.gameUuid)}" class="match-row">
+            <div class="match-result ${rc}">${rl}</div>
+            <div class="match-info"><span class="match-opponent">vs ${escapeText(g.opponent.username)} (${g.opponent.elo || '1200'})</span><span class="match-color">as ${g.playerColor}</span></div>
+            <div class="match-date">${formatDate(g.createdAt)}</div></a>`;
         });
-
         document.getElementById('matchHistoryList').innerHTML = html;
-      } catch (err) {
-        console.error('Failed to load match history:', err);
-        document.getElementById('matchHistoryList').innerHTML =
-          '<div class="empty-list" style="color: var(--red);">⚠ Failed to load match history.</div>';
-      }
+        const totalPages = Math.max(1, Math.ceil(matchTotal / MATCH_PAGE_SIZE));
+        const pagEl = document.getElementById('matchPagination');
+        if (totalPages <= 1) { pagEl.style.display = 'none'; } else {
+          pagEl.style.display = 'flex';
+          let ph = '';
+          if (page > 0) ph += `<button class="page-btn" onclick="loadMatchHistoryPage(${page - 1})">← Prev</button>`;
+          else ph += `<button class="page-btn" disabled>← Prev</button>`;
+          ph += `<span class="page-info">Page ${page + 1} of ${totalPages}</span>`;
+          if (page < totalPages - 1) ph += `<button class="page-btn" onclick="loadMatchHistoryPage(${page + 1})">Next →</button>`;
+          else ph += `<button class="page-btn" disabled>Next →</button>`;
+          pagEl.innerHTML = ph;
+        }
+      } catch (err) { document.getElementById('matchHistoryList').innerHTML = '<div class="empty-list" style="color: var(--red);">⚠ Failed to load history.</div>'; document.getElementById('matchPagination').style.display = 'none'; }
     }
 
-    function formatDate(dateStr) {
-      if (!dateStr) return '';
-      try {
-        const d = new Date(dateStr);
-        const now = new Date();
-        const diffMs = now - d;
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return diffDays + 'd ago';
-        return d.toLocaleDateString();
-      } catch (e) {
-        return dateStr;
-      }
-    }
-
-    function escapeAttr(str) {
-      if (!str) return '';
-      return str.replace(/&/g, '&').replace(/"/g, '"').replace(/</g, '<').replace(/>/g, '>');
-    }
+    function formatDate(d) { if (!d) return ''; try { const dt = new Date(d), n = new Date(), diff = Math.floor((n - dt) / 86400000); if (diff === 0) return 'Today'; if (diff === 1) return 'Yesterday'; if (diff < 7) return diff + 'd ago'; return dt.toLocaleDateString(); } catch(e) { return d; } }
+    function escapeText(s) { if (!s) return ''; return s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, '&#39;'); }
+    function escapeAttr(s) { if (!s) return ''; return s.replace(/&/g, '&').replace(/"/g, '"').replace(/</g, '<').replace(/>/g, '>'); }
 
     init();
   </script>
 </body>
+</html>

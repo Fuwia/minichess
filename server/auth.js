@@ -57,14 +57,14 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
@@ -111,6 +111,12 @@ function calculateElo(winnerElo, loserElo, isDraw = false) {
     winnerNew: Math.round(winnerElo + K * (1 - expectedWinner)),
     loserNew: Math.round(loserElo + K * (0 - expectedLoser))
   };
+}
+
+function updateAvatar(userId, avatarUrl) {
+  const stmt = db.prepare('UPDATE users SET avatar_url = ?, last_avatar_change = datetime(\'now\') WHERE id = ?');
+  stmt.run([avatarUrl, userId]);
+  stmt.free();
 }
 
 // ==================== Friends ====================
@@ -247,6 +253,7 @@ module.exports = {
   removeFriend,
   getFriends,
   getPendingRequests,
+  updateAvatar,
   createPrivateRoom,
   getPrivateRoom,
   joinPrivateRoom,

@@ -35,9 +35,15 @@ function initTables() {
       wins INTEGER DEFAULT 0,
       losses INTEGER DEFAULT 0,
       draws INTEGER DEFAULT 0,
+      avatar_url TEXT,
+      last_avatar_change TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  // Add avatar columns if upgrading from older schema
+  try { db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN last_avatar_change TEXT'); } catch (e) { }
   
   db.run(`
     CREATE TABLE IF NOT EXISTS games (
