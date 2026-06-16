@@ -11,6 +11,7 @@ const { getDb, saveDb } = require('./db');
 const auth = require('./auth');
 const engine = require('./game-engine');
 const Matchmaker = require('./matchmaker');
+const bot = require('./bot');
 
 const app = express();
 const server = http.createServer(app);
@@ -329,14 +330,14 @@ app.get('/api/users/:userId/games', async (req, res) => {
     }
     countStmt.free();
     
-    // Get paginated games
+    // Get paginated games (LEFT JOIN so bot games with black_id=0 still appear)
     const stmt = database.prepare(
       `SELECT g.game_uuid, g.white_id, g.black_id, g.result, g.fen_final, g.created_at,
         w.username as white_username, w.elo as white_elo,
         b.username as black_username, b.elo as black_elo
        FROM games g
-       JOIN users w ON g.white_id = w.id
-       JOIN users b ON g.black_id = b.id
+       LEFT JOIN users w ON g.white_id = w.id
+       LEFT JOIN users b ON g.black_id = b.id
        WHERE g.white_id = ? OR g.black_id = ?
        ORDER BY g.created_at DESC
        LIMIT ? OFFSET ?`
@@ -360,12 +361,16 @@ app.get('/api/users/:userId/games', async (req, res) => {
         playerResult = isWhite ? 'loss' : 'win';
       }
       
+      // Build opponent info (handle bot games where username is null from LEFT JOIN)
+      const oppUsername = isWhite ? row.black_username : row.white_username;
+      const oppElo = isWhite ? row.black_elo : row.white_elo;
       games.push({
         gameUuid: row.game_uuid,
         result: playerResult,
-        opponent: isWhite 
-          ? { username: row.black_username, elo: row.black_elo }
-          : { username: row.white_username, elo: row.white_elo },
+        opponent: {
+          username: oppUsername || 'Computer',
+          elo: oppElo || '—'
+        },
         playerColor: isWhite ? 'white' : 'black',
         createdAt: row.created_at
       });
@@ -900,6 +905,11 @@ io.on('connection', (socket) => {
       game.diceRoll = rollDice();
       emitDiceRoll(game, null, io);
     }
+
+    // If this is a bot game and it's now the bot's turn, make the bot move
+    if (game.isBot && !game.isOver && game.state.activeColor === 'black') {
+      processBotMove(game, io);
+    }
   });
 
   // --- Game: Resign ---
@@ -1278,7 +1288,128 @@ io.on('connection', (socket) => {
     // Send new dice roll to both players
     emitDiceRoll(game, null, io);
   });
+
+  // --- Bot Game ---
+
+  socket.on('start_bot_game', (data) => {
+    if (!userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    if (getGameByUserId(userId)) {
+      socket.emit('error', { message: 'You are already in a game' });
+      return;
+    }
+
+    const user = auth.getUserById(userId);
+    if (!user) return;
+
+    const difficulty = data.difficulty || 'easy';
+    const botName = bot.getBotName(difficulty);
+    const botElo = bot.getBotElo(difficulty);
+
+    // Create game: human is white, bot is black
+    const game = createGame(
+      { userId, username: user.username, elo: user.elo },
+      { userId: 0, username: botName, elo: botElo }
+    );
+    game.isBot = true;
+    game.botDifficulty = difficulty;
+
+    socketGames.set(socket.id, { gameId: game.id, color: 'white' });
+
+    socket.emit('match_found', {
+      gameId: game.id,
+      color: 'white',
+      opponent: { username: botName, elo: botElo },
+      fen: engine.toFen(game.state),
+      mode: 'standard'
+    });
+
+    console.log(`[BotGame] Started: ${user.username} vs ${botName} (${game.id})`);
+  });
 });
+
+// Helper function to process a bot move
+function processBotMove(game, io) {
+  if (game.isOver) return;
+  if (!game.isBot) return;
+
+  const botColor = game.state.activeColor;
+  if (botColor !== 'black') return; // Bot always plays black
+
+  const depth = bot.getDepth(game.botDifficulty);
+
+  // Clear TT for each new search to avoid stale entries
+  bot.ttClear();
+
+  const bestMove = bot.selectBotMove(game.state, depth, 'black', game.botDifficulty);
+  if (!bestMove) {
+    // No legal moves — game over
+    const result = engine.getGameResult(game.state);
+    if (result) {
+      handleGameOver(game, result);
+    }
+    return;
+  }
+
+  // Tick clock for bot (bot doesn't actually wait, but we deduct 0 elapsed)
+  const now = Date.now();
+  const elapsed = now - game.lastTickTime;
+  game.lastTickTime = now;
+  game.blackTime = Math.max(0, game.blackTime - elapsed);
+  game.blackTime += INCREMENT_TIME;
+
+  // Apply the bot's move
+  const oldFen = engine.toFen(game.state);
+  game.state = engine.applyMove(game.state, bestMove);
+  const newFen = engine.toFen(game.state);
+
+  const movePayload = {
+    move: {
+      from: bestMove.from,
+      to: bestMove.to,
+      pieceType: bestMove.pieceType || bestMove.piece?.type,
+      captured: bestMove.captured ? bestMove.captured.type : null,
+      isDrop: bestMove.isDrop,
+      promotion: bestMove.promotion
+    },
+    fen: newFen,
+    activeColor: game.state.activeColor,
+    pockets: game.state.pockets,
+    isCheck: engine.isInCheck(game.state),
+    whiteTime: game.whiteTime,
+    blackTime: game.blackTime
+  };
+
+  // Delay the bot's move to feel more human-like
+  // Normal: 1000-2500ms,   King in check: 500-1000ms (bot "under pressure")
+  const isInCheck = engine.isInCheck(game.state);
+  const delay = isInCheck
+    ? 500 + Math.floor(Math.random() * 500)
+    : 1000 + Math.floor(Math.random() * 1500);
+
+  setTimeout(() => {
+    // Re-check game is still active (user might have resigned/left during delay)
+    if (game.isOver) return;
+
+    // Send to human player
+    const humanId = game.whiteId;
+    const humanSockets = userSockets.get(humanId);
+    if (humanSockets) {
+      for (const sockId of humanSockets) {
+        io.to(sockId).emit('move_result', movePayload);
+      }
+    }
+
+    // Check for game over
+    const result = engine.getGameResult(game.state);
+    if (result) {
+      handleGameOver(game, result);
+    }
+  }, delay);
+}
 
 // ==================== Clock Tick ====================
 
@@ -1324,22 +1455,22 @@ function handleGameOver(game, result) {
     }
   }
 
-  // Update ELO
+  // Update ELO (update human player even for bot games, skip bot with userId=0)
   if (result === 'white_wins') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo);
-    auth.updateElo(game.whiteId, elos.winnerNew, 'win');
-    auth.updateElo(game.blackId, elos.loserNew, 'loss');
+    if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'win');
+    if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'loss');
   } else if (result === 'black_wins') {
     const elos = auth.calculateElo(game.blackElo, game.whiteElo);
-    auth.updateElo(game.blackId, elos.winnerNew, 'win');
-    auth.updateElo(game.whiteId, elos.loserNew, 'loss');
+    if (game.blackId !== 0) auth.updateElo(game.blackId, elos.winnerNew, 'win');
+    if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.loserNew, 'loss');
   } else if (result === 'draw') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo, true);
-    auth.updateElo(game.whiteId, elos.winnerNew, 'draw');
-    auth.updateElo(game.blackId, elos.loserNew, 'draw');
+    if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'draw');
+    if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'draw');
   }
 
-  // Save game to database (store UUID so clients can look it up later)
+  // Save game to database (includes bot games so they appear in history)
   const { getDb: loadDb } = require('./db');
   loadDb().then(database => {
     const stmt = database.prepare(

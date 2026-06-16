@@ -72,6 +72,27 @@
       <div class="queue-status" id="diceQueueStatus"></div>
     </div>
 
+    <!-- Play vs Computer -->
+    <div class="lobby-card bot-card">
+      <h1>🤖 Play vs Computer</h1>
+      <p class="subtitle">Practice against an AI opponent</p>
+      <div class="bot-options" style="margin-bottom: 16px;">
+        <select id="botDifficulty" style="padding: 10px 14px; background: var(--bg-tertiary, #1a1a2e); color: var(--text-primary); border: 1px solid var(--border-color, #333); border-radius: 6px; font-size: 14px; width: 100%;">
+          <option value="toddler">Toddler (600 ELO)</option>
+          <option value="novice">Novice (750 ELO)</option>
+          <option value="apprentice">Apprentice (900 ELO)</option>
+          <option value="casual">Casual (1050 ELO)</option>
+          <option value="amateur" selected>Amateur (1200 ELO)</option>
+          <option value="club_player">Club Player (1350 ELO)</option>
+          <option value="intermediate">Intermediate (1500 ELO)</option>
+          <option value="advanced">Advanced (1700 ELO)</option>
+          <option value="expert">Expert (1900 ELO)</option>
+          <option value="master">Master (2100 ELO)</option>
+        </select>
+      </div>
+      <button id="botPlayBtn" class="find-match-btn" style="background: var(--accent); color: white;" onclick="startBotGame()">Play vs Computer</button>
+    </div>
+
     <!-- Play with a Friend -->
     <div class="lobby-card private-room-card">
       <h1>Play with a Friend</h1>
@@ -250,6 +271,19 @@
       document.getElementById('roomSection').style.display = 'none';
       document.getElementById('createRoomBtn').style.display = 'block';
       currentRoomId = null;
+    }
+
+    function startBotGame() {
+      if (!socket || !socket.connected) {
+        showToast('Connecting to server...', 'info');
+        initSocket();
+        setTimeout(() => startBotGame(), 500);
+        return;
+      }
+
+      const difficulty = document.getElementById('botDifficulty').value;
+      socket.emit('start_bot_game', { difficulty });
+      showToast('Starting game vs Computer...', 'info');
     }
 
     function showToast(message, type) {
