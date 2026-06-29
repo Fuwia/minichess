@@ -7,14 +7,7 @@ let socket = null;
 function initSocket() {
   if (socket && socket.connected) return;
 
-  // Dynamically determine the backend URL based on the environment (local vs production)
-  const isLocal = window.location.hostname === 'localhost' || 
-                  window.location.hostname === '127.0.0.1' || 
-                  window.location.hostname === '' ||
-                  window.location.protocol === 'file:';
-  const serverUrl = isLocal ? 'http://localhost:3000' : 'https://minichess.xyz';
-
-  socket = io(serverUrl, {
+  socket = io({
     transports: ['websocket', 'polling'],
     withCredentials: true
   });
