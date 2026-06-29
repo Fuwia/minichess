@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess — Battlepass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --gold-glow: rgba(210,153,29,0.25);
+      --red-soft: #f85149;
+      --accent-purple: #7c3aed;
+      --accent-purple-glow: rgba(124,58,237,0.3);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+      --tier-locked: #2a2d35;
+      --tier-current: #3fb950;
+      --tier-completed: #1a6b2e;
+      --bp-gradient: linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 100vh;
+      width: 100%;
+    }
+    .sidebar {
+      background: #111318; border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0; display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; z-index: 10;
+    }
+    .sidebar-logo { padding: 0 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; }
+    .sidebar-nav { flex: 1; padding: 0 6px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 0; line-height: 1;
+      min-height: 38px; border-radius: 8px; color: var(--text-dim); text-decoration: none;
+      font-size: 15px; font-weight: 500; transition: all 0.2s ease;
+    }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text-bright); }
+    .sidebar-nav a.active { background: rgba(63,185,80,0.12); color: var(--emerald); font-weight: 600; }
+    .sidebar-nav a .nav-icon { font-size: 18px; width: 22px; text-align: center; opacity: 0.8; }
+    .sidebar-footer { padding: 16px 16px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .sidebar-footer .user-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-footer .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--emerald); color: #000;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-footer .user-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-footer .user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+    .sidebar-footer .user-elo-sm { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .sidebar-footer .sidebar-stats { display: flex; gap: 6px; margin-bottom: 10px; }
+    .sidebar-footer .sidebar-stat { flex: 1; background: var(--surface2); border-radius: 6px; padding: 5px 4px; text-align: center; }
+    .sidebar-footer .sidebar-stat .sb-val { font-size: 14px; font-weight: 700; }
+    .sidebar-footer .sidebar-stat .sb-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+    .sidebar-footer .logout-btn {
+      width: 100%; padding: 7px 12px; background: transparent; border: 1px solid var(--glass-border);
+      border-radius: 8px; color: var(--text-dim); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    .main-content { padding: 28px 32px; overflow-y: auto; max-height: 100vh; transition: opacity 180ms ease; }
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+    /* Hero Banner */
+    .bp-hero {
+      background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(59,130,246,0.1), rgba(6,182,212,0.08));
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .bp-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 40%, rgba(124,58,237,0.08), transparent 50%),
+                  radial-gradient(circle at 70% 60%, rgba(6,182,212,0.06), transparent 50%);
+      pointer-events: none;
+    }
+    .bp-hero-content { position: relative; z-index: 1; }
+    .bp-hero .bp-season-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: var(--bp-gradient);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .bp-hero h1 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .bp-hero .bp-subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 20px; }
+
+    /* Progress Bar */
+    .bp-progress-card {
+      background: var(--surface2);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .bp-progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .bp-tier-label { font-size: 14px; font-weight: 600; }
+    .bp-tier-label span { color: var(--emerald); }
+    .bp-xp-label { font-size: 13px; color: var(--text-dim); }
+    .bp-xp-label span { color: var(--text-bright); font-weight: 600; }
+    .bp-progress-track {
+      width: 100%;
+      height: 10px;
+      background: var(--surface3);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .bp-progress-fill {
+      height: 100%;
+      background: var(--bp-gradient);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+      min-width: 2%;
+    }
+    .bp-progress-sub {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Title Equip Bar */
+    .bp-equipped {
+      background: var(--surface2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bp-equipped .eq-label { font-size: 12px; color: var(--text-muted); }
+    .bp-equipped .eq-title {
+      font-size: 15px; font-weight: 700;
+      background: var(--bp-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .bp-equipped .eq-none { font-size: 14px; color: var(--text-dim); font-style: italic; }
+    .bp-equipped .eq-clear-btn {
+      margin-left: auto;
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .bp-equipped .eq-clear-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    /* Section Title */
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tier Grid */
+    .tier-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .tier-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tier-card.tier-locked { opacity: 0.5; }
+    .tier-card.tier-current {
+      border-color: var(--tier-current);
+      box-shadow: 0 0 0 1px var(--tier-current), 0 4px 16px rgba(63,185,80,0.12);
+    }
+    .tier-card.tier-completed {
+      border-color: var(--tier-completed);
+      background: rgba(26,107,46,0.1);
+    }
+    .tier-card .tier-number {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .tier-card.tier-current .tier-number { color: var(--emerald); }
+    .tier-card .tier-badge {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    .tier-card .tier-xp-req {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .tier-card .tier-title-name {
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--bp-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-top: 2px;
+    }
+    .tier-card .tier-claim-btn {
+      margin-top: 8px;
+      padding: 6px 16px;
+      background: var(--emerald);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tier-card .tier-claim-btn:hover { box-shadow: 0 2px 12px var(--emerald-glow); }
+    .tier-card .tier-claim-btn:disabled {
+      background: var(--tier-completed);
+      color: rgba(255,255,255,0.6);
+      cursor: default;
+      box-shadow: none;
+    }
+    .tier-card .tier-completed-check {
+      margin-top: 8px;
+      font-size: 20px;
+      color: var(--emerald);
+    }
+
+    /* Titles Showcase */
+    .titles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .title-item {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .title-item .ti-name {
+      font-size: 14px;
+      font-weight: 700;
+      background: var(--bp-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .title-item .ti-season {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .title-item .ti-equip-btn {
+      padding: 5px 12px;
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .title-item .ti-equip-btn:hover { background: #4f8ef7; }
+    .title-item .ti-equip-btn.equipped {
+      background: var(--emerald);
+      color: #000;
+    }
+    .title-item .ti-equip-btn.equipped:hover { background: var(--red-soft); color: #fff; }
+
+    .empty-state { color: var(--text-muted); font-size: 13px; padding: 12px 0; text-align: center; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 14px 22px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      animation: toastIn 0.3s ease;
+      backdrop-filter: blur(12px);
+      font-family: 'Inter', sans-serif;
+    }
+    .toast.info { background: rgba(59,130,246,0.9); }
+    .toast.success { background: rgba(34,197,94,0.9); }
+    .toast.error { background: rgba(248,81,73,0.9); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; padding: 12px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; display: none; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+      .tier-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="battlepass.html" class="active" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
+      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
+        </div>
+      </div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <!-- Hero -->
+    <div class="bp-hero">
+      <div class="bp-hero-content">
+        <span class="bp-season-badge">🎖 Season 1</span>
+        <h1>Founders Season</h1>
+        <p class="bp-subtitle">Play games, earn XP, and unlock exclusive titles. Every match counts!</p>
+        <div class="bp-progress-card">
+          <div class="bp-progress-header">
+            <div class="bp-tier-label">Tier <span id="currentTierDisplay">1</span>/<span id="maxTierDisplay">30</span></div>
+            <div class="bp-xp-label"><span id="xpDisplay">0</span> XP</div>
+          </div>
+          <div class="bp-progress-track">
+            <div class="bp-progress-fill" id="progressFill" style="width:0%;"></div>
+          </div>
+          <div class="bp-progress-sub">
+            <span id="xpNextTier">0 / 0 XP to next tier</span>
+            <span id="xpPctDisplay">0%</span>
+          </div>
+
+          <!-- Equipped Title -->
+          <div class="bp-equipped">
+            <span class="eq-label">Equipped Title:</span>
+            <span class="eq-none" id="equippedTitleDisplay">None</span>
+            <button class="eq-clear-btn" id="clearTitleBtn" style="display:none;" onclick="clearTitle()">Unequip</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tier Grid -->
+    <div class="section-title">🏅 Tiers <span style="font-size:12px;font-weight:400;color:var(--text-muted);">— Click Claim to collect your title</span></div>
+    <div class="tier-grid" id="tierGrid">
+      <div class="empty-state">Loading tiers...</div>
+    </div>
+
+    <!-- Titles Showcase -->
+    <div class="section-title">🎭 Your Titles</div>
+    <div id="titlesContainer">
+      <div class="empty-state">You haven't unlocked any titles yet. Keep playing to earn them!</div>
+    </div>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script>
+(function() {
+  let currentUser = null;
+  let battlepassData = null;
+
+  async function init() {
+    try {
+      currentUser = await getCurrentUser();
+      if (!currentUser) { window.location.href = 'index.html'; return; }
+    } catch(e) { return; }
+
+    // Sidebar
+    document.getElementById('sidebarUsername').textContent = currentUser.username;
+    document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (currentUser.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (currentUser.username || '?').charAt(0).toUpperCase();
+    }
+    document.getElementById('sbWins').textContent = currentUser.wins || 0;
+    document.getElementById('sbLosses').textContent = currentUser.losses || 0;
+    document.getElementById('sbDraws').textContent = currentUser.draws || 0;
+
+    fetch('/api/me/admin').then(r => r.json()).then(d => {
+      if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
+    }).catch(() => {});
+
+    await loadBattlepass();
+  }
+
+  async function loadBattlepass() {
+    try {
+      const res = await fetch('/api/battlepass');
+      const data = await res.json();
+      if (!data.success) { showToast('Failed to load battlepass', 'error'); return; }
+      battlepassData = data;
+      renderHero(data);
+      renderTiers(data);
+      renderTitles(data.titles || [], data.equippedTitle);
+    } catch(e) {
+      showToast('Failed to load battlepass data', 'error');
+    }
+  }
+
+  function renderHero(data) {
+    document.getElementById('currentTierDisplay').textContent = data.tier;
+    document.getElementById('maxTierDisplay').textContent = data.maxTier;
+    document.getElementById('xpDisplay').textContent = data.xp;
+
+    const pct = data.xpNeededForNext > 0
+      ? Math.min(100, Math.round((data.xpInCurrentTier / data.xpNeededForNext) * 100))
+      : 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('xpPctDisplay').textContent = pct + '%';
+
+    if (data.tier >= data.maxTier) {
+      document.getElementById('xpNextTier').textContent = '🎉 Max tier reached!';
+    } else {
+      document.getElementById('xpNextTier').textContent =
+        data.xpInCurrentTier + ' / ' + data.xpNeededForNext + ' XP to Tier ' + (data.tier + 1);
+    }
+
+    // Equipped title
+    const eqDisplay = document.getElementById('equippedTitleDisplay');
+    const clearBtn = document.getElementById('clearTitleBtn');
+    const userTitle = currentUser.title;
+    if (userTitle) {
+      eqDisplay.className = 'eq-title';
+      eqDisplay.textContent = userTitle;
+      clearBtn.style.display = '';
+    } else {
+      eqDisplay.className = 'eq-none';
+      eqDisplay.textContent = 'None';
+      clearBtn.style.display = 'none';
+    }
+  }
+
+  function renderTiers(data) {
+    const grid = document.getElementById('tierGrid');
+    if (!data.tiers || !data.tiers.length) {
+      grid.innerHTML = '<div class="empty-state">No tier data available.</div>';
+      return;
+    }
+
+    const claimed = data.claimedRewards || [];
+    grid.innerHTML = data.tiers.map(t => {
+      let cardClass = 'tier-card';
+      let badge = '';
+      let claimBtn = '';
+      let completedMark = '';
+      const isUnlocked = t.unlocked;
+      const isClaimed = claimed.includes(t.tier);
+      const isCurrent = t.tier === data.tier;
+
+      if (isClaimed) {
+        cardClass += ' tier-completed';
+        completedMark = '<div class="tier-completed-check">✅</div>';
+      } else if (isUnlocked) {
+        cardClass += ' tier-current';
+        claimBtn = `<button class="tier-claim-btn" onclick="claimTier(${t.tier})">Claim</button>`;
+      } else {
+        cardClass += ' tier-locked';
+        badge = '🔒';
+      }
+
+      if (t.title) {
+        badge = '🏅';
+      } else if (badge === '') {
+        badge = t.tier <= data.tier ? '⭐' : '🔒';
+      }
+
+      const titleHtml = t.title
+        ? `<div class="tier-title-name">${escapeText(t.title)}</div>`
+        : '';
+
+      return `<div class="${cardClass}">
+        <div class="tier-number">Tier ${t.tier}</div>
+        <div class="tier-badge">${badge}</div>
+        <div class="tier-xp-req">${t.xpRequired} XP${t.tier === 1 ? ' (start)' : ''}</div>
+        ${titleHtml}
+        ${completedMark}
+        ${claimBtn}
+      </div>`;
+    }).join('');
+  }
+
+  function renderTitles(titles, equippedTitle) {
+    const container = document.getElementById('titlesContainer');
+    if (!titles || !titles.length) {
+      container.innerHTML = '<div class="empty-state">You haven\'t unlocked any titles yet. Keep playing to earn them!</div>';
+      return;
+    }
+
+    const equippedName = currentUser.title;
+    const grid = document.createElement('div');
+    grid.className = 'titles-grid';
+
+    titles.forEach(t => {
+      const isEquipped = t.name === equippedName;
+      const item = document.createElement('div');
+      item.className = 'title-item';
+      item.innerHTML = `
+        <div>
+          <div class="ti-name">${escapeText(t.name)}</div>
+          <div class="ti-season">Season ${t.season} — Tier ${t.tier}</div>
+        </div>
+        <button class="ti-equip-btn ${isEquipped ? 'equipped' : ''}" onclick="${isEquipped ? 'unequipTitle()' : 'equipTitle(\'' + escapeAttr(t.id) + '\')'}">
+          ${isEquipped ? '✓ Equipped' : 'Equip'}
+        </button>
+      `;
+      grid.appendChild(item);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(grid);
+  }
+
+  // === Claim ===
+  window.claimTier = async function(tier) {
+    try {
+      const res = await fetch('/api/battlepass/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('🎉 Tier ' + tier + ' claimed!', 'success');
+        await loadBattlepass();
+      } else {
+        showToast(data.message || 'Failed to claim', 'error');
+      }
+    } catch(e) {
+      showToast('Failed to claim tier', 'error');
+    }
+  };
+
+  // === Equip Title ===
+  window.equipTitle = async function(titleId) {
+    try {
+      const res = await fetch('/api/battlepass/set-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titleId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser.title = data.title;
+        showToast('Title equipped!', 'success');
+        await loadBattlepass();
+      } else {
+        showToast(data.message || 'Failed to equip', 'error');
+      }
+    } catch(e) {
+      showToast('Failed to equip title', 'error');
+    }
+  };
+
+  window.unequipTitle = function() {
+    clearTitle();
+  };
+
+  window.clearTitle = async function() {
+    try {
+      const res = await fetch('/api/battlepass/clear-title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser.title = null;
+        showToast('Title unequipped', 'info');
+        await loadBattlepass();
+      }
+    } catch(e) {
+      showToast('Failed to unequip title', 'error');
+    }
+  };
+
+  // === Toast ===
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'info');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+  }
+
+  function escapeText(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#39;'); }
+  function escapeAttr(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/"/g,'"').replace(/</g,'<').replace(/>/g,'>'); }
+
+  init();
+})();
+</script>
+</body>
+</html>

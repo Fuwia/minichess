@@ -109,6 +109,83 @@ function initTables() {
       FOREIGN KEY (joiner_id) REFERENCES users(id)
     )
   `);
+
+  // ==================== Battlepass Tables ====================
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS battlepass_tiers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      season INTEGER NOT NULL,
+      tier INTEGER NOT NULL,
+      xp_required INTEGER NOT NULL,
+      title TEXT,
+      UNIQUE(season, tier)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_battlepass (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER UNIQUE NOT NULL,
+      season INTEGER DEFAULT 1,
+      xp INTEGER DEFAULT 0,
+      tier INTEGER DEFAULT 1,
+      claimed_rewards TEXT DEFAULT '[]',
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Add columns for battlepass titles if upgrading from older schema
+  try { db.run('ALTER TABLE users ADD COLUMN title TEXT'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN unlocked_titles TEXT DEFAULT \'[]\''); } catch (e) { }
+
+  // Seed Season 1 tiers (idempotent — uses INSERT OR IGNORE)
+  seedBattlepassTiers();
+}
+
+function seedBattlepassTiers() {
+  const tiers = [
+    { tier: 1,  xp: 0,    title: null },
+    { tier: 2,  xp: 50,   title: null },
+    { tier: 3,  xp: 100,  title: null },
+    { tier: 4,  xp: 160,  title: null },
+    { tier: 5,  xp: 230,  title: 'Pioneer' },
+    { tier: 6,  xp: 310,  title: null },
+    { tier: 7,  xp: 400,  title: null },
+    { tier: 8,  xp: 500,  title: null },
+    { tier: 9,  xp: 610,  title: null },
+    { tier: 10, xp: 730,  title: 'Founder' },
+    { tier: 11, xp: 860,  title: null },
+    { tier: 12, xp: 1000, title: null },
+    { tier: 13, xp: 1150, title: null },
+    { tier: 14, xp: 1310, title: null },
+    { tier: 15, xp: 1480, title: 'Trailblazer' },
+    { tier: 16, xp: 1660, title: null },
+    { tier: 17, xp: 1850, title: null },
+    { tier: 18, xp: 2050, title: null },
+    { tier: 19, xp: 2260, title: null },
+    { tier: 20, xp: 2480, title: 'Veteran' },
+    { tier: 21, xp: 2710, title: null },
+    { tier: 22, xp: 2950, title: null },
+    { tier: 23, xp: 3200, title: null },
+    { tier: 24, xp: 3460, title: null },
+    { tier: 25, xp: 3730, title: 'Legend' },
+    { tier: 26, xp: 4010, title: null },
+    { tier: 27, xp: 4300, title: null },
+    { tier: 28, xp: 4600, title: null },
+    { tier: 29, xp: 4910, title: null },
+    { tier: 30, xp: 5230, title: 'Founders Champion' },
+  ];
+
+  const stmt = db.prepare(`
+    INSERT OR IGNORE INTO battlepass_tiers (season, tier, xp_required, title)
+    VALUES (1, ?, ?, ?)
+  `);
+
+  for (const t of tiers) {
+    stmt.run([t.tier, t.xp, t.title]);
+  }
+  stmt.free();
 }
 
 function saveDb() {

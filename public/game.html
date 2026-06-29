@@ -5,89 +5,158 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MiniChess - Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-  <nav>
-    <div class="logo">♟ Mini<span>Chess</span></div>
-    <div class="nav-links" id="navLinks">
-      <a href="lobby.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Play</a>
-      <a href="profile.html" style="font-size:14px; color: var(--text-secondary); text-decoration: none;">Profile</a>
-      <!-- Live-mode controls (hidden in replay) -->
-      <span id="liveControls">
-        <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
-        <button class="secondary" onclick="resignGame()">Resign</button>
-        <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
-      </span>
-    </div>
-  </nav>
-
-  <!-- Replay badge (only visible in replay mode) -->
-  <div id="replayBanner" class="replay-banner" style="display:none;">
-    <span>📋 Replay</span>
-    <span id="replayResult"></span>
-  </div>
-
-  <div class="game-container">
-    <div class="board-wrapper">
-      <!-- Opponent pocket strip -->
-      <div class="pocket-strip">
-        <span class="pocket-strip-label">Opponent's Pocket</span>
-        <div class="pocket-strip-pieces" id="opponentPocket"></div>
+<body class="game-page">
+  <div class="dashboard game-dashboard">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
       </div>
-
-      <!-- Opponent info -->
-      <div class="board-header">
-        <div class="player-info">
-          <span class="player-color" id="opponentColorDot"></span>
-          <img id="opponentAvatar" class="board-avatar" src="" alt="" style="display:none;">
-          <div id="opponentAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
-          <span class="player-name" id="opponentName">Opponent</span>
-          <span class="player-elo" id="opponentElo">1200</span>
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <a href="lobby.html" class="active" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+        <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+        <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
+        <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+        <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-mini">
+          <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+          <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+          <div>
+            <div class="user-name" id="sidebarUsername">...</div>
+            <div class="user-elo-sm" id="sidebarElo">1200</div>
+          </div>
         </div>
-        <div class="clock" id="opponentClock">2:00</div>
-        <div class="turn-indicator" id="turnIndicator">...</div>
-      </div>
-
-      <!-- Dice display (hidden in standard mode) -->
-      <div class="dice-display" id="diceDisplay" style="display:none;">
-        <div class="dice-icon">🎲</div>
-        <div class="dice-info">Roll: <span id="diceRollNum">-</span> — <span id="dicePieceName">-</span></div>
-        <button id="skipBtn" class="btn-skip" style="display:none;" onclick="skipDiceTurn()">Skip Turn</button>
-      </div>
-
-      <!-- Chess board -->
-      <div class="chess-board" id="chessBoard"></div>
-
-      <!-- File labels -->
-      <div class="file-labels" id="fileLabels"></div>
-
-      <!-- Player info -->
-      <div class="board-header">
-        <div class="player-info">
-          <span class="player-color" id="playerColorDot"></span>
-          <img id="playerAvatar" class="board-avatar" src="" alt="" style="display:none;">
-          <div id="playerAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
-          <span class="player-name" id="playerName">You</span>
-          <span class="player-elo" id="playerElo">1200</span>
+        <div class="sidebar-stats">
+          <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+          <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+          <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
         </div>
-        <div class="clock" id="playerClock">2:00</div>
+        <button class="logout-btn" onclick="logout()">Sign Out</button>
       </div>
+    </aside>
 
-      <!-- Player pocket strip -->
-      <div class="pocket-strip your-pocket">
-        <span class="pocket-strip-label">Your Pocket</span>
-        <div class="pocket-strip-pieces" id="playerPocket"></div>
-      </div>
+    <main class="main-content game-main">
+      <div class="game-shell">
+        <!-- Replay badge (only visible in replay mode) -->
+        <div id="replayBanner" class="replay-banner" style="display:none;">
+          <span>📋 Replay</span>
+          <span id="replayResult"></span>
+        </div>
 
-      <!-- Move History strip -->
-      <div class="moves-strip">
-        <span class="moves-strip-label">Moves</span>
-        <div class="move-history" id="moveHistory">
-          <span class="moves-placeholder">Game starting...</span>
+        <section class="game-top-card">
+          <div>
+            <div class="section-title">Live Board</div>
+            <h1>6×6 Minichess</h1>
+            <p>Drop captured pieces from your pocket and fight for the mini board.</p>
+          </div>
+          <!-- Live-mode controls (hidden in replay) -->
+          <div id="liveControls" class="game-actions">
+            <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
+            <button class="secondary danger-action" onclick="resignGame()">Resign</button>
+            <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
+          </div>
+        </section>
+
+        <div class="game-layout">
+          <section class="game-board-card">
+            <div class="board-wrapper">
+              <!-- Opponent pocket strip -->
+              <div class="pocket-strip opponent-pocket">
+                <span class="pocket-strip-label">Opponent's Pocket</span>
+                <div class="pocket-strip-pieces" id="opponentPocket"></div>
+              </div>
+
+              <!-- Opponent info -->
+              <div class="board-header opponent-header">
+                <div class="player-info">
+                  <span class="player-color" id="opponentColorDot"></span>
+                  <img id="opponentAvatar" class="board-avatar" src="" alt="" style="display:none;">
+                  <div id="opponentAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
+                  <div class="player-meta">
+                    <span class="player-name" id="opponentName">Opponent</span>
+                    <span class="player-elo" id="opponentElo">1200</span>
+                  </div>
+                </div>
+                <div class="player-state">
+                  <div class="clock" id="opponentClock">2:00</div>
+                  <div class="turn-indicator" id="turnIndicator">...</div>
+                </div>
+              </div>
+
+              <!-- Dice display (hidden in standard mode) -->
+              <div class="dice-display" id="diceDisplay" style="display:none;">
+                <div class="dice-icon">🎲</div>
+                <div class="dice-info">Roll: <span id="diceRollNum">-</span> — <span id="dicePieceName">-</span></div>
+                <button id="skipBtn" class="btn-skip" style="display:none;" onclick="skipDiceTurn()">Skip Turn</button>
+              </div>
+
+              <!-- Chess board -->
+              <div class="board-frame">
+                <div class="chess-board" id="chessBoard"></div>
+              </div>
+
+              <!-- File labels -->
+              <div class="file-labels" id="fileLabels"></div>
+
+              <!-- Player info -->
+              <div class="board-header player-header">
+                <div class="player-info">
+                  <span class="player-color" id="playerColorDot"></span>
+                  <img id="playerAvatar" class="board-avatar" src="" alt="" style="display:none;">
+                  <div id="playerAvatarPlaceholder" class="board-avatar-placeholder" style="display:none;">?</div>
+                  <div class="player-meta">
+                    <span class="player-name" id="playerName">You</span>
+                    <span class="player-elo" id="playerElo">1200</span>
+                  </div>
+                </div>
+                <div class="clock" id="playerClock">2:00</div>
+              </div>
+
+              <!-- Player pocket strip -->
+              <div class="pocket-strip your-pocket">
+                <span class="pocket-strip-label">Your Pocket</span>
+                <div class="pocket-strip-pieces" id="playerPocket"></div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="game-side-panel">
+            <section class="game-panel-card pocket-help-card">
+              <div class="panel-eyebrow">Variant</div>
+              <h2>Crazyhouse Pockets</h2>
+              <p>Captured pieces become pocket pieces. Select or drag from your pocket to drop them onto empty squares.</p>
+            </section>
+
+            <section class="game-panel-card replay-controls-card" id="replayControls" style="display:none;">
+              <div class="panel-eyebrow">Replay</div>
+              <h2>Move Review</h2>
+              <p>Use ← / → on your keyboard, or the buttons below, to review the game.</p>
+              <div class="replay-controls-row">
+                <button class="replay-nav-btn" id="replayStartBtn" onclick="goReplayStart()" aria-label="Go to start">⏮</button>
+                <button class="replay-nav-btn" id="replayPrevBtn" onclick="stepReplay(-1)" aria-label="Previous move">←</button>
+                <div class="replay-move-counter" id="replayMoveCounter">0 / 0</div>
+                <button class="replay-nav-btn" id="replayNextBtn" onclick="stepReplay(1)" aria-label="Next move">→</button>
+                <button class="replay-nav-btn" id="replayEndBtn" onclick="goReplayEnd()" aria-label="Go to end">⏭</button>
+              </div>
+            </section>
+
+            <!-- Move History strip -->
+            <section class="game-panel-card moves-strip">
+              <div class="moves-strip-label">Moves</div>
+              <div class="move-history" id="moveHistory">
+                <span class="moves-placeholder">Game starting...</span>
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <!-- Promotion dialog (hidden) -->
@@ -127,6 +196,9 @@
     let gameMode = 'standard';
     let currentDice = null; // { roll, pieceType, pieceName }
     let isReplay = false;
+    const INITIAL_FEN = '2bnrk/5p/6/6/P5/KRNB2 w - - []/[]';
+    let replayPositions = [];
+    let replayIndex = 0;
 
     // ==================== Determine Mode ====================
 
@@ -141,6 +213,7 @@
         window.location.href = 'index.html';
         return;
       }
+      renderGameSidebar(user);
 
       const matchId = getMatchIdFromUrl();
 
@@ -195,6 +268,37 @@
       }
     }
 
+    function renderGameSidebar(user) {
+      const usernameEl = document.getElementById('sidebarUsername');
+      const eloEl = document.getElementById('sidebarElo');
+      const avatarImg = document.getElementById('sidebarAvatarImg');
+      const avatarFallback = document.getElementById('sidebarAvatarFallback');
+
+      if (usernameEl) usernameEl.textContent = user.username || 'Player';
+      if (eloEl) eloEl.textContent = user.elo || '1200';
+      if (avatarImg && avatarFallback) {
+        if (user.avatar_url) {
+          avatarImg.src = user.avatar_url;
+          avatarImg.style.display = '';
+          avatarFallback.style.display = 'none';
+        } else {
+          avatarImg.style.display = 'none';
+          avatarFallback.style.display = '';
+          avatarFallback.textContent = (user.username || '?').charAt(0).toUpperCase();
+        }
+      }
+      const winsEl = document.getElementById('sbWins');
+      const lossesEl = document.getElementById('sbLosses');
+      const drawsEl = document.getElementById('sbDraws');
+      if (winsEl) winsEl.textContent = user.wins || 0;
+      if (lossesEl) lossesEl.textContent = user.losses || 0;
+      if (drawsEl) drawsEl.textContent = user.draws || 0;
+
+      fetch('/api/me/admin').then(r => r.json()).then(d => {
+        if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
+      }).catch(() => {});
+    }
+
     // Helper to render a finished game from pre-fetched data (avoids second API call)
     async function initWithGameData(matchId, user, game) {
       isReplay = true;
@@ -222,17 +326,6 @@
       document.getElementById('playerColorDot').className = 'player-color ' + myColor;
       document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
 
-      if (game.fen) {
-        boardState = parseFen(game.fen);
-        if (boardState) {
-          pockets = boardState.pockets;
-          activeColor = boardState.activeColor;
-        }
-      } else {
-        boardState = { board: Array.from({ length: 6 }, () => Array(6).fill(null)), activeColor: 'white', pockets: { white: [], black: [] } };
-        pockets = boardState.pockets;
-      }
-
       if (game.moves && Array.isArray(game.moves)) {
         moveHistory = [];
         for (let i = 0; i < game.moves.length; i += 2) {
@@ -242,6 +335,8 @@
           });
         }
       }
+
+      setupReplayNavigation(game);
 
       renderReplayResult(game.result);
       showBanner('Replay', 'info');
@@ -255,7 +350,7 @@
       document.getElementById('turnIndicator').textContent = 'Finished';
       document.getElementById('playerClock').classList.remove('active-clock', 'low-time');
       document.getElementById('opponentClock').classList.remove('active-clock', 'low-time');
-      showReplayOverlay(game.result);
+      showReplayPosition(replayIndex);
     }
 
     // ==================== Replay Mode ====================
@@ -305,19 +400,6 @@
         document.getElementById('playerColorDot').className = 'player-color ' + myColor;
         document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
 
-        // Parse final FEN
-        if (game.fen) {
-          boardState = parseFen(game.fen);
-          if (boardState) {
-            pockets = boardState.pockets;
-            activeColor = boardState.activeColor;
-          }
-        } else {
-          boardState = { board: Array.from({ length: 6 }, () => Array(6).fill(null)), activeColor: 'white', pockets: { white: [], black: [] } };
-          pockets = boardState.pockets;
-          activeColor = boardState.activeColor;
-        }
-
         // Parse moves for history display
         if (game.moves && Array.isArray(game.moves)) {
           moveHistory = [];
@@ -330,6 +412,8 @@
             });
           }
         }
+
+        setupReplayNavigation(game);
 
         // Show result
         renderReplayResult(game.result);
@@ -350,9 +434,7 @@
         // Disable clocks
         document.getElementById('playerClock').classList.remove('active-clock', 'low-time');
         document.getElementById('opponentClock').classList.remove('active-clock', 'low-time');
-
-        // Show game over overlay
-        showReplayOverlay(game.result);
+        showReplayPosition(replayIndex);
 
       } catch (err) {
         console.error('Failed to load replay:', err);
@@ -365,28 +447,18 @@
 
     function renderReplayResult(serverResult) {
       // serverResult: 'white_wins', 'black_wins', or 'draw'
-      let playerResultText = '';
+      let playerResultText = 'Finished Game';
       let resultClass = '';
 
       if (serverResult === 'draw') {
-        playerResultText = 'Draw';
+        playerResultText = 'Result: Draw';
         resultClass = 'draw-text';
       } else if (serverResult === 'white_wins') {
-        if (myColor === 'white') {
-          playerResultText = 'You Won';
-          resultClass = 'win-text';
-        } else {
-          playerResultText = 'You Lost';
-          resultClass = 'lose-text';
-        }
+        playerResultText = 'Result: White won';
+        resultClass = 'replay-result-text';
       } else if (serverResult === 'black_wins') {
-        if (myColor === 'black') {
-          playerResultText = 'You Won';
-          resultClass = 'win-text';
-        } else {
-          playerResultText = 'You Lost';
-          resultClass = 'lose-text';
-        }
+        playerResultText = 'Result: Black won';
+        resultClass = 'replay-result-text';
       }
 
       const banner = document.getElementById('replayResult');
@@ -419,6 +491,145 @@
       `;
       overlay.style.display = 'flex';
     }
+
+    function cloneReplayState(state) {
+      return {
+        board: state.board.map(row => row.map(cell => cell ? { ...cell } : null)),
+        activeColor: state.activeColor,
+        castling: state.castling || '-',
+        enPassant: state.enPassant || '-',
+        pockets: {
+          white: [...(state.pockets.white || [])],
+          black: [...(state.pockets.black || [])]
+        },
+        isCheck: false,
+        lastMove: state.lastMove || null
+      };
+    }
+
+    function applyReplayMove(state, move) {
+      const next = cloneReplayState(state);
+      const mover = next.activeColor;
+
+      if (move.isDrop) {
+        const pocket = next.pockets[mover] || [];
+        const removeIndex = typeof move.pocketIndex === 'number' ? move.pocketIndex : pocket.indexOf(move.pieceType);
+        if (removeIndex >= 0) pocket.splice(removeIndex, 1);
+        const to = squareToCoords(move.to);
+        next.board[to.row][to.col] = { type: move.pieceType, color: mover };
+      } else {
+        const from = squareToCoords(move.from);
+        const to = squareToCoords(move.to);
+        const piece = next.board[from.row][from.col];
+
+        if (move.isEnPassant) {
+          const capturedPawn = next.board[from.row][to.col];
+          if (capturedPawn) {
+            next.pockets[mover].push(capturedPawn.type);
+            next.board[from.row][to.col] = null;
+          }
+        } else if (move.captured) {
+          const capturedType = move.captured.type || move.captured;
+          if (capturedType) next.pockets[mover].push(capturedType);
+        }
+
+        next.board[to.row][to.col] = piece ? {
+          type: move.promotion || piece.type,
+          color: piece.color
+        } : null;
+        next.board[from.row][from.col] = null;
+        next.enPassant = move.enPassantTarget || '-';
+      }
+
+      next.activeColor = mover === 'white' ? 'black' : 'white';
+      next.lastMove = { from: move.from, to: move.to };
+      return next;
+    }
+
+    function setupReplayNavigation(game) {
+      const moves = Array.isArray(game.moves) ? game.moves : [];
+      const start = parseFen(INITIAL_FEN);
+      replayPositions = [cloneReplayState(start)];
+      let current = cloneReplayState(start);
+
+      moves.forEach(move => {
+        current = applyReplayMove(current, move);
+        replayPositions.push(cloneReplayState(current));
+      });
+
+      if (game.fen && replayPositions.length === 1) {
+        const finalState = parseFen(game.fen);
+        if (finalState) replayPositions = [cloneReplayState(finalState)];
+      }
+
+      replayIndex = replayPositions.length - 1;
+      const controls = document.getElementById('replayControls');
+      if (controls) controls.style.display = 'block';
+      showReplayPosition(replayIndex);
+    }
+
+    function showReplayPosition(index) {
+      if (!isReplay || replayPositions.length === 0) return;
+      replayIndex = Math.max(0, Math.min(index, replayPositions.length - 1));
+      boardState = cloneReplayState(replayPositions[replayIndex]);
+      pockets = boardState.pockets;
+      activeColor = boardState.activeColor;
+      selectedSquare = null;
+      selectedPocketPiece = null;
+      possibleMoves = [];
+
+      renderBoard();
+      updatePockets();
+      setupMoveLabels();
+      document.getElementById('turnIndicator').textContent = replayIndex === replayPositions.length - 1 ? 'Final Position' : 'Move ' + replayIndex;
+      document.getElementById('turnIndicator').classList.remove('active');
+      updateReplayControls();
+    }
+
+    function updateReplayControls() {
+      const totalMoves = Math.max(0, replayPositions.length - 1);
+      const counter = document.getElementById('replayMoveCounter');
+      if (counter) counter.textContent = replayIndex + ' / ' + totalMoves;
+      const atStart = replayIndex <= 0;
+      const atEnd = replayIndex >= totalMoves;
+      ['replayStartBtn', 'replayPrevBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = atStart;
+      });
+      ['replayNextBtn', 'replayEndBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = atEnd;
+      });
+    }
+
+    function stepReplay(delta) {
+      showReplayPosition(replayIndex + delta);
+    }
+
+    function goReplayStart() {
+      showReplayPosition(0);
+    }
+
+    function goReplayEnd() {
+      showReplayPosition(replayPositions.length - 1);
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (!isReplay) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        stepReplay(-1);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        stepReplay(1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        goReplayStart();
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        goReplayEnd();
+      }
+    });
 
     function showBanner(text, type) {
       const banner = document.getElementById('replayBanner');
@@ -690,6 +901,18 @@
       socket.on('dice_skip_result', (data) => {
         if (data.skipped) {
           showToast(`${data.skippedBy} had no valid moves — skipped`, 'info');
+        }
+      });
+
+      // Battlepass level up notification
+      socket.on('battlepass_level_up', (data) => {
+        if (data.leveledUp) {
+          let msg = '🎉 Level up! You reached Tier ' + data.newTier + '!';
+          if (data.unlockedTitle) {
+            msg += ' Unlocked: ' + data.unlockedTitle + '!';
+          }
+          msg += ' Check the Battlepass!';
+          showToast(msg, 'success');
         }
       });
     }

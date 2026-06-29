@@ -12,6 +12,7 @@ const auth = require('./auth');
 const engine = require('./game-engine');
 const Matchmaker = require('./matchmaker');
 const bot = require('./bot');
+const battlepass = require('./battlepass');
 
 const app = express();
 const server = http.createServer(app);
@@ -231,7 +232,8 @@ app.get('/api/users/by-username/:username', (req, res) => {
       losses: user.losses,
       draws: user.draws,
       createdAt: user.created_at,
-      avatarUrl: user.avatar_url || null
+      avatarUrl: user.avatar_url || null,
+      title: user.title || null
     }
   });
 });
@@ -494,6 +496,59 @@ app.post('/api/admin/users/:userId/reset-stats', requireAdmin, (req, res) => {
 app.post('/api/admin/reset-stats', requireAdmin, (req, res) => {
   auth.resetAllStats();
   res.json({ success: true, message: 'All stats have been reset' });
+});
+
+// Grant battlepass XP to a user (admin only) — for testing tier progression
+app.post('/api/admin/users/:userId/grant-xp', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const amount = parseInt(req.body.amount);
+
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return res.json({ success: false, message: 'XP amount must be a positive integer' });
+  }
+
+  // Verify user exists
+  const user = auth.getUserById(userId);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+
+  const bpResult = battlepass.grantXP(userId, amount);
+  saveDb();
+
+  // Notify the user in real time if they're online and leveled up
+  if (bpResult.leveledUp) {
+    notifyLevelUp(userId, bpResult);
+  }
+
+  const status = battlepass.getBattlepassStatus(userId);
+  res.json({
+    success: true,
+    message: `Granted ${amount} XP to ${user.username}`,
+    leveledUp: bpResult.leveledUp,
+    newTier: bpResult.newTier,
+    unlockedTitle: bpResult.unlockedTitle,
+    battlepass: status
+  });
+});
+
+// Reset a user's battlepass progress (admin only)
+app.post('/api/admin/users/:userId/reset-battlepass', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+
+  const user = auth.getUserById(userId);
+  if (!user) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+
+  const result = battlepass.resetBattlepass(userId);
+  saveDb();
+
+  if (result.success) {
+    res.json({ success: true, message: `Battlepass reset for ${user.username}` });
+  } else {
+    res.json({ success: false, message: result.message || 'Failed to reset battlepass' });
+  }
 });
 
 // ==================== Game State Management ====================
@@ -1531,6 +1586,38 @@ function handleGameOver(game, result) {
     console.error('Failed to save game to DB:', err);
   });
 
+  // ===== Battlepass XP Grant =====
+  const isBotGame = game.whiteId === 0 || game.blackId === 0;
+  if (!isBotGame) {
+    // PvP match — full XP
+    const whiteXp = result === 'white_wins' ? 30 : (result === 'draw' ? 15 : 10);
+    const blackXp = result === 'black_wins' ? 30 : (result === 'draw' ? 15 : 10);
+    if (game.whiteId !== 0) {
+      const bpResult = battlepass.grantXP(game.whiteId, whiteXp);
+      if (bpResult.leveledUp) {
+        notifyLevelUp(game.whiteId, bpResult);
+      }
+    }
+    if (game.blackId !== 0) {
+      const bpResult = battlepass.grantXP(game.blackId, blackXp);
+      if (bpResult.leveledUp) {
+        notifyLevelUp(game.blackId, bpResult);
+      }
+    }
+  } else {
+    // Bot game — half XP (only for the human player)
+    const humanId = game.whiteId !== 0 ? game.whiteId : game.blackId;
+    if (humanId !== 0) {
+      const isHumanWhite = game.whiteId === humanId;
+      const humanResult = isHumanWhite ? result : (result === 'white_wins' ? 'black_wins' : result === 'black_wins' ? 'white_wins' : result);
+      const xpAmount = humanResult === 'white_wins' ? 15 : (humanResult === 'draw' ? 7 : 5);
+      const bpResult = battlepass.grantXP(humanId, xpAmount);
+      if (bpResult.leveledUp) {
+        notifyLevelUp(humanId, bpResult);
+      }
+    }
+  }
+
   // Clean up socket-games mapping
   for (const [sockId, info] of socketGames) {
     if (info.gameId === game.id) {
@@ -1544,11 +1631,72 @@ function handleGameOver(game, result) {
   }, 60000); // Keep for 1 minute in case of reconnection
 }
 
+/**
+ * Notify a user that they've leveled up in the battlepass.
+ */
+function notifyLevelUp(userId, bpResult) {
+  const sockets = userSockets.get(userId);
+  if (sockets) {
+    const data = {
+      newTier: bpResult.newTier,
+      unlockedTitle: bpResult.unlockedTitle || null,
+      leveledUp: true
+    };
+    for (const sockId of sockets) {
+      io.to(sockId).emit('battlepass_level_up', data);
+    }
+  }
+}
+
+// ==================== Battlepass API ====================
+
+// Get the current user's battlepass status
+app.get('/api/battlepass', requireAuth, (req, res) => {
+  const status = battlepass.getBattlepassStatus(req.session.userId);
+  const titles = battlepass.getUnlockedTitles(req.session.userId);
+  res.json({ success: true, ...status, titles });
+});
+
+// Get all tier definitions
+app.get('/api/battlepass/tiers', (req, res) => {
+  const tiers = battlepass.getSeasonTiers(1);
+  res.json({ success: true, tiers });
+});
+
+// Claim a tier reward
+app.post('/api/battlepass/claim', requireAuth, (req, res) => {
+  const { tier } = req.body;
+  if (!tier) return res.json({ success: false, message: 'Tier number required' });
+  const result = battlepass.claimTierReward(req.session.userId, tier);
+  res.json(result);
+});
+
+// Set equipped title
+app.post('/api/battlepass/set-title', requireAuth, (req, res) => {
+  const { titleId } = req.body;
+  if (!titleId) return res.json({ success: false, message: 'Title ID required' });
+  const result = battlepass.setEquippedTitle(req.session.userId, titleId);
+  res.json(result);
+});
+
+// Clear equipped title
+app.post('/api/battlepass/clear-title', requireAuth, (req, res) => {
+  const result = battlepass.clearEquippedTitle(req.session.userId);
+  res.json(result);
+});
+
+// Get all unlocked titles for current user
+app.get('/api/battlepass/titles', requireAuth, (req, res) => {
+  const titles = battlepass.getUnlockedTitles(req.session.userId);
+  res.json({ success: true, titles });
+});
+
 // ==================== Start Server ====================
 
 async function start() {
   const database = await getDb();
   auth.setDb(database);
+  battlepass.setDb(database);
 
   server.listen(PORT, () => {
     console.log(`\n♟  MiniChess Server`);

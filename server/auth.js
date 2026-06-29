@@ -57,14 +57,14 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, title FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url, title FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
@@ -246,7 +246,15 @@ function isAdmin(userId) {
 }
 
 function getAllUsers() {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, is_admin FROM users ORDER BY id ASC');
+  const stmt = db.prepare(`
+    SELECT u.id, u.username, u.elo, u.wins, u.losses, u.draws, u.created_at,
+           u.avatar_url, u.is_admin,
+           COALESCE(b.xp, 0) AS bp_xp,
+           COALESCE(b.tier, 1) AS bp_tier
+    FROM users u
+    LEFT JOIN user_battlepass b ON b.user_id = u.id
+    ORDER BY u.id ASC
+  `);
   const results = [];
   while (stmt.step()) {
     results.push(stmt.getAsObject());

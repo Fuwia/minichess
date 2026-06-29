@@ -134,6 +134,16 @@
       opacity: 1;
     }
 
+    .profile-title-display {
+      font-size: 14px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-top: 2px;
+    }
+
     /* Stats */
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
     .stat-box { background: var(--surface2); border-radius: 12px; padding: 16px 12px; text-align: center; }
@@ -240,6 +250,7 @@
     <nav class="sidebar-nav">
       <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
       <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
       <a href="profile.html" class="active" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
       <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
     </nav>
@@ -272,6 +283,7 @@
         </div>
         <div class="profile-info">
           <h1 id="profileUsername">—</h1>
+          <div class="profile-title-display" id="profileTitle" style="display:none;"></div>
           <div class="elo-display"><span id="profileElo">1200</span> <span>ELO</span></div>
           <div class="member-since" id="profileMemberSince"></div>
         </div>
@@ -416,6 +428,15 @@
       try {
         document.getElementById('profileMemberSince').textContent = 'Member since ' + new Date(createdAt.replace(' ', 'T')).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
       } catch(e) {}
+    }
+    // Show title if available
+    const userData = isOwnProfile ? currentUser : profileUser;
+    const titleEl = document.getElementById('profileTitle');
+    if (userData && userData.title) {
+      titleEl.textContent = '「' + userData.title + '」';
+      titleEl.style.display = '';
+    } else {
+      titleEl.style.display = 'none';
     }
   }
 

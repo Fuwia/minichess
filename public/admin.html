@@ -132,6 +132,18 @@
       font-family: inherit; transition: all 0.2s;
     }
     .btn-danger:hover { background: var(--red-soft); color: #fff; }
+    .btn-xp {
+      background: transparent; border: 1px solid var(--accent-purple); color: #a78bfa;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-family: inherit; margin-right: 6px; transition: all 0.2s;
+    }
+    .btn-xp:hover { background: var(--accent-purple); color: #fff; }
+    .btn-bp-reset {
+      background: transparent; border: 1px solid var(--accent-cyan); color: var(--accent-cyan);
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-family: inherit; margin-right: 6px; transition: all 0.2s;
+    }
+    .btn-bp-reset:hover { background: var(--accent-cyan); color: #000; }
     .btn-reset {
       background: transparent; border: 1px solid var(--gold); color: var(--gold);
       padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
@@ -181,6 +193,7 @@
     <nav class="sidebar-nav">
       <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
       <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
       <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
       <a href="admin.html" id="navAdmin"><span class="nav-icon">⚙</span> Admin</a>
     </nav>
@@ -225,6 +238,8 @@
               <th>Username</th>
               <th>Elo</th>
               <th>W / L / D</th>
+              <th>BP Tier</th>
+              <th>BP XP</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
@@ -296,14 +311,18 @@
     tbody.innerHTML = users.map(u => {
       const isAdmin = u.is_admin === 1;
       const isSelf = u.id === currentUserId;
+      const bpActions = `<button class="btn-xp" onclick="grantUserXp(${u.id}, '${esc(u.username)}')">+ XP</button>
+             <button class="btn-bp-reset" onclick="resetUserBattlepass(${u.id}, '${esc(u.username)}')">Reset BP</button>`;
       return `<tr>
         <td>${u.id}</td>
         <td>${esc(u.username)}${isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}</td>
         <td style="color:var(--gold);font-weight:700;">${u.elo}</td>
         <td>${u.wins} / ${u.losses} / ${u.draws}</td>
+        <td style="color:var(--accent-purple);font-weight:700;">${u.bp_tier || 1}</td>
+        <td style="color:var(--accent-cyan);font-weight:600;">${u.bp_xp || 0}</td>
         <td>${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
-        <td>${isSelf
-          ? '<span style="color:var(--text-muted);font-size:12px;">You</span>'
+        <td>${bpActions}${isSelf
+          ? '<span style="color:var(--text-muted);font-size:12px;margin-left:6px;">You</span>'
           : `<button class="btn-reset" onclick="resetUserStats(${u.id}, '${esc(u.username)}')">Reset</button>
              <button class="btn-danger" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>`}</td>
       </tr>`;
@@ -344,6 +363,45 @@
       if (data.success) { showToast('All stats have been reset', 'success'); loadUsers(); }
       else { showToast(data.message || 'Failed to reset stats', 'error'); }
     } catch (err) { showToast('Failed to reset stats', 'error'); }
+  }
+
+  async function grantUserXp(userId, username) {
+    const input = prompt(`Grant battlepass XP to "${username}".\n\nEnter XP amount (positive integer).\n\nTip: Tier thresholds are 50, 100, 160, 230 (Pioneer), 730 (Founder), 2480 (Veteran), 3730 (Legend), 5230 (Champion).`);
+    if (input === null) return;
+    const amount = parseInt(input, 10);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      showToast('Please enter a valid positive integer', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/users/' + userId + '/grant-xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      if (data.success) {
+        let msg = `Granted ${amount} XP to ${username}`;
+        if (data.leveledUp) {
+          msg += ` — reached Tier ${data.newTier}`;
+          if (data.unlockedTitle) msg += ` (unlocked "${data.unlockedTitle}")`;
+        }
+        showToast(msg, 'success');
+        loadUsers();
+      } else {
+        showToast(data.message || 'Failed to grant XP', 'error');
+      }
+    } catch (err) { showToast('Failed to grant XP', 'error'); }
+  }
+
+  async function resetUserBattlepass(userId, username) {
+    if (!confirm(`Reset battlepass for "${username}"?\n\nThis will set XP to 0, tier to 1, and clear all unlocked/equipped titles. This cannot be undone.`)) return;
+    try {
+      const res = await fetch('/api/admin/users/' + userId + '/reset-battlepass', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast('Battlepass reset for ' + username, 'success'); loadUsers(); }
+      else { showToast(data.message || 'Failed to reset battlepass', 'error'); }
+    } catch (err) { showToast('Failed to reset battlepass', 'error'); }
   }
 
   function showToast(message, type) {
