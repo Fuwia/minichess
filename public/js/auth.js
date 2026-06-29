@@ -7,7 +7,7 @@ const isLocal = window.location.hostname === 'localhost' ||
                 window.location.hostname === '127.0.0.1' || 
                 window.location.hostname === '' ||
                 window.location.protocol === 'file:';
-const BACKEND_URL = isLocal ? 'http://localhost:3000' : window.location.origin;
+const BACKEND_URL = isLocal ? 'http://localhost:3000' : 'https://minichess.xyz';
 
 // Automatically intercept and rewrite relative /api/ requests to point to the correct backend host
 (function() {

@@ -12,7 +12,7 @@ function initSocket() {
                   window.location.hostname === '127.0.0.1' || 
                   window.location.hostname === '' ||
                   window.location.protocol === 'file:';
-  const serverUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
+  const serverUrl = isLocal ? 'http://localhost:3000' : 'https://minichess.xyz';
 
   socket = io(serverUrl, {
     transports: ['websocket', 'polling'],
