@@ -347,8 +347,8 @@
     }
 
     .btn-play:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px var(--emerald-glow);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px var(--emerald-glow);
     }
 
     .btn-play.searching {
@@ -378,6 +378,8 @@
     .btn-play-dice:hover {
       background: rgba(6,182,212,0.18);
       border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(6,182,212,0.25);
     }
 
     .btn-play-dice.searching {
@@ -481,14 +483,55 @@
     }
 
     .bot-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(255,255,255,0.14);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      transform: translateY(-4px) scale(1.02);
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.4);
     }
 
     .bot-card.selected {
       border-color: var(--emerald);
       box-shadow: 0 0 0 1px var(--emerald), 0 8px 24px rgba(63,185,80,0.15);
+    }
+
+    .bot-card[data-bot="toddler"].selected {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 1px #818cf8, 0 8px 24px rgba(129,140,248,0.25);
+    }
+    .bot-card[data-bot="novice"].selected {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 1px #60a5fa, 0 8px 24px rgba(96,165,250,0.25);
+    }
+    .bot-card[data-bot="apprentice"].selected {
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 1px #22d3ee, 0 8px 24px rgba(34,211,238,0.25);
+    }
+    .bot-card[data-bot="casual"].selected {
+      border-color: #4ade80;
+      box-shadow: 0 0 0 1px #4ade80, 0 8px 24px rgba(74,222,128,0.25);
+    }
+    .bot-card[data-bot="amateur"].selected {
+      border-color: #a3e635;
+      box-shadow: 0 0 0 1px #a3e635, 0 8px 24px rgba(163,230,53,0.25);
+    }
+    .bot-card[data-bot="club_player"].selected {
+      border-color: #facc15;
+      box-shadow: 0 0 0 1px #facc15, 0 8px 24px rgba(250,204,21,0.25);
+    }
+    .bot-card[data-bot="intermediate"].selected {
+      border-color: #fb923c;
+      box-shadow: 0 0 0 1px #fb923c, 0 8px 24px rgba(251,146,60,0.25);
+    }
+    .bot-card[data-bot="advanced"].selected {
+      border-color: #f87171;
+      box-shadow: 0 0 0 1px #f87171, 0 8px 24px rgba(248,113,113,0.25);
+    }
+    .bot-card[data-bot="expert"].selected {
+      border-color: #c084fc;
+      box-shadow: 0 0 0 1px #c084fc, 0 8px 24px rgba(192,132,252,0.25);
+    }
+    .bot-card[data-bot="master"].selected {
+      border-color: #22d3ee;
+      box-shadow: 0 0 0 1px #22d3ee, 0 8px 24px rgba(34,211,238,0.3);
     }
 
     .bot-card .bot-diff-badge {
@@ -597,18 +640,25 @@
     .room-share-box input {
       flex: 1;
       padding: 12px 16px;
-      background: var(--surface);
-      border: 1px solid var(--glass-border);
+      background: var(--surface2);
+      border: 1px solid var(--border-glass);
       border-radius: 10px;
       color: var(--text-bright);
       font-size: 14px;
       font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .room-share-box input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
     }
 
     .room-share-box button {
       padding: 12px 20px;
       background: var(--surface3);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--border-glass);
       border-radius: 10px;
       color: var(--text-bright);
       font-size: 13px;
@@ -646,6 +696,168 @@
       color: var(--red-soft);
     }
 
+    /* ===== Hero Welcome Banner ===== */
+    .hero-welcome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(135deg, rgba(31, 38, 52, 0.6) 0%, rgba(16, 21, 30, 0.8) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-welcome::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(63, 185, 80, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-welcome-content {
+      max-width: 70%;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .hero-title span {
+      background: linear-gradient(135deg, var(--emerald) 0%, #22d3ee 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .hero-stats-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px 18px;
+      border-radius: 12px;
+    }
+
+    .hero-stats-badge .badge-icon {
+      font-size: 24px;
+      color: var(--gold);
+    }
+
+    .hero-stats-badge .badge-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .hero-stats-badge .badge-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-bright);
+    }
+
+    /* ===== Mode Tabs ===== */
+    .mode-tabs {
+      display: flex;
+      gap: 10px;
+      background: rgba(24, 27, 32, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-bright);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-btn.active {
+      color: var(--emerald);
+      background: rgba(63, 185, 80, 0.08);
+      border: 1px solid rgba(63, 185, 80, 0.15);
+    }
+
+    /* ===== Tab Transitions ===== */
+    .tab-content {
+      animation: tabFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes tabFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ===== Bot Difficulty Filters ===== */
+    .bot-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      color: var(--text-bright);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .filter-btn.active {
+      background: var(--surface3);
+      color: var(--text-bright);
+      border-color: var(--text-muted);
+    }
 
     /* ========== Toast ========== */
     .toast {
@@ -673,7 +885,7 @@
     /* ========== Responsive ========== */
     @media (max-width: 1100px) {
       .dashboard {
-        grid-template-columns: 200px 1fr 260px;
+        grid-template-columns: 180px 1fr;
       }
     }
 
@@ -705,7 +917,10 @@
   <!-- ========== LEFT SIDEBAR ========== -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <img class="logo-img" src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+      <img class="logo-img" src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'; document.getElementById('sidebarLogoText').style.display='block'">
+      <div class="logo-text" id="sidebarLogoText" style="display:none; padding: 4px 8px;">
+        <span class="logo-icon">♟</span>Mini<span>Chess</span>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <a href="lobby.html" class="active" id="navPlay">
@@ -768,55 +983,95 @@
       <a id="rejoinBtn" href="#" class="rejoin-link">Rejoin Game</a>
     </div>
 
-    <!-- Multiplayer Zone -->
-    <div class="section-title">Multiplayer</div>
-    <section class="multiplayer-zone">
-      <div class="mp-header">
+    <!-- Hero Welcome Banner -->
+    <div class="hero-welcome">
+      <div class="hero-welcome-content">
+        <h1 class="hero-title">Welcome back, <span id="heroUsername">Player</span>!</h1>
+        <p class="hero-subtitle">Choose your game mode and start playing</p>
+      </div>
+      <div class="hero-stats-badge">
+        <span class="badge-icon">⚡</span>
         <div>
-          <div class="mp-title">Find a Match</div>
-          <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
-        </div>
-        <div class="online-indicator" id="onlineIndicator">
-          <span class="online-dot"></span> Online <span id="queueCountText"></span>
+          <div class="badge-label">CURRENT ELO</div>
+          <div class="badge-value" id="heroElo">1200</div>
         </div>
       </div>
-      <div class="mp-actions">
-        <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
-          Find Match
-        </button>
-        <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
-          🎲 MiniDice
-        </button>
-      </div>
-      <div class="mp-queue-status" id="queueStatus"></div>
-      <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
-    </section>
+    </div>
 
-    <!-- Singleplayer / Bot Zone -->
-    <div class="section-title">Singleplayer — vs Computer</div>
-    <section class="bot-zone">
-      <div class="bot-grid" id="botGrid"></div>
-      <button id="botPlayBtn" class="bot-play-btn" onclick="startBotGame()">
-        🤖 Play vs <span id="selectedBotName">Amateur</span>
+    <!-- Mode Tabs Switcher -->
+    <div class="mode-tabs">
+      <button class="tab-btn active" id="tab-btn-multiplayer" onclick="switchPlayTab('multiplayer')">
+        <span class="tab-icon">🎮</span> Multiplayer
       </button>
-    </section>
+      <button class="tab-btn" id="tab-btn-computer" onclick="switchPlayTab('computer')">
+        <span class="tab-icon">🤖</span> Vs Computer
+      </button>
+      <button class="tab-btn" id="tab-btn-friend" onclick="switchPlayTab('friend')">
+        <span class="tab-icon">👥</span> Play a Friend
+      </button>
+    </div>
 
-    <!-- Private Room Zone -->
-    <div class="section-title">Play with a Friend</div>
-    <section class="friends-zone">
-      <div class="fz-header">
-        <div class="fz-title">Private Room</div>
-        <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()">➕ Create Room</button>
-      </div>
-      <div id="roomSection" style="display:none;">
-        <div class="room-share-box">
-          <input type="text" id="roomLink" readonly placeholder="Generating room link...">
-          <button onclick="copyRoomLink()">Copy</button>
+    <!-- Tab Content: Multiplayer -->
+    <div class="tab-content" id="tab-content-multiplayer">
+      <div class="section-title">Multiplayer</div>
+      <section class="multiplayer-zone">
+        <div class="mp-header">
+          <div>
+            <div class="mp-title">Find a Match</div>
+            <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
+          </div>
+          <div class="online-indicator" id="onlineIndicator">
+            <span class="online-dot"></span> Online <span id="queueCountText"></span>
+          </div>
         </div>
-        <div class="room-status-text" id="roomStatus">Waiting for friend to join...</div>
-        <button class="btn-cancel-room" onclick="cancelRoom()">Cancel Room</button>
+        <div class="mp-actions">
+          <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
+            Find Match
+          </button>
+          <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
+            🎲 MiniDice
+          </button>
+        </div>
+        <div class="mp-queue-status" id="queueStatus"></div>
+        <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
+      </section>
+    </div>
+
+    <!-- Tab Content: VS Computer -->
+    <div class="tab-content" id="tab-content-computer" style="display:none;">
+      <div class="section-title">Singleplayer — vs Computer</div>
+      <div class="bot-filters">
+        <button class="filter-btn active" id="filter-all" onclick="filterBots('all')">All Levels</button>
+        <button class="filter-btn" id="filter-beginner" onclick="filterBots('beginner')">Beginner</button>
+        <button class="filter-btn" id="filter-intermediate" onclick="filterBots('intermediate')">Intermediate</button>
+        <button class="filter-btn" id="filter-expert" onclick="filterBots('expert')">Expert / Master</button>
       </div>
-    </section>
+      <section class="bot-zone">
+        <div class="bot-grid" id="botGrid"></div>
+        <button id="botPlayBtn" class="bot-play-btn" onclick="startBotGame()">
+          🤖 Play vs <span id="selectedBotName">Amateur</span>
+        </button>
+      </section>
+    </div>
+
+    <!-- Tab Content: Play with Friend -->
+    <div class="tab-content" id="tab-content-friend" style="display:none;">
+      <div class="section-title">Play with a Friend</div>
+      <section class="friends-zone">
+        <div class="fz-header">
+          <div class="fz-title">Private Room</div>
+          <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()">➕ Create Room</button>
+        </div>
+        <div id="roomSection" style="display:none;">
+          <div class="room-share-box">
+            <input type="text" id="roomLink" readonly placeholder="Generating room link...">
+            <button onclick="copyRoomLink()">Copy</button>
+          </div>
+          <div class="room-status-text" id="roomStatus">Waiting for friend to join...</div>
+          <button class="btn-cancel-room" onclick="cancelRoom()">Cancel Room</button>
+        </div>
+      </section>
+    </div>
   </main>
 
 </div>
@@ -833,24 +1088,27 @@
   let currentUser = null;
   let currentRoomId = null;
   let selectedBot = 'amateur';
+  let botFilterCategory = 'all';
 
   // ========== Bot Profiles ==========
   const BOT_PROFILES = [
-    { id:'toddler',      name:'Toddler',      elo:600,  depth:1, diffClass:'diff-toddler' },
-    { id:'novice',       name:'Novice',       elo:750,  depth:1, diffClass:'diff-novice' },
-    { id:'apprentice',   name:'Apprentice',   elo:900,  depth:1, diffClass:'diff-apprentice' },
-    { id:'casual',       name:'Casual',       elo:1050, depth:2, diffClass:'diff-casual' },
-    { id:'amateur',      name:'Amateur',      elo:1200, depth:2, diffClass:'diff-amateur' },
-    { id:'club_player',  name:'Club Player',  elo:1350, depth:2, diffClass:'diff-club_player' },
-    { id:'intermediate', name:'Intermediate', elo:1500, depth:2, diffClass:'diff-intermediate' },
-    { id:'advanced',     name:'Advanced',     elo:1700, depth:3, diffClass:'diff-advanced' },
-    { id:'expert',       name:'Expert',       elo:1900, depth:3, diffClass:'diff-expert' },
-    { id:'master',       name:'Master',       elo:2100, depth:4, diffClass:'diff-master' },
+    { id:'toddler',      name:'Toddler',      elo:600,  depth:1, diffClass:'diff-toddler',      category:'beginner' },
+    { id:'novice',       name:'Novice',       elo:750,  depth:1, diffClass:'diff-novice',       category:'beginner' },
+    { id:'apprentice',   name:'Apprentice',   elo:900,  depth:1, diffClass:'diff-apprentice',   category:'beginner' },
+    { id:'casual',       name:'Casual',       elo:1050, depth:2, diffClass:'diff-casual',       category:'intermediate' },
+    { id:'amateur',      name:'Amateur',      elo:1200, depth:2, diffClass:'diff-amateur',      category:'intermediate' },
+    { id:'club_player',  name:'Club Player',  elo:1350, depth:2, diffClass:'diff-club_player',  category:'intermediate' },
+    { id:'intermediate', name:'Intermediate', elo:1500, depth:2, diffClass:'diff-intermediate', category:'intermediate' },
+    { id:'advanced',     name:'Advanced',     elo:1700, depth:3, diffClass:'diff-advanced',     category:'expert' },
+    { id:'expert',       name:'Expert',       elo:1900, depth:3, diffClass:'diff-expert',       category:'expert' },
+    { id:'master',       name:'Master',       elo:2100, depth:4, diffClass:'diff-master',       category:'expert' },
   ];
 
   function renderBotGrid() {
     const grid = document.getElementById('botGrid');
-    grid.innerHTML = BOT_PROFILES.map(b => `
+    if (!grid) return;
+    const filtered = BOT_PROFILES.filter(b => botFilterCategory === 'all' || b.category === botFilterCategory);
+    grid.innerHTML = filtered.map(b => `
       <div class="bot-card ${selectedBot === b.id ? 'selected' : ''}"
            onclick="selectBot('${b.id}')" data-bot="${b.id}">
         <span class="bot-diff-badge ${b.diffClass}">${b.name}</span>
@@ -864,8 +1122,45 @@
   function selectBot(id) {
     selectedBot = id;
     const bot = BOT_PROFILES.find(b => b.id === id);
-    document.getElementById('selectedBotName').textContent = bot ? bot.name : 'Amateur';
+    const label = document.getElementById('selectedBotName');
+    if (label) {
+      label.textContent = bot ? bot.name : 'Amateur';
+    }
     renderBotGrid();
+  }
+
+  function filterBots(category) {
+    botFilterCategory = category;
+    const filterButtons = document.querySelectorAll('.bot-filters .filter-btn');
+    filterButtons.forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById(`filter-${category}`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
+    renderBotGrid();
+  }
+
+  function switchPlayTab(tabName) {
+    // Switch tabs
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(content => {
+      content.style.display = 'none';
+    });
+    const targetContent = document.getElementById(`tab-content-${tabName}`);
+    if (targetContent) {
+      targetContent.style.display = 'block';
+    }
+
+    const tabBtns = document.querySelectorAll('.mode-tabs .tab-btn');
+    tabBtns.forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+    if (targetBtn) {
+      targetBtn.classList.add('active');
+    }
   }
 
   // ========== Init ==========
@@ -879,6 +1174,12 @@
     // Sidebar
     document.getElementById('sidebarUsername').textContent = currentUser.username;
     document.getElementById('sidebarElo').textContent = currentUser.elo;
+
+    // Hero welcome banner
+    const heroUsername = document.getElementById('heroUsername');
+    if (heroUsername) heroUsername.textContent = currentUser.username;
+    const heroElo = document.getElementById('heroElo');
+    if (heroElo) heroElo.textContent = currentUser.elo;
 
     // Avatar: show profile picture if available, else fallback initial
     if (currentUser.avatar_url) {
@@ -1076,6 +1377,8 @@
   window.copyRoomLink = copyRoomLink;
   window.cancelRoom = cancelRoom;
   window.selectBot = selectBot;
+  window.filterBots = filterBots;
+  window.switchPlayTab = switchPlayTab;
 
   init();
 })();
