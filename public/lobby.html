@@ -859,6 +859,146 @@
       border-color: var(--text-muted);
     }
 
+    /* ===== 2-Column Grid ===== */
+    .lobby-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+      .lobby-layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+    }
+
+    /* ===== Feed Card ===== */
+    .feed-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .feed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 10px;
+    }
+
+    .feed-header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-bright);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .feed-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--red-soft);
+      box-shadow: 0 0 8px var(--red-soft);
+      animation: livePulse 1.5s infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .feed-list::-webkit-scrollbar { width: 4px; }
+    .feed-list::-webkit-scrollbar-track { background: transparent; }
+    .feed-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); border-radius: 2px; }
+
+    .feed-loading {
+      color: var(--text-dim);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* ===== Feed Item Animation ===== */
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text-dim);
+      transition: all 0.2s ease;
+      animation: feedSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes feedSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .feed-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.06);
+      transform: translateX(2px);
+    }
+
+    .feed-item .act-icon {
+      font-size: 16px;
+      line-height: 1;
+      padding-top: 2px;
+    }
+
+    .feed-item .act-text {
+      flex: 1;
+    }
+
+    .feed-item .act-username {
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .feed-item .act-target {
+      font-weight: 600;
+      color: var(--emerald);
+    }
+
+    .feed-item .act-milestone {
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .feed-item .act-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
     /* ========== Toast ========== */
     .toast {
       position: fixed;
@@ -1013,28 +1153,47 @@
 
     <!-- Tab Content: Multiplayer -->
     <div class="tab-content" id="tab-content-multiplayer">
-      <div class="section-title">Multiplayer</div>
-      <section class="multiplayer-zone">
-        <div class="mp-header">
-          <div>
-            <div class="mp-title">Find a Match</div>
-            <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
-          </div>
-          <div class="online-indicator" id="onlineIndicator">
-            <span class="online-dot"></span> Online <span id="queueCountText"></span>
+      <div class="lobby-layout">
+        <!-- Left: Matchmaking (70%) -->
+        <div class="lobby-play-zone">
+          <div class="section-title">Multiplayer</div>
+          <section class="multiplayer-zone">
+            <div class="mp-header">
+              <div>
+                <div class="mp-title">Find a Match</div>
+                <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
+              </div>
+              <div class="online-indicator" id="onlineIndicator">
+                <span class="online-dot"></span> Online <span id="queueCountText"></span>
+              </div>
+            </div>
+            <div class="mp-actions">
+              <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
+                Find Match
+              </button>
+              <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
+                🎲 MiniDice
+              </button>
+            </div>
+            <div class="mp-queue-status" id="queueStatus"></div>
+            <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
+          </section>
+        </div>
+
+        <!-- Right: Recent Activity Feed (30%) -->
+        <div class="lobby-feed-zone">
+          <div class="section-title">Community Feed</div>
+          <div class="feed-card">
+            <div class="feed-header">
+              <span class="feed-header-title">Recent Activity</span>
+              <span class="feed-live-dot"></span>
+            </div>
+            <div class="feed-list" id="activityFeedList">
+              <div class="feed-loading">Loading live activities...</div>
+            </div>
           </div>
         </div>
-        <div class="mp-actions">
-          <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
-            Find Match
-          </button>
-          <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
-            🎲 MiniDice
-          </button>
-        </div>
-        <div class="mp-queue-status" id="queueStatus"></div>
-        <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
-      </section>
+      </div>
     </div>
 
     <!-- Tab Content: VS Computer -->
@@ -1209,6 +1368,7 @@
     initSocket();
     setupSocketListeners();
     checkActiveGame();
+    loadActivities();
     if (socket && socket.connected) {
       socket.emit('request_queue_counts');
     } else {
@@ -1247,6 +1407,123 @@
       currentRoomId = null;
       showToast('Room cancelled', 'info');
     });
+
+    socket.on('new_activity', (act) => {
+      const feedList = document.getElementById('activityFeedList');
+      if (feedList) {
+        // Remove loading state if it is showing
+        const loading = feedList.querySelector('.feed-loading');
+        if (loading) {
+          feedList.innerHTML = '';
+        }
+        
+        // Render item HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = renderActivityItem(act);
+        const itemNode = tempDiv.firstElementChild;
+        
+        // Prepend to feed
+        feedList.insertBefore(itemNode, feedList.firstChild);
+        
+        // Maintain max 15 items in feed
+        while (feedList.children.length > 15) {
+          feedList.lastChild.remove();
+        }
+      }
+    });
+  }
+
+  function formatRelativeTime(dateStr) {
+    if (!dateStr) return 'Just now';
+    const parsed = new Date(dateStr);
+    if (isNaN(parsed.getTime())) return 'Just now';
+    const secDiff = Math.floor((Date.now() - parsed.getTime()) / 1000);
+    if (secDiff < 10) return 'Just now';
+    if (secDiff < 60) return `${secDiff}s ago`;
+    const minDiff = Math.floor(secDiff / 60);
+    if (minDiff < 60) return `${minDiff}m ago`;
+    const hrDiff = Math.floor(minDiff / 60);
+    if (hrDiff < 24) return `${hrDiff}h ago`;
+    return parsed.toLocaleDateString();
+  }
+
+  function renderActivityItem(act) {
+    const emojis = {
+      ranked_win: '⚔️',
+      elo_milestone: '👑',
+      battlepass_tier: '🏆',
+      shop_purchase: '🛒',
+      achievement: '🌟',
+      season_start: '🎉'
+    };
+    
+    const emoji = emojis[act.type] || '🔔';
+    let textHTML = '';
+    const details = act.details || {};
+    
+    switch (act.type) {
+      case 'ranked_win':
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> defeated <span class="act-target">${escapeHTML(details.opponent)}</span> (reached <span class="act-milestone">${details.winnerElo} ELO</span>)`;
+        break;
+      case 'elo_milestone':
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> reached <span class="act-milestone">${details.milestone} ELO</span>`;
+        break;
+      case 'battlepass_tier':
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> reached Tier <span class="act-milestone">${details.tier}</span>`;
+        break;
+      case 'shop_purchase':
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> bought <span class="act-target">${escapeHTML(details.itemName)}</span>`;
+        break;
+      case 'achievement':
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> unlocked achievement <span class="act-target">'${escapeHTML(details.achievementName)}'</span>`;
+        break;
+      case 'season_start':
+        textHTML = `<span class="act-username" style="color: var(--accent-purple);">${escapeHTML(details.text || 'New season start!')}</span>`;
+        break;
+      default:
+        textHTML = `<span class="act-username">${escapeHTML(act.username)}</span> did something exciting`;
+    }
+    
+    const timeText = formatRelativeTime(act.created_at);
+    
+    return `
+      <div class="feed-item">
+        <span class="act-icon">${emoji}</span>
+        <div style="flex: 1;">
+          <div class="act-text">${textHTML}</div>
+          <div class="act-time">${timeText}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+      .replace(/&/g, '&')
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/"/g, '"')
+      .replace(/'/g, '&#039;');
+  }
+
+  async function loadActivities() {
+    try {
+      const res = await fetch('/api/activities');
+      const data = await res.json();
+      if (data.success) {
+        const feedList = document.getElementById('activityFeedList');
+        if (feedList) {
+          if (data.activities.length === 0) {
+            feedList.innerHTML = '<div class="feed-loading">No recent activity</div>';
+          } else {
+            feedList.innerHTML = data.activities.map(act => renderActivityItem(act)).join('');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load activities:', err);
+    }
   }
 
   async function checkActiveGame() {

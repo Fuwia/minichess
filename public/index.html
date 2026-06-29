@@ -14,109 +14,335 @@
       --surface: #181b20;
       --surface2: #1f2229;
       --border-glass: rgba(255,255,255,0.08);
+      --border-active: rgba(255,255,255,0.2);
       --text-bright: #f0f3f7;
       --text-dim: #8b949e;
       --text-muted: #5c6470;
       --emerald: #3fb950;
       --emerald-glow: rgba(63,185,80,0.3);
-      --red-soft: #f85149;
       --accent-cyan: #06b6d4;
-      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
-      --glass-border: rgba(255,255,255,0.07);
+      --cyan-glow: rgba(6,182,212,0.3);
+      --gold: #d2991d;
+      --red-soft: #f85149;
+      --glass-surface: rgba(24, 27, 32, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.07);
     }
+    
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
       font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    
+    /* Background Orbs */
+    .bg-orbs {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+      animation: float 20s infinite alternate ease-in-out;
+    }
+    .orb-1 {
+      width: 400px; height: 400px;
+      background: var(--emerald);
+      top: -100px; left: -100px;
+    }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: var(--accent-cyan);
+      bottom: -200px; right: -100px;
+      animation-delay: -5s;
+    }
+    .orb-3 {
+      width: 300px; height: 300px;
+      background: var(--gold);
+      top: 40%; left: 40%;
+      opacity: 0.15;
+      animation-delay: -10s;
+    }
+    
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(50px, 50px) scale(1.1); }
+    }
+    
+    /* Layout */
+    .layout-wrapper {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Left: Showcase */
+    .showcase {
+      flex: 1;
+      display: none; /* Hidden on mobile */
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      border-right: 1px solid var(--border-glass);
+      background: linear-gradient(135deg, rgba(13,17,23,0.85), rgba(24,27,32,0.7));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    @media (min-width: 960px) {
+      .showcase { display: flex; }
+    }
+    
+    .mini-board-wrapper {
+      perspective: 1000px;
+      margin-bottom: 60px;
+    }
+    .mini-board {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      width: 320px;
+      height: 320px;
+      transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg);
+      transform-style: preserve-3d;
+      box-shadow: -20px 30px 60px rgba(0,0,0,0.8), 0 0 30px var(--emerald-glow);
+      border: 4px solid #2a2e38;
+      border-radius: 8px;
+      background: #2a2e38;
+      transition: transform 0.5s ease;
+      animation: boardFloat 6s infinite ease-in-out;
+    }
+    .mini-board:hover {
+      transform: rotateX(15deg) rotateY(-5deg) rotateZ(5deg) translateY(-10px);
+    }
+    @keyframes boardFloat {
+      0%, 100% { transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg) translateY(0); }
+      50% { transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg) translateY(-15px); }
+    }
+    
+    .cell {
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow-x: hidden;
+      position: relative;
     }
-
-    .auth-wrapper {
+    .cell.dark { background: rgba(31,34,41,0.9); }
+    .cell.light { background: rgba(51,55,66,0.9); }
+    .cell img {
+      width: 70%;
+      height: 70%;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 6px rgba(0,0,0,0.6));
+      transform: translateY(-5px);
+    }
+    
+    .feature-ticker {
       width: 100%;
       max-width: 400px;
-      padding: 24px;
+      height: 60px;
+      overflow: hidden;
+      position: relative;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-glass);
     }
-
-    .auth-logo {
+    .ticker-content {
+      display: flex;
+      flex-direction: column;
+      animation: tickText 12s infinite;
+    }
+    .ticker-item {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-bright);
       text-align: center;
-      margin-bottom: 28px;
     }
-    .auth-logo img {
-      max-height: 150px;
-      object-fit: contain;
+    .ticker-item span { color: var(--accent-cyan); font-weight: 700; margin-right: 8px; }
+    
+    @keyframes tickText {
+      0%, 20% { transform: translateY(0); }
+      25%, 45% { transform: translateY(-60px); }
+      50%, 70% { transform: translateY(-120px); }
+      75%, 95% { transform: translateY(-180px); }
+      100% { transform: translateY(0); }
     }
-
+    
+    /* Right: Form */
+    .form-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: transparent;
+    }
+    
     .auth-card {
+      width: 100%;
+      max-width: 420px;
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 32px;
-      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 40px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .auth-card h1 {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 6px;
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .auth-logo {
       text-align: center;
+      margin-bottom: 32px;
+    }
+    .auth-logo img {
+      max-height: 50px;
+      object-fit: contain;
+    }
+    
+    .auth-card h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-align: center;
+      letter-spacing: -0.5px;
     }
     .auth-card .subtitle {
       text-align: center;
-      font-size: 14px;
+      font-size: 15px;
       color: var(--text-dim);
-      margin-bottom: 24px;
+      margin-bottom: 32px;
     }
-
+    
+    /* Error Msg */
     .error-msg {
       background: rgba(248,81,73,0.1);
-      border: 1px solid rgba(248,81,73,0.25);
-      border-radius: 8px;
-      padding: 10px 14px;
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: 12px;
+      padding: 12px 16px;
       color: var(--red-soft);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
       display: none;
-      text-align: center;
+      align-items: center;
+      gap: 10px;
+      transform-origin: top;
+      animation: errorShake 0.4s ease, dropdown 0.3s ease;
     }
-
+    .error-msg.show {
+      display: flex;
+    }
+    .error-msg svg {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      flex-shrink: 0;
+    }
+    @keyframes dropdown {
+      from { opacity: 0; transform: scaleY(0.8); }
+      to { opacity: 1; transform: scaleY(1); }
+    }
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    /* Form Elements */
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
     .form-group label {
       display: block;
       font-size: 13px;
       font-weight: 600;
       color: var(--text-dim);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      transition: color 0.2s;
     }
-    .form-group input {
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrapper .icon {
+      position: absolute;
+      left: 14px;
+      width: 20px; height: 20px;
+      color: var(--text-muted);
+      transition: color 0.3s;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      pointer-events: none;
+    }
+    .input-wrapper input {
       width: 100%;
-      padding: 12px 14px;
-      background: var(--surface);
+      padding: 14px 14px 14px 44px;
+      background: rgba(0,0,0,0.2);
       border: 1px solid var(--border-glass);
-      border-radius: 10px;
+      border-radius: 12px;
       color: var(--text-bright);
       font-size: 15px;
       font-family: inherit;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .form-group input:focus {
+    .input-wrapper input:focus {
       outline: none;
       border-color: var(--emerald);
-      box-shadow: 0 0 0 3px rgba(63,185,80,0.12);
+      background: rgba(0,0,0,0.4);
+      box-shadow: 0 0 0 4px var(--emerald-glow);
     }
-    .form-group input::placeholder {
+    .input-wrapper input:focus + .icon,
+    .input-wrapper input:focus ~ .icon {
+      color: var(--emerald);
+    }
+    .input-wrapper input::placeholder {
       color: var(--text-muted);
     }
-
+    
+    .btn-toggle-pass {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .btn-toggle-pass:hover {
+      color: var(--text-bright);
+      background: rgba(255,255,255,0.1);
+    }
+    .btn-toggle-pass svg {
+      width: 20px; height: 20px;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+    
     .btn-submit {
       width: 100%;
-      padding: 14px 24px;
+      padding: 16px;
       background: var(--emerald);
       color: #000;
       border: none;
@@ -124,22 +350,55 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      letter-spacing: -0.2px;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      margin-top: 4px;
+      margin-top: 12px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      overflow: hidden;
     }
-    .btn-submit:hover {
-      box-shadow: 0 4px 20px var(--emerald-glow);
-      transform: translateY(-1px);
+    .btn-submit:hover:not(:disabled) {
+      box-shadow: 0 8px 24px var(--emerald-glow);
+      transform: translateY(-2px);
+      background: #4ade80;
     }
-    .btn-submit:active {
+    .btn-submit:active:not(:disabled) {
       transform: translateY(0);
     }
-
+    .btn-submit:disabled {
+      background: var(--surface2);
+      color: var(--text-dim);
+      cursor: not-allowed;
+      border: 1px solid var(--border-glass);
+      box-shadow: none;
+      transform: none;
+    }
+    .btn-text {
+      transition: opacity 0.2s;
+    }
+    .spinner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s;
+    }
+    .btn-submit.loading .btn-text { opacity: 0; }
+    .btn-submit.loading .spinner { opacity: 1; visibility: visible; }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
     .switch-link {
       text-align: center;
-      margin-top: 20px;
+      margin-top: 24px;
       font-size: 14px;
       color: var(--text-dim);
     }
@@ -147,64 +406,228 @@
       color: var(--accent-cyan);
       text-decoration: none;
       font-weight: 600;
-      transition: color 0.2s;
+      transition: all 0.2s;
+      padding: 4px 8px;
+      border-radius: 6px;
     }
     .switch-link a:hover {
       color: #67e8f9;
+      background: var(--cyan-glow);
     }
   </style>
 </head>
 <body>
 
-<div class="auth-wrapper">
-  <div class="auth-logo">
-    <img src="img/logo.png" alt="MiniChess" style="width:100%;" onerror="this.style.display='none'">
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="layout-wrapper">
+  <!-- Left Column -->
+  <div class="showcase">
+    <div class="mini-board-wrapper">
+      <div class="mini-board">
+        <!-- Row 6 -->
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"><img src="img/pieces/bb.svg" alt="Black Bishop"></div>
+        <div class="cell light"><img src="img/pieces/bn.svg" alt="Black Knight"></div>
+        <div class="cell dark"><img src="img/pieces/br.svg" alt="Black Rook"></div>
+        <div class="cell light"><img src="img/pieces/bk.svg" alt="Black King"></div>
+        <!-- Row 5 -->
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"><img src="img/pieces/bp.svg" alt="Black Pawn"></div>
+        <!-- Row 4 -->
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <!-- Row 3 -->
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <!-- Row 2 -->
+        <div class="cell dark"><img src="img/pieces/wp.svg" alt="White Pawn"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+        <div class="cell light"></div>
+        <!-- Row 1 -->
+        <div class="cell light"><img src="img/pieces/wk.svg" alt="White King"></div>
+        <div class="cell dark"><img src="img/pieces/wr.svg" alt="White Rook"></div>
+        <div class="cell light"><img src="img/pieces/wn.svg" alt="White Knight"></div>
+        <div class="cell dark"><img src="img/pieces/wb.svg" alt="White Bishop"></div>
+        <div class="cell light"></div>
+        <div class="cell dark"></div>
+      </div>
+    </div>
+    
+    <div class="feature-ticker">
+      <div class="ticker-content">
+        <div class="ticker-item"><span>⚔️</span> Fast-paced Minichess Duels</div>
+        <div class="ticker-item"><span>🏆</span> Climb the Global Leaderboards</div>
+        <div class="ticker-item"><span>🤖</span> Challenge Advanced Bots</div>
+        <div class="ticker-item"><span>🎒</span> Unlock Premium Customizations</div>
+      </div>
+    </div>
   </div>
 
-  <div class="auth-card">
-    <h1>Welcome Back</h1>
-    <p class="subtitle">Log in to play MiniChess</p>
-    <div id="error" class="error-msg"></div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" placeholder="Your username" required minlength="3" maxlength="20" autocomplete="username">
+  <!-- Right Column -->
+  <div class="form-section">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="img/logo.png" alt="MiniChess" onerror="this.style.display='none'">
       </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="Your password" required minlength="4" autocomplete="current-password">
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Log in to your MiniChess account</p>
+      
+      <div id="error" class="error-msg">
+        <svg viewBox="0 0 24 24">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span id="errorText"></span>
       </div>
-      <button type="submit" class="btn-submit">Log In</button>
-    </form>
-    <p class="switch-link">Don't have an account? <a href="register.html">Register</a></p>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-wrapper">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required minlength="3" maxlength="20" autocomplete="username">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <svg class="icon" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required minlength="4" autocomplete="current-password">
+            <button type="button" class="btn-toggle-pass" id="togglePass" tabindex="-1" aria-label="Toggle Password Visibility">
+              <svg viewBox="0 0 24 24" class="eye-icon">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span class="btn-text">Log In to Play</span>
+          <div class="spinner"></div>
+        </button>
+      </form>
+      <p class="switch-link">New to MiniChess? <a href="register.html">Create Account</a></p>
+    </div>
   </div>
 </div>
 
 <script src="js/auth.js"></script>
 <script>
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const errorEl = document.getElementById('error');
-    errorEl.style.display = 'none';
-
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-
-    const result = await login(username, password);
-
-    if (result.success) {
-      const redirect = sessionStorage.getItem('redirectAfterLogin');
-      if (redirect) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        window.location.href = redirect;
-      } else {
-        window.location.href = 'lobby.html';
-      }
+  // Password Visibility Toggle
+  const togglePassBtn = document.getElementById('togglePass');
+  const passInput = document.getElementById('password');
+  
+  togglePassBtn.addEventListener('click', () => {
+    const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passInput.setAttribute('type', type);
+    
+    // Change icon based on state
+    if (type === 'text') {
+      togglePassBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" class="eye-icon">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+      `;
     } else {
-      errorEl.textContent = result.message;
-      errorEl.style.display = 'block';
+      togglePassBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" class="eye-icon">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      `;
     }
   });
+
+  // Login Form Submission
+  const loginForm = document.getElementById('loginForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorEl = document.getElementById('error');
+  const errorText = document.getElementById('errorText');
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Hide error
+    errorEl.classList.remove('show');
+    
+    // Set loading state
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+    document.getElementById('username').disabled = true;
+    passInput.disabled = true;
+    togglePassBtn.disabled = true;
+
+    const username = document.getElementById('username').value.trim();
+    const password = passInput.value;
+
+    try {
+      const result = await login(username, password);
+
+      if (result.success) {
+        const redirect = sessionStorage.getItem('redirectAfterLogin');
+        if (redirect) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          window.location.href = redirect;
+        } else {
+          window.location.href = 'lobby.html';
+        }
+      } else {
+        showError(result.message);
+      }
+    } catch (err) {
+      showError('Failed to connect to server.');
+    }
+  });
+
+  function showError(msg) {
+    // Reset state
+    submitBtn.classList.remove('loading');
+    submitBtn.disabled = false;
+    document.getElementById('username').disabled = false;
+    passInput.disabled = false;
+    togglePassBtn.disabled = false;
+    
+    // Show error with reflow for animation restart
+    errorEl.classList.remove('show');
+    void errorEl.offsetWidth; // trigger reflow
+    errorText.textContent = msg;
+    errorEl.classList.add('show');
+    
+    // Focus pass field
+    passInput.focus();
+    passInput.select();
+  }
 </script>
 </body>
 </html>

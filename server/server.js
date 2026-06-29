@@ -1540,14 +1540,35 @@ function handleGameOver(game, result) {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo);
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'win');
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'loss');
+
+    // Log activities for PvP
+    if (game.whiteId !== 0 && game.blackId !== 0) {
+      logAndBroadcastActivity('ranked_win', game.whiteUsername, { opponent: game.blackUsername, winnerElo: elos.winnerNew });
+      checkAndLogEloMilestone(game.whiteUsername, game.whiteElo, elos.winnerNew);
+    }
   } else if (result === 'black_wins') {
     const elos = auth.calculateElo(game.blackElo, game.whiteElo);
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.winnerNew, 'win');
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.loserNew, 'loss');
+
+    // Log activities for PvP
+    if (game.whiteId !== 0 && game.blackId !== 0) {
+      logAndBroadcastActivity('ranked_win', game.blackUsername, { opponent: game.whiteUsername, winnerElo: elos.winnerNew });
+      checkAndLogEloMilestone(game.blackUsername, game.blackElo, elos.winnerNew);
+    }
   } else if (result === 'draw') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo, true);
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'draw');
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'draw');
+  }
+
+  // Prototype Achievement Unlocks (Lightning Speed for fast mates)
+  const movesCount = (game.state.moveHistory || []).length;
+  if (movesCount <= 10 && (result === 'white_wins' || result === 'black_wins')) {
+    const winnerUsername = result === 'white_wins' ? game.whiteUsername : game.blackUsername;
+    if (game.whiteId !== 0 && game.blackId !== 0) {
+      logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'Lightning Speed' });
+    }
   }
 
   // Save game to database (includes bot games so they appear in history)
@@ -1648,7 +1669,72 @@ function notifyLevelUp(userId, bpResult) {
       io.to(sockId).emit('battlepass_level_up', data);
     }
   }
+
+  // Log battlepass tier reached activity
+  const user = auth.getUserById(userId);
+  if (user) {
+    logAndBroadcastActivity('battlepass_tier', user.username, { tier: bpResult.newTier });
+  }
 }
+
+/**
+ * Helper to log an activity in the database and broadcast via Socket.io
+ */
+function logAndBroadcastActivity(type, username, details) {
+  const { getDb: loadDb, saveDb } = require('./db');
+  loadDb().then(database => {
+    const stmt = database.prepare('INSERT INTO activities (type, username, details) VALUES (?, ?, ?)');
+    stmt.run([type, username, JSON.stringify(details)]);
+    stmt.free();
+    saveDb();
+
+    const activityObj = {
+      type,
+      username,
+      details,
+      created_at: new Date().toISOString()
+    };
+    
+    // Broadcast via socket.io to all users!
+    io.emit('new_activity', activityObj);
+  }).catch(err => {
+    console.error('Failed to log and broadcast activity:', err);
+  });
+}
+
+/**
+ * Helper to check for ELO milestones and log them
+ */
+function checkAndLogEloMilestone(username, oldElo, newElo) {
+  const milestones = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200];
+  for (const m of milestones) {
+    if (oldElo < m && newElo >= m) {
+      logAndBroadcastActivity('elo_milestone', username, { milestone: m });
+      break;
+    }
+  }
+}
+
+// Get the latest 15 activities
+app.get('/api/activities', (req, res) => {
+  const { getDb: loadDb } = require('./db');
+  loadDb().then(database => {
+    const stmt = database.prepare('SELECT type, username, details, created_at FROM activities ORDER BY id DESC LIMIT 15');
+    const activities = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      try {
+        row.details = JSON.parse(row.details || '{}');
+      } catch(e) {}
+      activities.push(row);
+    }
+    stmt.free();
+    res.json({ success: true, activities });
+  }).catch(err => {
+    console.error('Error fetching activities:', err);
+    res.json({ success: false, message: 'Failed to fetch activities' });
+  });
+});
 
 // ==================== Battlepass API ====================
 
@@ -1743,6 +1829,7 @@ app.post('/api/shop/buy', requireAuth, (req, res) => {
   
   auth.deductCoins(req.session.userId, item.price);
   auth.unlockItem(req.session.userId, itemId);
+  logAndBroadcastActivity('shop_purchase', user.username, { itemName: item.name });
   res.json({ success: true, message: 'Purchase successful!' });
 });
 

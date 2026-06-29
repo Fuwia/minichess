@@ -151,6 +151,45 @@ function initTables() {
 
   // Seed Season 1 tiers (idempotent — uses INSERT OR IGNORE)
   seedBattlepassTiers();
+
+  // Create activities table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS activities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      username TEXT NOT NULL,
+      details TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  seedActivities();
+}
+
+function seedActivities() {
+  const checkStmt = db.prepare('SELECT COUNT(*) as count FROM activities');
+  const row = checkStmt.getAsObject();
+  checkStmt.free();
+
+  if (row.count === 0) {
+    const seed = [
+      { type: 'season_start', username: 'System', details: { text: 'Season 1: Under the Canopy has officially begun!' } },
+      { type: 'achievement', username: 'Kairoth', details: { achievementName: 'Fast Mate' } },
+      { type: 'elo_milestone', username: 'Fuwia', details: { milestone: 1400 } },
+      { type: 'shop_purchase', username: 'AKACAN', details: { itemName: 'Emerald Forest Theme' } },
+      { type: 'ranked_win', username: 'sansomeister', details: { opponent: 'Kairoth', winnerElo: 1250 } },
+      { type: 'battlepass_tier', username: 'Fuwia', details: { tier: 10 } }
+    ];
+
+    // Seeding in reverse order of display so newer appears first
+    const stmt = db.prepare('INSERT INTO activities (type, username, details) VALUES (?, ?, ?)');
+    for (const act of seed) {
+      stmt.run([act.type, act.username, JSON.stringify(act.details)]);
+    }
+    stmt.free();
+    saveDb();
+    console.log('[DB] Seeded initial activities feed.');
+  }
 }
 
 function seedBattlepassTiers() {
