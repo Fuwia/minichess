@@ -16,10 +16,11 @@
       <div class="sidebar-logo">
         <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
       </div>
-      <nav class="sidebar-nav" aria-label="Primary navigation">
+      <nav class="sidebar-nav">
         <a href="lobby.html" class="active" id="navPlay"><span class="nav-icon">▶</span> Play</a>
         <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
         <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
+        <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
         <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
         <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
       </nav>
@@ -297,6 +298,23 @@
       fetch('/api/me/admin').then(r => r.json()).then(d => {
         if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
       }).catch(() => {});
+
+      if (user.username_color) {
+        document.getElementById('sidebarUsername').style.color = user.username_color;
+        document.getElementById('playerName').style.color = user.username_color;
+      }
+      
+      if (user.board_theme && user.board_theme !== 'default') {
+        fetch('/api/shop/items').then(r => r.json()).then(data => {
+          if (data.success && data.items && data.items.board_themes) {
+            const theme = data.items.board_themes.find(t => t.id === user.board_theme);
+            if (theme) {
+              document.documentElement.style.setProperty('--square-light', theme.cssLight);
+              document.documentElement.style.setProperty('--square-dark', theme.cssDark);
+            }
+          }
+        }).catch(() => {});
+      }
     }
 
     // Helper to render a finished game from pre-fetched data (avoids second API call)
@@ -775,6 +793,8 @@
         const opponentColor = myColor === 'white' ? 'black' : 'white';
         document.getElementById('playerColorDot').className = 'player-color ' + myColor;
         document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+        
+        // Opponent name color (optional enhancement, we might need it from server in the future)
 
         gameMode = data.mode || 'standard';
         if (gameMode === 'dice') {
@@ -1279,6 +1299,37 @@
       `;
 
       overlay.style.display = 'flex';
+
+      // Win effects
+      if (!isReplay && titleClass === 'win-text') {
+        getCurrentUser().then(u => {
+          if (u && u.win_effect === 'confetti') {
+            fireConfetti();
+          }
+        }).catch(() => {});
+      }
+    }
+
+    function fireConfetti() {
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      (function frame() {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = ['#fbbf24', '#ef4444', '#3b82f6', '#22c55e', '#a855f7'][Math.floor(Math.random() * 5)];
+        confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
+        document.body.appendChild(confetti);
+
+        setTimeout(() => {
+          if (confetti.parentNode) confetti.remove();
+        }, 3000);
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      }());
     }
 
     function resignGame() {

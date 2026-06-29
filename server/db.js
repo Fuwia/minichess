@@ -47,6 +47,13 @@ function initTables() {
   try { db.run('ALTER TABLE users ADD COLUMN last_avatar_change TEXT'); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0'); } catch (e) { }
   
+  // Shop and Customization columns
+  try { db.run('ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN unlocked_items TEXT DEFAULT \'[]\''); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN board_theme TEXT DEFAULT \'default\''); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN win_effect TEXT DEFAULT \'none\''); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN username_color TEXT DEFAULT \'\''); } catch (e) { }
+  
   // Grant admin to user "Fuwia" if they exist
   const grantStmt = db.prepare('UPDATE users SET is_admin = 1 WHERE username = ? AND is_admin = 0');
   grantStmt.run(['Fuwia']);
@@ -119,6 +126,7 @@ function initTables() {
       tier INTEGER NOT NULL,
       xp_required INTEGER NOT NULL,
       title TEXT,
+      reward_coins INTEGER DEFAULT 0,
       UNIQUE(season, tier)
     )
   `);
@@ -138,6 +146,8 @@ function initTables() {
   // Add columns for battlepass titles if upgrading from older schema
   try { db.run('ALTER TABLE users ADD COLUMN title TEXT'); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN unlocked_titles TEXT DEFAULT \'[]\''); } catch (e) { }
+  
+  try { db.run('ALTER TABLE battlepass_tiers ADD COLUMN reward_coins INTEGER DEFAULT 0'); } catch (e) { }
 
   // Seed Season 1 tiers (idempotent — uses INSERT OR IGNORE)
   seedBattlepassTiers();
@@ -145,47 +155,58 @@ function initTables() {
 
 function seedBattlepassTiers() {
   const tiers = [
-    { tier: 1,  xp: 0,    title: null },
-    { tier: 2,  xp: 50,   title: null },
-    { tier: 3,  xp: 100,  title: null },
-    { tier: 4,  xp: 160,  title: null },
-    { tier: 5,  xp: 230,  title: 'Pioneer' },
-    { tier: 6,  xp: 310,  title: null },
-    { tier: 7,  xp: 400,  title: null },
-    { tier: 8,  xp: 500,  title: null },
-    { tier: 9,  xp: 610,  title: null },
-    { tier: 10, xp: 730,  title: 'Founder' },
-    { tier: 11, xp: 860,  title: null },
-    { tier: 12, xp: 1000, title: null },
-    { tier: 13, xp: 1150, title: null },
-    { tier: 14, xp: 1310, title: null },
-    { tier: 15, xp: 1480, title: 'Trailblazer' },
-    { tier: 16, xp: 1660, title: null },
-    { tier: 17, xp: 1850, title: null },
-    { tier: 18, xp: 2050, title: null },
-    { tier: 19, xp: 2260, title: null },
-    { tier: 20, xp: 2480, title: 'Veteran' },
-    { tier: 21, xp: 2710, title: null },
-    { tier: 22, xp: 2950, title: null },
-    { tier: 23, xp: 3200, title: null },
-    { tier: 24, xp: 3460, title: null },
-    { tier: 25, xp: 3730, title: 'Legend' },
-    { tier: 26, xp: 4010, title: null },
-    { tier: 27, xp: 4300, title: null },
-    { tier: 28, xp: 4600, title: null },
-    { tier: 29, xp: 4910, title: null },
-    { tier: 30, xp: 5230, title: 'Founders Champion' },
+    { tier: 1,  xp: 0,    title: null, coins: 0 },
+    { tier: 2,  xp: 50,   title: null, coins: 50 },
+    { tier: 3,  xp: 100,  title: null, coins: 50 },
+    { tier: 4,  xp: 160,  title: null, coins: 100 },
+    { tier: 5,  xp: 230,  title: 'Pioneer', coins: 150 },
+    { tier: 6,  xp: 310,  title: null, coins: 50 },
+    { tier: 7,  xp: 400,  title: null, coins: 100 },
+    { tier: 8,  xp: 500,  title: null, coins: 100 },
+    { tier: 9,  xp: 610,  title: null, coins: 150 },
+    { tier: 10, xp: 730,  title: 'Founder', coins: 300 },
+    { tier: 11, xp: 860,  title: null, coins: 100 },
+    { tier: 12, xp: 1000, title: null, coins: 100 },
+    { tier: 13, xp: 1150, title: null, coins: 150 },
+    { tier: 14, xp: 1310, title: null, coins: 150 },
+    { tier: 15, xp: 1480, title: 'Trailblazer', coins: 300 },
+    { tier: 16, xp: 1660, title: null, coins: 100 },
+    { tier: 17, xp: 1850, title: null, coins: 150 },
+    { tier: 18, xp: 2050, title: null, coins: 150 },
+    { tier: 19, xp: 2260, title: null, coins: 200 },
+    { tier: 20, xp: 2480, title: 'Veteran', coins: 400 },
+    { tier: 21, xp: 2710, title: null, coins: 150 },
+    { tier: 22, xp: 2950, title: null, coins: 150 },
+    { tier: 23, xp: 3200, title: null, coins: 200 },
+    { tier: 24, xp: 3460, title: null, coins: 200 },
+    { tier: 25, xp: 3730, title: 'Legend', coins: 500 },
+    { tier: 26, xp: 4010, title: null, coins: 200 },
+    { tier: 27, xp: 4300, title: null, coins: 200 },
+    { tier: 28, xp: 4600, title: null, coins: 250 },
+    { tier: 29, xp: 4910, title: null, coins: 250 },
+    { tier: 30, xp: 5230, title: 'Founders Champion', coins: 1000 },
   ];
 
   const stmt = db.prepare(`
-    INSERT OR IGNORE INTO battlepass_tiers (season, tier, xp_required, title)
-    VALUES (1, ?, ?, ?)
+    INSERT OR IGNORE INTO battlepass_tiers (season, tier, xp_required, title, reward_coins)
+    VALUES (1, ?, ?, ?, ?)
   `);
 
   for (const t of tiers) {
-    stmt.run([t.tier, t.xp, t.title]);
+    stmt.run([t.tier, t.xp, t.title, t.coins]);
   }
   stmt.free();
+  
+  // Also update existing tiers to retroactively add coins for existing databases
+  const updateStmt = db.prepare(`
+    UPDATE battlepass_tiers SET reward_coins = ? WHERE season = 1 AND tier = ? AND reward_coins = 0
+  `);
+  for (const t of tiers) {
+    if (t.coins > 0) {
+      updateStmt.run([t.coins, t.tier]);
+    }
+  }
+  updateStmt.free();
 }
 
 function saveDb() {

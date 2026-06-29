@@ -57,21 +57,21 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, title FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url, title FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getLeaderboard(limit = 50) {
-  const stmt = db.prepare('SELECT username, elo, wins, losses, draws FROM users ORDER BY elo DESC');
+  const stmt = db.prepare('SELECT username, elo, wins, losses, draws, username_color FROM users ORDER BY elo DESC');
   const results = [];
   stmt.bind([]);
   while (stmt.step()) {
@@ -116,6 +116,59 @@ function calculateElo(winnerElo, loserElo, isDraw = false) {
 function updateAvatar(userId, avatarUrl) {
   const stmt = db.prepare('UPDATE users SET avatar_url = ?, last_avatar_change = datetime(\'now\') WHERE id = ?');
   stmt.run([avatarUrl, userId]);
+  stmt.free();
+}
+
+// ==================== Shop / Customization ====================
+
+function addCoins(userId, amount) {
+  const stmt = db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?');
+  stmt.run([amount, userId]);
+  stmt.free();
+}
+
+function deductCoins(userId, amount) {
+  const user = getUserById(userId);
+  if (!user || user.coins < amount) return false;
+  
+  const stmt = db.prepare('UPDATE users SET coins = coins - ? WHERE id = ?');
+  stmt.run([amount, userId]);
+  stmt.free();
+  return true;
+}
+
+function unlockItem(userId, itemId) {
+  const user = getUserById(userId);
+  if (!user) return false;
+  
+  let unlocked = [];
+  try { unlocked = JSON.parse(user.unlocked_items || '[]'); } catch(e) {}
+  
+  if (!unlocked.includes(itemId)) {
+    unlocked.push(itemId);
+    const stmt = db.prepare('UPDATE users SET unlocked_items = ? WHERE id = ?');
+    stmt.run([JSON.stringify(unlocked), userId]);
+    stmt.free();
+    return true;
+  }
+  return false;
+}
+
+function equipTheme(userId, themeId) {
+  const stmt = db.prepare('UPDATE users SET board_theme = ? WHERE id = ?');
+  stmt.run([themeId, userId]);
+  stmt.free();
+}
+
+function equipWinEffect(userId, effectId) {
+  const stmt = db.prepare('UPDATE users SET win_effect = ? WHERE id = ?');
+  stmt.run([effectId, userId]);
+  stmt.free();
+}
+
+function equipUsernameColor(userId, color) {
+  const stmt = db.prepare('UPDATE users SET username_color = ? WHERE id = ?');
+  stmt.run([color, userId]);
   stmt.free();
 }
 
@@ -315,5 +368,11 @@ module.exports = {
   getAllUsers,
   deleteUser,
   resetAllStats,
-  resetUserStats
+  resetUserStats,
+  addCoins,
+  deductCoins,
+  unlockItem,
+  equipTheme,
+  equipWinEffect,
+  equipUsernameColor
 };

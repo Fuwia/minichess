@@ -46,6 +46,7 @@ function grantXP(userId, amount) {
   const leveledUp = newTier > tier;
 
   // If leveled up and new tier has a title, auto-unlock it
+  let coinsEarned = 0;
   if (leveledUp) {
     for (let t = tier + 1; t <= newTier; t++) {
       const tierDef = allTiers.find(td => td.tier === t);
@@ -55,6 +56,15 @@ function grantXP(userId, amount) {
           unlockedTitle = tierDef.title;
         }
       }
+      if (tierDef && tierDef.reward_coins) {
+        coinsEarned += tierDef.reward_coins;
+      }
+    }
+    if (coinsEarned > 0) {
+      // Need to add coins to user. Require auth module locally if needed or just execute direct query
+      const updateCoins = db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?');
+      updateCoins.run([coinsEarned, userId]);
+      updateCoins.free();
     }
   }
 
@@ -65,7 +75,7 @@ function grantXP(userId, amount) {
   updateStmt.run([xp, newTier, userId]);
   updateStmt.free();
 
-  return { leveledUp, newTier, unlockedTitle };
+  return { leveledUp, newTier, unlockedTitle, coinsEarned };
 }
 
 /**
@@ -129,7 +139,7 @@ function getUserBattlepassRow(userId) {
  */
 function getSeasonTiers(season) {
   const stmt = db.prepare(`
-    SELECT tier, xp_required, title FROM battlepass_tiers
+    SELECT tier, xp_required, title, reward_coins FROM battlepass_tiers
     WHERE season = ? ORDER BY tier ASC
   `);
   const results = [];
@@ -273,6 +283,7 @@ function getBattlepassStatus(userId) {
       tier: t.tier,
       xpRequired: t.xp_required,
       title: t.title,
+      rewardCoins: t.reward_coins,
       unlocked: t.tier <= bp.tier,
       claimed: claimed.includes(t.tier)
     }))

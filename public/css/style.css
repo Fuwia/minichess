@@ -49,7 +49,7 @@ body {
 
 /* ==================== Navigation ==================== */
 
-nav {
+nav:not(.sidebar-nav) {
   width: 100%;
   background: var(--bg-secondary);
   padding: 14px 24px;
@@ -62,51 +62,51 @@ nav {
   z-index: 100;
 }
 
-nav .logo {
+nav:not(.sidebar-nav) .logo {
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 1px;
 }
 
-nav .logo span {
+nav:not(.sidebar-nav) .logo span {
   color: var(--text-primary);
 }
 
-nav .nav-links {
+nav:not(.sidebar-nav) .nav-links {
   display: flex;
   gap: 20px;
   align-items: center;
 }
 
-nav .nav-links a {
+nav:not(.sidebar-nav) .nav-links a {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 15px;
   transition: color 0.2s;
 }
 
-nav .nav-links a:hover {
+nav:not(.sidebar-nav) .nav-links a:hover {
   color: var(--accent-hover);
 }
 
-nav .user-info {
+nav:not(.sidebar-nav) .user-info {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-nav .user-info .username {
+nav:not(.sidebar-nav) .user-info .username {
   color: var(--gold);
   font-weight: 600;
 }
 
-nav .user-info .elo {
+nav:not(.sidebar-nav) .user-info .elo {
   color: var(--text-secondary);
   font-size: 13px;
 }
 
-nav button {
+nav:not(.sidebar-nav) button {
   background: var(--accent);
   color: white;
   border: none;
@@ -117,17 +117,17 @@ nav button {
   transition: background 0.2s;
 }
 
-nav button:hover {
+nav:not(.sidebar-nav) button:hover {
   background: var(--accent-hover);
 }
 
-nav button.secondary {
+nav:not(.sidebar-nav) button.secondary {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-secondary);
 }
 
-nav button.secondary:hover {
+nav:not(.sidebar-nav) button.secondary:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -744,6 +744,22 @@ nav button.secondary:hover {
   color: var(--text-secondary);
   width: 20px;
   text-align: center;
+}
+
+/* Confetti */
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  width: 10px;
+  height: 10px;
+  background-color: #f2d74e;
+  z-index: 10000;
+  pointer-events: none;
+  animation: confettiFall 2s linear forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
 }
 
 /* Game over overlay */
@@ -2223,8 +2239,8 @@ body.game-page {
   transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.game-page .square.light { background: #d8c7a4; }
-.game-page .square.dark { background: #566b3d; }
+.game-page .square.light { background: var(--square-light, #d8c7a4); }
+.game-page .square.dark { background: var(--square-dark, #566b3d); }
 
 .game-page .square:hover {
   filter: brightness(1.08);

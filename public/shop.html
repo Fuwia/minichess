@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniChess — Shop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-bg: #0d1117;
+      --surface: #181b20;
+      --surface2: #1f2229;
+      --surface3: #262930;
+      --border-subtle: rgba(255,255,255,0.06);
+      --border-glass: rgba(255,255,255,0.08);
+      --text-bright: #f0f3f7;
+      --text-dim: #8b949e;
+      --text-muted: #5c6470;
+      --emerald: #3fb950;
+      --emerald-glow: rgba(63,185,80,0.3);
+      --gold: #d2991d;
+      --gold-glow: rgba(210,153,29,0.25);
+      --red-soft: #f85149;
+      --accent-purple: #7c3aed;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
+      --glass-border: rgba(255,255,255,0.07);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--page-bg);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 100vh;
+      width: 100%;
+    }
+    .sidebar {
+      background: #111318; border-right: 1px solid rgba(255,255,255,0.05);
+      padding: 20px 0; display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; z-index: 10;
+    }
+    .sidebar-logo { padding: 0 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px; }
+    .sidebar-nav { flex: 1; padding: 0 6px; display: flex; flex-direction: column; gap: 0; justify-content: flex-start; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 7px; padding: 0 8px; margin: 0; line-height: 1;
+      min-height: 38px; border-radius: 8px; color: var(--text-dim); text-decoration: none;
+      font-size: 15px; font-weight: 500; transition: all 0.2s ease;
+    }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: var(--text-bright); }
+    .sidebar-nav a.active { background: rgba(63,185,80,0.12); color: var(--emerald); font-weight: 600; }
+    .sidebar-nav a .nav-icon { font-size: 18px; width: 22px; text-align: center; opacity: 0.8; }
+    .sidebar-footer { padding: 16px 16px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .sidebar-footer .user-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .sidebar-footer .user-avatar {
+      width: 34px; height: 34px; border-radius: 50%; background: var(--emerald); color: #000;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .sidebar-footer .user-avatar-img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-footer .user-name { font-size: 13px; font-weight: 600; color: var(--text-bright); }
+    .sidebar-footer .user-elo-sm { font-size: 11px; color: var(--gold); font-weight: 600; }
+    .sidebar-footer .sidebar-stats { display: flex; gap: 6px; margin-bottom: 10px; }
+    .sidebar-footer .sidebar-stat { flex: 1; background: var(--surface2); border-radius: 6px; padding: 5px 4px; text-align: center; }
+    .sidebar-footer .sidebar-stat .sb-val { font-size: 14px; font-weight: 700; }
+    .sidebar-footer .sidebar-stat .sb-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+    .sidebar-footer .sb-win .sb-val { color: var(--emerald); }
+    .sidebar-footer .sb-loss .sb-val { color: var(--red-soft); }
+    .sidebar-footer .sb-draw .sb-val { color: var(--text-dim); }
+    .sidebar-footer .logout-btn {
+      width: 100%; padding: 7px 12px; background: transparent; border: 1px solid var(--glass-border);
+      border-radius: 8px; color: var(--text-dim); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
+
+    .main-content { padding: 28px 32px; overflow-y: auto; max-height: 100vh; transition: opacity 180ms ease; }
+    .main-content::-webkit-scrollbar { width: 6px; }
+    .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+    /* Shop Header */
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .shop-header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text-bright);
+    }
+    .coin-balance {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(210,153,29,0.1);
+      border: 1px solid rgba(210,153,29,0.3);
+      padding: 10px 18px;
+      border-radius: 12px;
+    }
+    .coin-icon {
+      font-size: 20px;
+    }
+    .coin-amount {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    /* Tabs */
+    .shop-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+    .shop-tab {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .shop-tab:hover {
+      background: var(--surface2);
+      color: var(--text-bright);
+    }
+    .shop-tab.active {
+      background: var(--surface2);
+      border-color: var(--glass-border);
+      color: var(--text-bright);
+    }
+
+    /* Shop Grid */
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .shop-card {
+      background: var(--glass-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .shop-card .preview-box {
+      width: 100%;
+      height: 100px;
+      border-radius: 8px;
+      background: var(--surface3);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+    .preview-theme {
+      display: grid;
+      grid-template-columns: repeat(4, 25%);
+      grid-template-rows: repeat(4, 25%);
+      width: 100%;
+      height: 100%;
+    }
+    .preview-theme > div {
+      width: 100%; height: 100%;
+    }
+    .preview-effect {
+      font-size: 32px;
+    }
+    .preview-color {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .shop-card .item-name {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--text-bright);
+    }
+    .shop-card .item-price {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .shop-card .item-price.owned {
+      color: var(--emerald);
+    }
+    .shop-card .action-btn {
+      margin-top: auto;
+      padding: 10px 16px;
+      background: var(--emerald);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .shop-card .action-btn:hover {
+      box-shadow: 0 4px 12px var(--emerald-glow);
+    }
+    .shop-card .action-btn.equip-btn {
+      background: var(--surface3);
+      color: var(--text-bright);
+      border: 1px solid var(--glass-border);
+    }
+    .shop-card .action-btn.equip-btn:hover {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+    }
+    .shop-card .action-btn.equipped-btn {
+      background: rgba(63,185,80,0.1);
+      color: var(--emerald);
+      border: 1px solid var(--emerald);
+      cursor: default;
+    }
+    .shop-card .action-btn.equipped-btn:hover {
+      box-shadow: none;
+    }
+
+    .empty-state { color: var(--text-muted); font-size: 14px; padding: 24px 0; text-align: center; width: 100%; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 14px 22px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      animation: toastIn 0.3s ease;
+      backdrop-filter: blur(12px);
+      font-family: 'Inter', sans-serif;
+    }
+    .toast.info { background: rgba(59,130,246,0.9); }
+    .toast.success { background: rgba(34,197,94,0.9); }
+    .toast.error { background: rgba(248,81,73,0.9); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; flex-direction: row; padding: 12px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0 12px; display: none; }
+      .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
+      .sidebar-footer { display: none; }
+      .main-content { padding: 20px 16px; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
+      <a href="shop.html" class="active" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
+      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
+        <div class="user-avatar" id="sidebarAvatarFallback">?</div>
+        <div>
+          <div class="user-name" id="sidebarUsername">...</div>
+          <div class="user-elo-sm" id="sidebarElo">1200</div>
+        </div>
+      </div>
+      <div class="sidebar-stats">
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="shop-header">
+      <h1>Shop</h1>
+      <div class="coin-balance">
+        <span class="coin-icon">🪙</span>
+        <span class="coin-amount" id="userCoins">0</span>
+      </div>
+    </div>
+
+    <div class="shop-tabs">
+      <button class="shop-tab active" data-tab="board_themes">Board Themes</button>
+      <button class="shop-tab" data-tab="win_effects">Win Effects</button>
+      <button class="shop-tab" data-tab="username_colors">Name Colors</button>
+    </div>
+
+    <div class="shop-grid" id="shopGrid">
+      <div class="empty-state">Loading shop items...</div>
+    </div>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/spa.js"></script>
+<script src="js/socket.js"></script>
+<script>
+(function() {
+  let currentUser = null;
+  let shopItems = {};
+  let currentCategory = 'board_themes';
+
+  async function init() {
+    try {
+      currentUser = await getCurrentUser();
+      if (!currentUser) { window.location.href = 'index.html'; return; }
+      initSocket();
+    } catch(e) { return; }
+
+    // Sidebar
+    document.getElementById('sidebarUsername').textContent = currentUser.username;
+    if (currentUser.username_color) {
+      document.getElementById('sidebarUsername').style.color = currentUser.username_color;
+    }
+    document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (currentUser.avatar_url) {
+      document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
+      document.getElementById('sidebarAvatarImg').style.display = '';
+      document.getElementById('sidebarAvatarFallback').style.display = 'none';
+    } else {
+      document.getElementById('sidebarAvatarFallback').textContent = (currentUser.username || '?').charAt(0).toUpperCase();
+    }
+    document.getElementById('sbWins').textContent = currentUser.wins || 0;
+    document.getElementById('sbLosses').textContent = currentUser.losses || 0;
+    document.getElementById('sbDraws').textContent = currentUser.draws || 0;
+
+    fetch('/api/me/admin').then(r => r.json()).then(d => {
+      if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
+    }).catch(() => {});
+
+    updateUserCoins();
+    await loadShopItems();
+
+    // Tab bindings
+    document.querySelectorAll('.shop-tab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        currentCategory = e.target.dataset.tab;
+        renderItems();
+      });
+    });
+  }
+
+  function updateUserCoins() {
+    document.getElementById('userCoins').textContent = currentUser.coins || 0;
+  }
+
+  async function loadShopItems() {
+    try {
+      const res = await fetch('/api/shop/items');
+      const data = await res.json();
+      if (data.success) {
+        shopItems = data.items;
+        renderItems();
+      }
+    } catch(e) {
+      showToast('Failed to load shop items', 'error');
+    }
+  }
+
+  function renderItems() {
+    const grid = document.getElementById('shopGrid');
+    const items = shopItems[currentCategory] || [];
+    
+    if (items.length === 0) {
+      grid.innerHTML = '<div class="empty-state">No items available in this category.</div>';
+      return;
+    }
+
+    let unlocked = [];
+    try { unlocked = JSON.parse(currentUser.unlocked_items || '[]'); } catch(e) {}
+    
+    // Add defaults to unlocked since they are free
+    items.forEach(i => {
+      if (i.price === 0 && !unlocked.includes(i.id)) {
+        unlocked.push(i.id);
+      }
+    });
+
+    grid.innerHTML = items.map(item => {
+      const isOwned = unlocked.includes(item.id);
+      
+      let isEquipped = false;
+      if (currentCategory === 'board_themes') isEquipped = (currentUser.board_theme || 'default') === item.id;
+      if (currentCategory === 'win_effects') isEquipped = (currentUser.win_effect || 'none') === item.id;
+      if (currentCategory === 'username_colors') isEquipped = (currentUser.username_color || '') === item.value;
+
+      let actionBtn = '';
+      if (isEquipped) {
+        actionBtn = `<button class="action-btn equipped-btn">✓ Equipped</button>`;
+      } else if (isOwned) {
+        actionBtn = `<button class="action-btn equip-btn" onclick="equipItem('${item.id}', '${currentCategory}')">Equip</button>`;
+      } else {
+        actionBtn = `<button class="action-btn" onclick="buyItem('${item.id}', '${currentCategory}', ${item.price})">Buy for ${item.price} 🪙</button>`;
+      }
+
+      const priceHtml = isOwned ? `<div class="item-price owned">Owned</div>` : `<div class="item-price">${item.price} 🪙</div>`;
+      
+      let previewHtml = '';
+      if (currentCategory === 'board_themes') {
+        let squares = '';
+        for (let r=0; r<4; r++) {
+          for (let c=0; c<4; c++) {
+            squares += `<div style="background: ${(r+c)%2===0 ? item.cssLight : item.cssDark}"></div>`;
+          }
+        }
+        previewHtml = `<div class="preview-theme">${squares}</div>`;
+      } else if (currentCategory === 'win_effects') {
+        previewHtml = `<div class="preview-effect">${item.id === 'confetti' ? '🎉' : '❌'}</div>`;
+      } else if (currentCategory === 'username_colors') {
+        previewHtml = `<div class="preview-color" style="color: ${item.value || 'var(--text-bright)'}; text-shadow: 0 0 10px ${item.value || 'transparent'}">${currentUser.username}</div>`;
+      }
+
+      return `
+        <div class="shop-card">
+          <div class="preview-box">${previewHtml}</div>
+          <div class="item-name">${escapeText(item.name)}</div>
+          ${priceHtml}
+          ${actionBtn}
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.buyItem = async function(itemId, category, price) {
+    if ((currentUser.coins || 0) < price) {
+      showToast('Not enough coins!', 'error');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/shop/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, category })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, 'success');
+        // Refresh user data
+        currentUser = await getCurrentUser();
+        updateUserCoins();
+        renderItems();
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch(e) {
+      showToast('Purchase failed', 'error');
+    }
+  };
+
+  window.equipItem = async function(itemId, category) {
+    try {
+      const res = await fetch('/api/shop/equip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, category })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, 'success');
+        // Refresh user data
+        currentUser = await getCurrentUser();
+        
+        // Update sidebar name color dynamically if it changed
+        if (category === 'username_colors') {
+          document.getElementById('sidebarUsername').style.color = currentUser.username_color || '';
+        }
+        
+        renderItems();
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch(e) {
+      showToast('Failed to equip item', 'error');
+    }
+  };
+
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + (type || 'info');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+  }
+
+  function escapeText(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#39;'); }
+
+  init();
+})();
+</script>
+</body>
+</html>

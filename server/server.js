@@ -233,7 +233,8 @@ app.get('/api/users/by-username/:username', (req, res) => {
       draws: user.draws,
       createdAt: user.created_at,
       avatarUrl: user.avatar_url || null,
-      title: user.title || null
+      title: user.title || null,
+      username_color: user.username_color || ''
     }
   });
 });
@@ -1640,6 +1641,7 @@ function notifyLevelUp(userId, bpResult) {
     const data = {
       newTier: bpResult.newTier,
       unlockedTitle: bpResult.unlockedTitle || null,
+      coinsEarned: bpResult.coinsEarned || 0,
       leveledUp: true
     };
     for (const sockId of sockets) {
@@ -1689,6 +1691,85 @@ app.post('/api/battlepass/clear-title', requireAuth, (req, res) => {
 app.get('/api/battlepass/titles', requireAuth, (req, res) => {
   const titles = battlepass.getUnlockedTitles(req.session.userId);
   res.json({ success: true, titles });
+});
+
+// ==================== Shop / Customization API ====================
+
+const SHOP_ITEMS = {
+  board_themes: [
+    { id: 'default', name: 'Classic Wood', price: 0, type: 'theme', cssLight: 'var(--square-light)', cssDark: 'var(--square-dark)' },
+    { id: 'ocean', name: 'Ocean Breeze', price: 200, type: 'theme', cssLight: '#e0f2fe', cssDark: '#0ea5e9' },
+    { id: 'emerald', name: 'Emerald Forest', price: 250, type: 'theme', cssLight: '#dcfce7', cssDark: '#22c55e' },
+    { id: 'midnight', name: 'Midnight Neon', price: 500, type: 'theme', cssLight: '#2e1065', cssDark: '#c084fc' },
+    { id: 'crimson', name: 'Crimson Blood', price: 400, type: 'theme', cssLight: '#fee2e2', cssDark: '#dc2626' }
+  ],
+  win_effects: [
+    { id: 'none', name: 'None', price: 0, type: 'effect' },
+    { id: 'confetti', name: 'Confetti Party', price: 500, type: 'effect' }
+  ],
+  username_colors: [
+    { id: 'default', name: 'Default', price: 0, type: 'color', value: '' },
+    { id: 'gold', name: 'Gold', price: 300, type: 'color', value: '#fbbf24' },
+    { id: 'red', name: 'Ruby', price: 300, type: 'color', value: '#ef4444' },
+    { id: 'blue', name: 'Sapphire', price: 300, type: 'color', value: '#3b82f6' },
+    { id: 'neon', name: 'Neon Cyan', price: 400, type: 'color', value: '#22d3ee' }
+  ]
+};
+
+app.get('/api/shop/items', requireAuth, (req, res) => {
+  res.json({ success: true, items: SHOP_ITEMS });
+});
+
+app.post('/api/shop/buy', requireAuth, (req, res) => {
+  const { itemId, category } = req.body;
+  
+  if (!SHOP_ITEMS[category]) return res.json({ success: false, message: 'Invalid category' });
+  const item = SHOP_ITEMS[category].find(i => i.id === itemId);
+  if (!item) return res.json({ success: false, message: 'Item not found' });
+  
+  if (item.price === 0) return res.json({ success: false, message: 'This item is free and already owned' });
+
+  const user = auth.getUserById(req.session.userId);
+  let unlocked = [];
+  try { unlocked = JSON.parse(user.unlocked_items || '[]'); } catch(e) {}
+  
+  if (unlocked.includes(itemId)) {
+    return res.json({ success: false, message: 'You already own this item' });
+  }
+  
+  if (user.coins < item.price) {
+    return res.json({ success: false, message: 'Not enough coins' });
+  }
+  
+  auth.deductCoins(req.session.userId, item.price);
+  auth.unlockItem(req.session.userId, itemId);
+  res.json({ success: true, message: 'Purchase successful!' });
+});
+
+app.post('/api/shop/equip', requireAuth, (req, res) => {
+  const { itemId, category } = req.body;
+  
+  if (!SHOP_ITEMS[category]) return res.json({ success: false, message: 'Invalid category' });
+  const item = SHOP_ITEMS[category].find(i => i.id === itemId);
+  if (!item) return res.json({ success: false, message: 'Item not found' });
+
+  const user = auth.getUserById(req.session.userId);
+  let unlocked = [];
+  try { unlocked = JSON.parse(user.unlocked_items || '[]'); } catch(e) {}
+  
+  if (item.price > 0 && !unlocked.includes(itemId)) {
+    return res.json({ success: false, message: 'You do not own this item' });
+  }
+
+  if (category === 'board_themes') {
+    auth.equipTheme(req.session.userId, itemId);
+  } else if (category === 'win_effects') {
+    auth.equipWinEffect(req.session.userId, itemId);
+  } else if (category === 'username_colors') {
+    auth.equipUsernameColor(req.session.userId, item.value);
+  }
+  
+  res.json({ success: true, message: 'Equipped!' });
 });
 
 // ==================== Start Server ====================
