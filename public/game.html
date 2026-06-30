@@ -868,7 +868,7 @@
       socket.on('game_over', (data) => {
         gameOver = true;
         SoundManager.play('gameover');
-        showGameOver(data.result);
+        showGameOver(data);
       });
 
       socket.on('opponent_disconnected', (data) => {
@@ -1263,13 +1263,13 @@
       }
     }
 
-    function showGameOver(result) {
+    function showGameOver(data) {
+      const result = data.result;
       const overlay = document.getElementById('gameOverOverlay');
       const card = document.getElementById('gameOverCard');
 
       let titleText = '';
       let titleClass = '';
-      let message = '';
 
       if (result === 'white_wins') {
         if (myColor === 'white') {
@@ -1292,12 +1292,52 @@
         titleClass = 'draw-text';
       }
 
+      // Generate HTML for player cards
+      const wPlayer = data.players ? data.players.white : null;
+      const bPlayer = data.players ? data.players.black : null;
+      
+      let playersHtml = '';
+      if (wPlayer && bPlayer) {
+        const getAvatarHtml = (p) => p.avatarUrl 
+          ? `<img src="${p.avatarUrl}" class="go-avatar">` 
+          : `<div class="go-avatar-placeholder">${p.username.charAt(0).toUpperCase()}</div>`;
+          
+        const getEloDiffHtml = (diff) => {
+          if (diff > 0) return `<span class="go-elo-diff positive">+${diff}</span>`;
+          if (diff < 0) return `<span class="go-elo-diff negative">${diff}</span>`;
+          return `<span class="go-elo-diff neutral">0</span>`;
+        };
+
+        // Put the current user first if possible, or just left=White, right=Black
+        const leftP = myColor === 'black' ? bPlayer : wPlayer;
+        const rightP = myColor === 'black' ? wPlayer : bPlayer;
+
+        playersHtml = `
+          <div class="go-players">
+            <div class="go-player">
+              ${getAvatarHtml(leftP)}
+              <div class="go-name">${leftP.username}</div>
+              <div class="go-elo">${leftP.newElo} ${getEloDiffHtml(leftP.eloDiff)}</div>
+            </div>
+            <div class="go-vs">vs</div>
+            <div class="go-player">
+              ${getAvatarHtml(rightP)}
+              <div class="go-name">${rightP.username}</div>
+              <div class="go-elo">${rightP.newElo} ${getEloDiffHtml(rightP.eloDiff)}</div>
+            </div>
+          </div>
+        `;
+      } else {
+        playersHtml = `<p class="elo-change">Result: ${result.replace('_', ' ')}</p>`;
+      }
+
       card.innerHTML = `
         <h2 class="${titleClass}">${titleText}</h2>
-        <p class="elo-change">Result: ${result.replace('_', ' ')}</p>
-        <button onclick="window.location.href='lobby.html'">Back to Lobby</button>
+        ${playersHtml}
+        <button class="go-back-btn" onclick="window.location.href='lobby.html'">Back to Lobby</button>
       `;
 
+      card.className = 'game-over-card modern';
       overlay.style.display = 'flex';
 
       // Win effects

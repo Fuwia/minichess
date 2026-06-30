@@ -1469,7 +1469,7 @@ io.on('connection', (socket) => {
 });
 
 // Helper function to process a bot move
-function processBotMove(game, io) {
+async function processBotMove(game, io) {
   if (game.isOver) return;
   if (!game.isBot) return;
 
@@ -1478,74 +1478,75 @@ function processBotMove(game, io) {
 
   const depth = bot.getDepth(game.botDifficulty);
 
-  // Clear TT for each new search to avoid stale entries
-  bot.ttClear();
-
-  const bestMove = bot.selectBotMove(game.state, depth, 'black', game.botDifficulty);
-  if (!bestMove) {
-    // No legal moves — game over
-    const result = engine.getGameResult(game.state);
-    if (result) {
-      handleGameOver(game, result);
+  try {
+    const bestMove = await bot.selectBotMoveAsync(game.state, depth, 'black', game.botDifficulty);
+    if (!bestMove) {
+      // No legal moves — game over
+      const result = engine.getGameResult(game.state);
+      if (result) {
+        handleGameOver(game, result);
+      }
+      return;
     }
-    return;
-  }
 
-  // Tick clock for bot (bot doesn't actually wait, but we deduct 0 elapsed)
-  const now = Date.now();
-  const elapsed = now - game.lastTickTime;
-  game.lastTickTime = now;
-  game.blackTime = Math.max(0, game.blackTime - elapsed);
-  game.blackTime += INCREMENT_TIME;
-
-  // Apply the bot's move
-  const oldFen = engine.toFen(game.state);
-  game.state = engine.applyMove(game.state, bestMove);
-  const newFen = engine.toFen(game.state);
-
-  const movePayload = {
-    move: {
-      from: bestMove.from,
-      to: bestMove.to,
-      pieceType: bestMove.pieceType || bestMove.piece?.type,
-      captured: bestMove.captured ? bestMove.captured.type : null,
-      isDrop: bestMove.isDrop,
-      promotion: bestMove.promotion
-    },
-    fen: newFen,
-    activeColor: game.state.activeColor,
-    pockets: game.state.pockets,
-    isCheck: engine.isInCheck(game.state),
-    whiteTime: game.whiteTime,
-    blackTime: game.blackTime
-  };
-
-  // Delay the bot's move to feel more human-like
-  // Normal: 1000-2500ms,   King in check: 500-1000ms (bot "under pressure")
-  const isInCheck = engine.isInCheck(game.state);
-  const delay = isInCheck
-    ? 500 + Math.floor(Math.random() * 500)
-    : 1000 + Math.floor(Math.random() * 1500);
-
-  setTimeout(() => {
-    // Re-check game is still active (user might have resigned/left during delay)
+    // Since the move calculation is async and took some time, check if the game was ended
+    // (e.g. human resigned/disconnected) while the bot was thinking.
     if (game.isOver) return;
 
-    // Send to human player
-    const humanId = game.whiteId;
-    const humanSockets = userSockets.get(humanId);
-    if (humanSockets) {
-      for (const sockId of humanSockets) {
-        io.to(sockId).emit('move_result', movePayload);
-      }
-    }
+    // Tick clock for bot (bot doesn't actually wait, but we deduct 0 elapsed)
+    const now = Date.now();
+    const elapsed = now - game.lastTickTime;
+    game.lastTickTime = now;
+    game.blackTime = Math.max(0, game.blackTime - elapsed);
+    game.blackTime += INCREMENT_TIME;
 
-    // Check for game over
-    const result = engine.getGameResult(game.state);
-    if (result) {
-      handleGameOver(game, result);
-    }
-  }, delay);
+    // Apply the bot's move
+    const oldFen = engine.toFen(game.state);
+    game.state = engine.applyMove(game.state, bestMove);
+    const newFen = engine.toFen(game.state);
+
+    const movePayload = {
+      move: {
+        from: bestMove.from,
+        to: bestMove.to,
+        pieceType: bestMove.pieceType || bestMove.piece?.type,
+        captured: bestMove.captured ? bestMove.captured.type : null,
+        isDrop: bestMove.isDrop,
+        promotion: bestMove.promotion
+      },
+      fen: newFen,
+      activeColor: game.state.activeColor,
+      pockets: game.state.pockets,
+      isCheck: engine.isInCheck(game.state),
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime
+    };
+
+    // The delay simulation is mostly covered by the worker time,
+    // but we can add a small padding if it computed instantly.
+    // (A 500ms delay to feel more natural if worker finishes in 10ms)
+    setTimeout(() => {
+      if (game.isOver) return;
+
+      // Send to human player
+      const humanId = game.whiteId;
+      const humanSockets = userSockets.get(humanId);
+      if (humanSockets) {
+        for (const sockId of humanSockets) {
+          io.to(sockId).emit('move_result', movePayload);
+        }
+      }
+
+      // Check for game over
+      const result = engine.getGameResult(game.state);
+      if (result) {
+        handleGameOver(game, result);
+      }
+    }, 500);
+
+  } catch (err) {
+    console.error('[Bot Error]', err);
+  }
 }
 
 // ==================== Clock Tick ====================
@@ -1582,19 +1583,18 @@ function handleGameOver(game, result) {
   game.result = result;
   console.log(`[Game] Over: ${game.id} | Result: ${result}`);
 
-  // Notify both players
-  for (const [color, playerId] of Object.entries(game.players)) {
-    const sockets = userSockets.get(playerId);
-    if (sockets) {
-      for (const sockId of sockets) {
-        io.to(sockId).emit('game_over', { result, gameId: game.id });
-      }
-    }
-  }
+  // Calculate ELO (update human player even for bot games, skip bot with userId=0)
+  let whiteEloDiff = 0;
+  let blackEloDiff = 0;
+  let whiteNewElo = game.whiteElo;
+  let blackNewElo = game.blackElo;
 
-  // Update ELO (update human player even for bot games, skip bot with userId=0)
   if (result === 'white_wins') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo);
+    whiteNewElo = elos.winnerNew;
+    blackNewElo = elos.loserNew;
+    whiteEloDiff = whiteNewElo - game.whiteElo;
+    blackEloDiff = blackNewElo - game.blackElo;
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'win');
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'loss');
 
@@ -1605,6 +1605,10 @@ function handleGameOver(game, result) {
     }
   } else if (result === 'black_wins') {
     const elos = auth.calculateElo(game.blackElo, game.whiteElo);
+    blackNewElo = elos.winnerNew;
+    whiteNewElo = elos.loserNew;
+    blackEloDiff = blackNewElo - game.blackElo;
+    whiteEloDiff = whiteNewElo - game.whiteElo;
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.winnerNew, 'win');
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.loserNew, 'loss');
 
@@ -1615,8 +1619,47 @@ function handleGameOver(game, result) {
     }
   } else if (result === 'draw') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo, true);
+    whiteNewElo = elos.winnerNew;
+    blackNewElo = elos.loserNew;
+    whiteEloDiff = whiteNewElo - game.whiteElo;
+    blackEloDiff = blackNewElo - game.blackElo;
     if (game.whiteId !== 0) auth.updateElo(game.whiteId, elos.winnerNew, 'draw');
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'draw');
+  }
+
+  // Get user details for avatars
+  const whiteUser = game.whiteId !== 0 ? auth.getUserById(game.whiteId) : null;
+  const blackUser = game.blackId !== 0 ? auth.getUserById(game.blackId) : null;
+
+  const gameOverPayload = {
+    result,
+    gameId: game.id,
+    players: {
+      white: {
+        username: game.whiteUsername,
+        avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+        oldElo: game.whiteElo,
+        newElo: whiteNewElo,
+        eloDiff: whiteEloDiff
+      },
+      black: {
+        username: game.blackUsername,
+        avatarUrl: blackUser ? blackUser.avatar_url : null,
+        oldElo: game.blackElo,
+        newElo: blackNewElo,
+        eloDiff: blackEloDiff
+      }
+    }
+  };
+
+  // Notify both players
+  for (const [color, playerId] of Object.entries(game.players)) {
+    const sockets = userSockets.get(playerId);
+    if (sockets) {
+      for (const sockId of sockets) {
+        io.to(sockId).emit('game_over', gameOverPayload);
+      }
+    }
   }
 
   const movesCount = (game.state.moveHistory || []).length;
