@@ -116,7 +116,20 @@ app.get('/api/me', (req, res) => {
     return res.json({ user: null });
   }
   
-  const user = auth.getUserById(req.session.userId);
+  let user = auth.getUserById(req.session.userId);
+  
+  if (user) {
+    let changed = false;
+    if (user.wins >= 1 && auth.unlockAchievement(user.id, 'first_win')) changed = true;
+    if (user.elo >= 1500 && auth.unlockAchievement(user.id, 'elo_1500')) changed = true;
+    if (user.elo >= 2000 && auth.unlockAchievement(user.id, 'elo_2000')) changed = true;
+    if ((user.wins + user.losses + user.draws) >= 50 && auth.unlockAchievement(user.id, 'dedicated_player')) changed = true;
+    
+    if (changed) {
+      user = auth.getUserById(req.session.userId);
+    }
+  }
+
   res.json({ user });
 });
 
@@ -212,15 +225,31 @@ app.post('/api/me/avatar', requireAuth, avatarUpload.single('avatar'), (req, res
   const avatarUrl = 'img/avatars/' + req.file.filename;
   auth.updateAvatar(req.session.userId, avatarUrl);
 
+  if (auth.unlockAchievement(req.session.userId, 'fashionista')) {
+    logAndBroadcastActivity('achievement', user.username, { achievementName: 'Fashionista' });
+  }
+
   res.json({ success: true, avatarUrl: avatarUrl });
 });
 
 // Get a user's profile by username (public)
 app.get('/api/users/by-username/:username', (req, res) => {
-  const user = auth.getUserByUsername(req.params.username);
+  let user = auth.getUserByUsername(req.params.username);
   if (!user) {
     return res.json({ success: false, message: 'User not found' });
   }
+
+  // Retroactive achievement check for existing accounts
+  let changed = false;
+  if (user.wins >= 1 && auth.unlockAchievement(user.id, 'first_win')) changed = true;
+  if (user.elo >= 1500 && auth.unlockAchievement(user.id, 'elo_1500')) changed = true;
+  if (user.elo >= 2000 && auth.unlockAchievement(user.id, 'elo_2000')) changed = true;
+  if ((user.wins + user.losses + user.draws) >= 50 && auth.unlockAchievement(user.id, 'dedicated_player')) changed = true;
+  
+  if (changed) {
+    user = auth.getUserByUsername(req.params.username);
+  }
+
   // Don't expose password_hash
   res.json({
     success: true,
@@ -234,7 +263,8 @@ app.get('/api/users/by-username/:username', (req, res) => {
       createdAt: user.created_at,
       avatarUrl: user.avatar_url || null,
       title: user.title || null,
-      username_color: user.username_color || ''
+      username_color: user.username_color || '',
+      unlocked_achievements: user.unlocked_achievements || '[]'
     }
   });
 });
@@ -393,6 +423,19 @@ app.post('/api/friends/request', requireAuth, (req, res) => {
   const { friendUsername } = req.body;
   if (!friendUsername) return res.json({ success: false, message: 'Username required' });
   const result = auth.sendFriendRequest(req.session.userId, friendUsername);
+
+  if (result.success && result.message === 'Friend request accepted (already pending)') {
+    const user = auth.getUserById(req.session.userId);
+    if (auth.unlockAchievement(req.session.userId, 'social_butterfly')) {
+      logAndBroadcastActivity('achievement', user.username, { achievementName: 'Social Butterfly' });
+    }
+    if (result.friend) {
+      if (auth.unlockAchievement(result.friend.id, 'social_butterfly')) {
+        logAndBroadcastActivity('achievement', result.friend.username, { achievementName: 'Social Butterfly' });
+      }
+    }
+  }
+
   res.json(result);
 });
 
@@ -400,6 +443,20 @@ app.post('/api/friends/accept', requireAuth, (req, res) => {
   const { requestId } = req.body;
   if (!requestId) return res.json({ success: false, message: 'Request ID required' });
   const result = auth.acceptFriendRequest(req.session.userId, requestId);
+  
+  if (result.success) {
+    const user = auth.getUserById(req.session.userId);
+    if (auth.unlockAchievement(req.session.userId, 'social_butterfly')) {
+      logAndBroadcastActivity('achievement', user.username, { achievementName: 'Social Butterfly' });
+    }
+    
+    if (result.friendId && result.friendUsername) {
+      if (auth.unlockAchievement(result.friendId, 'social_butterfly')) {
+        logAndBroadcastActivity('achievement', result.friendUsername, { achievementName: 'Social Butterfly' });
+      }
+    }
+  }
+
   res.json(result);
 });
 
@@ -1544,7 +1601,7 @@ function handleGameOver(game, result) {
     // Log activities for PvP
     if (game.whiteId !== 0 && game.blackId !== 0) {
       logAndBroadcastActivity('ranked_win', game.whiteUsername, { opponent: game.blackUsername, winnerElo: elos.winnerNew });
-      checkAndLogEloMilestone(game.whiteUsername, game.whiteElo, elos.winnerNew);
+      checkAndLogEloMilestone(game.whiteId, game.whiteUsername, game.whiteElo, elos.winnerNew);
     }
   } else if (result === 'black_wins') {
     const elos = auth.calculateElo(game.blackElo, game.whiteElo);
@@ -1554,7 +1611,7 @@ function handleGameOver(game, result) {
     // Log activities for PvP
     if (game.whiteId !== 0 && game.blackId !== 0) {
       logAndBroadcastActivity('ranked_win', game.blackUsername, { opponent: game.whiteUsername, winnerElo: elos.winnerNew });
-      checkAndLogEloMilestone(game.blackUsername, game.blackElo, elos.winnerNew);
+      checkAndLogEloMilestone(game.blackId, game.blackUsername, game.blackElo, elos.winnerNew);
     }
   } else if (result === 'draw') {
     const elos = auth.calculateElo(game.whiteElo, game.blackElo, true);
@@ -1562,12 +1619,69 @@ function handleGameOver(game, result) {
     if (game.blackId !== 0) auth.updateElo(game.blackId, elos.loserNew, 'draw');
   }
 
-  // Prototype Achievement Unlocks (Lightning Speed for fast mates)
   const movesCount = (game.state.moveHistory || []).length;
-  if (movesCount <= 10 && (result === 'white_wins' || result === 'black_wins')) {
+
+  if (result === 'white_wins' || result === 'black_wins') {
     const winnerUsername = result === 'white_wins' ? game.whiteUsername : game.blackUsername;
-    if (game.whiteId !== 0 && game.blackId !== 0) {
-      logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'Lightning Speed' });
+    const winnerId = result === 'white_wins' ? game.whiteId : game.blackId;
+    const loserId = result === 'white_wins' ? game.blackId : game.whiteId;
+    
+    // Achievements (Win based)
+    if (winnerId !== 0) {
+      const winnerData = auth.getUserById(winnerId);
+      // First Win
+      if (winnerData && winnerData.wins === 1) { // auth.updateElo is called right before this, so wins should be 1
+        if (auth.unlockAchievement(winnerId, 'first_win')) {
+          logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'First Blood' });
+        }
+      }
+      
+      // Fast Mate
+      if (movesCount <= 10 && loserId !== 0) {
+        if (auth.unlockAchievement(winnerId, 'fast_mate')) {
+          logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'Lightning Speed' });
+        }
+      }
+      
+      // Bot Slayer
+      if (loserId === 0) {
+        if (auth.unlockAchievement(winnerId, 'bot_slayer')) {
+          logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'Bot Slayer' });
+        }
+      }
+      
+      // Win Streak 10
+      if (winnerData && winnerData.current_streak >= 10) {
+        if (auth.unlockAchievement(winnerId, 'win_streak_10')) {
+          logAndBroadcastActivity('achievement', winnerUsername, { achievementName: 'Untouchable' });
+        }
+      }
+
+    }
+  } else if (result === 'draw') {
+    // Pacifist Achievement
+    for (const pId of [game.whiteId, game.blackId]) {
+      if (pId !== 0) {
+        const u = auth.getUserById(pId);
+        if (u && auth.unlockAchievement(pId, 'pacifist')) {
+          logAndBroadcastActivity('achievement', u.username, { achievementName: 'Pacifist' });
+        }
+      }
+    }
+  }
+
+  // Dedicated Player achievement checks
+  for (const pId of [game.whiteId, game.blackId]) {
+    if (pId !== 0) {
+      const u = auth.getUserById(pId);
+      if (u) {
+        const totalGames = u.wins + u.losses + u.draws;
+        if (totalGames >= 50) {
+          if (auth.unlockAchievement(pId, 'dedicated_player')) {
+            logAndBroadcastActivity('achievement', u.username, { achievementName: 'Dedicated Player' });
+          }
+        }
+      }
     }
   }
 
@@ -1705,12 +1819,25 @@ function logAndBroadcastActivity(type, username, details) {
 /**
  * Helper to check for ELO milestones and log them
  */
-function checkAndLogEloMilestone(username, oldElo, newElo) {
+function checkAndLogEloMilestone(userId, username, oldElo, newElo) {
   const milestones = [1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100, 2200];
   for (const m of milestones) {
     if (oldElo < m && newElo >= m) {
       logAndBroadcastActivity('elo_milestone', username, { milestone: m });
       break;
+    }
+  }
+
+  // Achievement checks
+  if (newElo >= 1500) {
+    if (auth.unlockAchievement(userId, 'elo_1500')) {
+      logAndBroadcastActivity('achievement', username, { achievementName: 'Rising Star' });
+    }
+  }
+  
+  if (newElo >= 2000) {
+    if (auth.unlockAchievement(userId, 'elo_2000')) {
+      logAndBroadcastActivity('achievement', username, { achievementName: 'Grandmaster' });
     }
   }
 }
@@ -1830,6 +1957,11 @@ app.post('/api/shop/buy', requireAuth, (req, res) => {
   auth.deductCoins(req.session.userId, item.price);
   auth.unlockItem(req.session.userId, itemId);
   logAndBroadcastActivity('shop_purchase', user.username, { itemName: item.name });
+  
+  if (auth.unlockAchievement(req.session.userId, 'big_spender')) {
+    logAndBroadcastActivity('achievement', user.username, { achievementName: 'Big Spender' });
+  }
+  
   res.json({ success: true, message: 'Purchase successful!' });
 });
 

@@ -54,6 +54,10 @@ function initTables() {
   try { db.run('ALTER TABLE users ADD COLUMN win_effect TEXT DEFAULT \'none\''); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN username_color TEXT DEFAULT \'\''); } catch (e) { }
   
+  // Achievements
+  try { db.run('ALTER TABLE users ADD COLUMN unlocked_achievements TEXT DEFAULT \'[]\''); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0'); } catch (e) { }
+  
   // Grant admin to user "Fuwia" if they exist
   const grantStmt = db.prepare('UPDATE users SET is_admin = 1 WHERE username = ? AND is_admin = 0');
   grantStmt.run(['Fuwia']);

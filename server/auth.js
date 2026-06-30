@@ -57,14 +57,14 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
@@ -88,10 +88,11 @@ function updateElo(userId, newElo, result) {
     UPDATE users SET elo = ?, 
     wins = wins + CASE WHEN ? = 'win' THEN 1 ELSE 0 END,
     losses = losses + CASE WHEN ? = 'loss' THEN 1 ELSE 0 END,
-    draws = draws + CASE WHEN ? = 'draw' THEN 1 ELSE 0 END
+    draws = draws + CASE WHEN ? = 'draw' THEN 1 ELSE 0 END,
+    current_streak = CASE WHEN ? = 'win' THEN current_streak + 1 ELSE 0 END
     WHERE id = ?
   `);
-  stmt.run([newElo, result, result, result, userId]);
+  stmt.run([newElo, result, result, result, result, userId]);
   stmt.free();
 }
 
@@ -135,6 +136,23 @@ function deductCoins(userId, amount) {
   stmt.run([amount, userId]);
   stmt.free();
   return true;
+}
+
+function unlockAchievement(userId, achievementId) {
+  const user = getUserById(userId);
+  if (!user) return false;
+  
+  let unlocked = [];
+  try { unlocked = JSON.parse(user.unlocked_achievements || '[]'); } catch(e) {}
+  
+  if (!unlocked.includes(achievementId)) {
+    unlocked.push(achievementId);
+    const stmt = db.prepare('UPDATE users SET unlocked_achievements = ? WHERE id = ?');
+    stmt.run([JSON.stringify(unlocked), userId]);
+    stmt.free();
+    return true; // Successfully unlocked
+  }
+  return false; // Already unlocked
 }
 
 function unlockItem(userId, itemId) {
@@ -203,10 +221,26 @@ function sendFriendRequest(userId, friendUsername) {
 }
 
 function acceptFriendRequest(userId, requestId) {
+  const getStmt = db.prepare('SELECT user_id FROM friends WHERE id = ? AND friend_id = ? AND status = ?');
+  const getRow = getStmt.getAsObject([requestId, userId, 'pending']);
+  getStmt.free();
+
+  if (!getRow.user_id) {
+    return { success: false, message: 'Request not found' };
+  }
+
   const stmt = db.prepare('UPDATE friends SET status = ? WHERE id = ? AND friend_id = ? AND status = ?');
   stmt.run(['accepted', requestId, userId, 'pending']);
   stmt.free();
-  return { success: true, message: 'Friend request accepted' };
+  
+  const friendUser = getUserById(getRow.user_id);
+
+  return { 
+    success: true, 
+    message: 'Friend request accepted',
+    friendId: getRow.user_id,
+    friendUsername: friendUser ? friendUser.username : null
+  };
 }
 
 function declineFriendRequest(userId, requestId) {
@@ -372,6 +406,7 @@ module.exports = {
   addCoins,
   deductCoins,
   unlockItem,
+  unlockAchievement,
   equipTheme,
   equipWinEffect,
   equipUsernameColor

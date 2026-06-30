@@ -86,6 +86,45 @@
     }
     .sidebar-footer .logout-btn:hover { border-color: var(--red-soft); color: var(--red-soft); }
 
+    .achievement-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      padding: 12px 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      text-align: center;
+      transition: all 0.2s ease;
+      opacity: 0.4;
+      filter: grayscale(100%);
+    }
+    .achievement-badge.unlocked {
+      opacity: 1;
+      filter: grayscale(0%);
+      background: rgba(63, 185, 80, 0.08);
+      border-color: var(--emerald);
+      box-shadow: 0 4px 12px rgba(63, 185, 80, 0.1);
+    }
+    .achievement-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+    .achievement-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-bright);
+      line-height: 1.2;
+    }
+    .achievement-desc {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.2;
+    }
+
     /* ===== MAIN CONTENT ===== */
     .main-content { padding: 28px 32px; overflow-y: auto; max-height: 100vh; transition: opacity 180ms ease; }
     .main-content::-webkit-scrollbar { width: 6px; }
@@ -300,6 +339,12 @@
       </div>
     </div>
 
+    <!-- Achievements Section -->
+    <div class="card" id="achievementsCard" style="display:none;">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:14px;">Achievements</h3>
+      <div id="achievementsGrid" style="display: flex; flex-wrap: wrap; gap: 12px;"></div>
+    </div>
+
     <div id="ownProfileSections" style="display:none;">
       <div class="friends-grid">
         <div class="card">
@@ -433,6 +478,8 @@
     // Show title if available
     const userData = isOwnProfile ? currentUser : profileUser;
     const titleEl = document.getElementById('profileTitle');
+    
+    renderAchievements(userData);
     if (userData && userData.title) {
       titleEl.textContent = '「' + userData.title + '」';
       titleEl.style.display = '';
@@ -585,6 +632,49 @@
   }
   function escapeText(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'"').replace(/'/g,'&#39;'); }
   function escapeAttr(s) { if(!s) return ''; return s.replace(/&/g,'&').replace(/"/g,'"').replace(/</g,'<').replace(/>/g,'>'); }
+
+  const ACHIEVEMENTS_DEF = [
+    { id: 'first_win', icon: '🎯', name: 'First Blood', desc: 'Win your first game' },
+    { id: 'fast_mate', icon: '⚡', name: 'Lightning Speed', desc: 'Win in 10 moves or less' },
+    { id: 'bot_slayer', icon: '🤖', name: 'Bot Slayer', desc: 'Defeat a computer opponent' },
+    { id: 'win_streak_10', icon: '🔥', name: 'Untouchable', desc: 'Win 10 games in a row' },
+    { id: 'pacifist', icon: '🕊️', name: 'Pacifist', desc: 'Draw a game' },
+    { id: 'dedicated_player', icon: '🛡️', name: 'Dedicated Player', desc: 'Play 50 games' },
+    { id: 'elo_1500', icon: '⭐', name: 'Rising Star', desc: 'Reach 1500 ELO' },
+    { id: 'elo_2000', icon: '👑', name: 'Grandmaster', desc: 'Reach 2000 ELO' },
+    { id: 'social_butterfly', icon: '👥', name: 'Social Butterfly', desc: 'Add a friend' },
+    { id: 'big_spender', icon: '💎', name: 'Big Spender', desc: 'Buy an item from the shop' },
+    { id: 'fashionista', icon: '📷', name: 'Fashionista', desc: 'Change your avatar' }
+  ];
+
+  function renderAchievements(userData) {
+    const card = document.getElementById('achievementsCard');
+    const grid = document.getElementById('achievementsGrid');
+    if (!userData || !userData.unlocked_achievements) {
+      card.style.display = 'none';
+      return;
+    }
+    
+    card.style.display = 'block';
+    
+    let unlocked = [];
+    try {
+      unlocked = JSON.parse(userData.unlocked_achievements);
+    } catch(e) {}
+    
+    let html = '';
+    for (const ach of ACHIEVEMENTS_DEF) {
+      const isUnlocked = unlocked.includes(ach.id);
+      html += `
+        <div class="achievement-badge ${isUnlocked ? 'unlocked' : ''}">
+          <div class="achievement-icon">${ach.icon}</div>
+          <div class="achievement-name">${ach.name}</div>
+          <div class="achievement-desc">${ach.desc}</div>
+        </div>
+      `;
+    }
+    grid.innerHTML = html;
+  }
 
   window.loadMatchHistoryPage = loadMatchHistoryPage;
   window.uploadAvatar = uploadAvatar;
