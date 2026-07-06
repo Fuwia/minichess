@@ -1,4 +1,5 @@
-# MiniChess ♟️
+# MiniChess ♟️minichess.xyz [minichess.xyz](https://minichess.xyz)
+
 
 MiniChess is a fast-paced, competitive 6x6 chess variant inspired by the "Minihouse" variant from chess.com. It combines the rules of traditional chess on a smaller board with "Crazyhouse" mechanics, meaning captured pieces can be dropped back onto the board as your own!
 
