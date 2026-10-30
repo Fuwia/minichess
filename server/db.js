@@ -46,6 +46,9 @@ function initTables() {
   try { db.run('ALTER TABLE users ADD COLUMN avatar_url TEXT'); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN last_avatar_change TEXT'); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN banned_reason TEXT'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN banned_at TEXT'); } catch (e) { }
   
   // Shop and Customization columns
   try { db.run('ALTER TABLE users ADD COLUMN coins INTEGER DEFAULT 0'); } catch (e) { }

@@ -7,7 +7,9 @@
   <title>MiniChess — Leaderboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
       --page-bg: #0d1117;
@@ -32,7 +34,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -151,14 +153,15 @@
       <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
     </div>
     <nav class="sidebar-nav">
-      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
-      <a href="leaderboard.html" class="active" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
-      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
-      <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
-      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
-      <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+      <a href="lobby.html" id="navPlay" data-i18n="nav_play"><i data-lucide="play" class="nav-icon"></i> Play</a>
+      <a href="leaderboard.html" class="active" id="navLeaderboard" data-i18n="nav_leaderboard"><i data-lucide="trophy" class="nav-icon"></i> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass" data-i18n="nav_battlepass"><i data-lucide="award" class="nav-icon"></i> Battlepass</a>
+      <a href="shop.html" id="navShop" data-i18n="nav_shop"><i data-lucide="shopping-bag" class="nav-icon"></i> Shop</a>
+      <a href="profile.html" id="navProfile" data-i18n="nav_profile"><i data-lucide="user" class="nav-icon"></i> Profile</a>
+      <a href="admin.html" id="navAdmin" style="display:none;" data-i18n="nav_admin"><i data-lucide="settings" class="nav-icon"></i> Admin</a>
     </nav>
     <div class="sidebar-footer">
+      <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
       <div class="user-mini">
         <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
         <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -168,30 +171,33 @@
         </div>
       </div>
       <div class="sidebar-stats">
-        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
-        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
-        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl" data-i18n="stat_w">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl" data-i18n="stat_l">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl" data-i18n="stat_d">D</div></div>
       </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-actions">
+        <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+        <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+      </div>
     </div>
   </aside>
 
   <main class="main-content">
-    <div class="page-title">🏆 Leaderboard</div>
+    <div class="page-title"><i data-lucide="trophy"></i> <span data-i18n="nav_leaderboard">Leaderboard</span></div>
     <div class="lb-card">
       <table class="lb-table">
         <thead>
           <tr>
-            <th>Rank</th>
-            <th>Player</th>
-            <th>ELO</th>
-            <th>Wins</th>
-            <th>Losses</th>
-            <th>Draws</th>
+            <th data-i18n="rank">Rank</th>
+            <th data-i18n="player">Player</th>
+            <th data-i18n="current_elo">ELO</th>
+            <th data-i18n="stat_wins">Wins</th>
+            <th data-i18n="stat_losses">Losses</th>
+            <th data-i18n="stat_draws">Draws</th>
           </tr>
         </thead>
         <tbody id="leaderboardBody">
-          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;">Loading...</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px;" data-i18n="loading">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -199,6 +205,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
@@ -207,6 +214,7 @@
     const user = await getCurrentUser();
     if (!user) { window.location.href = 'index.html'; return; }
     initSocket();
+    if (window.renderGuestBadges) renderGuestBadges(user);
 
     document.getElementById('sidebarUsername').textContent = user.username;
     document.getElementById('sidebarElo').textContent = user.elo;
@@ -233,6 +241,9 @@
       document.getElementById('leaderboardBody').innerHTML =
         '<tr><td colspan="6" style="text-align:center;color:var(--red-soft);padding:24px;">Failed to load leaderboard</td></tr>';
     }
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
 
   function renderLeaderboard(leaders) {
@@ -246,16 +257,21 @@
       if (i === 0) rankClass = 'top-1';
       else if (i === 1) rankClass = 'top-2';
       else if (i === 2) rankClass = 'top-3';
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      const tier = getRankTier(p.elo);
       return `<tr>
-        <td class="lb-rank ${rankClass}">${medal} #${i + 1}</td>
+        <td class="lb-rank ${rankClass}">#${i + 1}</td>
         <td class="lb-name"><a href="profile.html?username=${encodeURIComponent(p.username)}">${esc(p.username)}</a></td>
-        <td class="lb-elo">${p.elo}</td>
+        <td class="lb-elo">
+          ${renderRankBadge(p.elo, { size: 'sm' })}
+        </td>
         <td>${p.wins}</td>
         <td>${p.losses}</td>
         <td>${p.draws}</td>
       </tr>`;
     }).join('');
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }

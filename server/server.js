@@ -31,10 +31,16 @@ const INITIAL_FEN = '2bnrk/5p/6/6/P5/KRNB2 w - - []/[]';
 // ==================== Middleware ====================
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  etag: false,
+  maxAge: 0,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  }
+}));
 
 const sessionMiddleware = session({
-  secret: 'minichess-secret-key-' + uuidv4(),
+  secret: process.env.SESSION_SECRET || 'minichess-secret-key-production-session',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
@@ -44,16 +50,84 @@ app.use(sessionMiddleware);
 
 // Share session with Socket.IO
 io.use((socket, next) => {
-  sessionMiddleware(socket.request, {}, next);
+  sessionMiddleware(socket.request, {}, (err) => {
+    if (err) return next(err);
+    const session = socket.request.session;
+    // If session already belongs to a registered user, NEVER treat as guest!
+    if (session && session.userId) {
+      const regUser = auth.getUserById(session.userId);
+      if (regUser) {
+        if (regUser.is_banned === 1) {
+          return next(new Error('ACCOUNT_BANNED'));
+        }
+        if (!regUser.username.startsWith('Guest_')) {
+          session.isGuest = false;
+        }
+        return next();
+      } else {
+        session.userId = null;
+      }
+    }
+    const gName = (session && session.username) ||
+                  (socket.handshake && socket.handshake.auth && socket.handshake.auth.guestUsername) ||
+                  (socket.handshake && socket.handshake.query && socket.handshake.query.guestUsername) ||
+                  (socket.handshake && socket.handshake.headers && socket.handshake.headers['x-guest-username']);
+    if (gName && gName.startsWith('Guest_')) {
+      socket.guestUsername = gName;
+      let gUser = auth.getUserByUsername(gName);
+      if (!gUser) {
+        auth.registerUser(gName, GUEST_DUMMY_HASH);
+        saveDb();
+        gUser = auth.getUserByUsername(gName);
+      }
+      if (gUser && session) {
+        session.userId = gUser.id;
+        session.username = gUser.username;
+        session.isGuest = true;
+        try { session.save(); } catch (e) {}
+      }
+    }
+    next();
+  });
 });
 
 // Auth middleware for protected routes
 function requireAuth(req, res, next) {
-  if (req.session.userId) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
+  if (req.session && req.session.userId) {
+    const user = auth.getUserById(req.session.userId);
+    if (user) {
+      if (user.is_banned === 1) {
+        req.session.destroy();
+        return res.status(403).json({ error: 'Account has been banned', banned: true, message: user.banned_reason || 'Bu hesap yönetici tarafından engellenmiştir.' });
+      }
+      return next();
+    }
+    req.session.userId = null;
   }
+  // Auto-resolve guest session if guest username exists in session or request headers/query/body
+  const gName = (req.session && req.session.username) ||
+                req.headers['x-guest-username'] ||
+                (req.query && req.query.guestUsername) ||
+                (req.body && req.body.guestUsername);
+  if ((req.session && req.session.isGuest) || (gName && gName.startsWith('Guest_'))) {
+    const finalGName = (gName && gName.startsWith('Guest_')) ? gName : `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+    let gUser = auth.getUserByUsername(finalGName);
+    if (!gUser) {
+      auth.registerUser(finalGName, GUEST_DUMMY_HASH);
+      saveDb();
+      gUser = auth.getUserByUsername(finalGName);
+    }
+    if (gUser) {
+      if (req.session) {
+        req.session.userId = gUser.id;
+        req.session.username = gUser.username;
+        req.session.isGuest = true;
+        try { req.session.save(); } catch (e) {}
+      }
+      return next();
+    }
+  }
+  res.status(401).json({ error: 'Not authenticated' });
 }
 
 // ==================== REST API Routes ====================
@@ -73,14 +147,44 @@ app.post('/api/register', async (req, res) => {
   if (password.length < 4) {
     return res.json({ success: false, message: 'Password must be at least 4 characters' });
   }
+
+  if (/^guest/i.test(username.trim())) {
+    return res.json({ success: false, message: 'Usernames starting with "Guest" are reserved for guest players' });
+  }
   
+  const prevGuestId = req.session && req.session.isGuest ? req.session.userId : null;
+  const guestHeader = req.headers['x-guest-username'];
+
   const passwordHash = await auth.hashPassword(password);
   const result = auth.registerUser(username, passwordHash);
   
   if (result.success) {
+    if (prevGuestId) {
+      try { auth.cleanupEmptyGuest(prevGuestId); saveDb(); } catch (e) {}
+    } else if (guestHeader && guestHeader.startsWith('Guest_')) {
+      try {
+        const gUser = auth.getUserByUsername(guestHeader);
+        if (gUser) { auth.cleanupEmptyGuest(gUser.id); saveDb(); }
+      } catch (e) {}
+    }
+
     const user = auth.getUserByUsername(username);
     req.session.userId = user.id;
     req.session.username = user.username;
+    req.session.isGuest = false;
+    result.user = {
+      id: user.id,
+      username: user.username,
+      elo: user.elo || 1200,
+      wins: user.wins || 0,
+      losses: user.losses || 0,
+      draws: user.draws || 0,
+      isGuest: false
+    };
+    return req.session.save((err) => {
+      if (err) console.error('[Register Session Error]', err);
+      res.json(result);
+    });
   }
   
   res.json(result);
@@ -93,12 +197,30 @@ app.post('/api/login', async (req, res) => {
   if (!username || !password) {
     return res.json({ success: false, message: 'Username and password are required' });
   }
+
+  const prevGuestId = req.session && req.session.isGuest ? req.session.userId : null;
+  const guestHeader = req.headers['x-guest-username'];
   
   const result = auth.loginUser(username, password);
   
   if (result.success) {
+    if (prevGuestId) {
+      try { auth.cleanupEmptyGuest(prevGuestId); saveDb(); } catch (e) {}
+    } else if (guestHeader && guestHeader.startsWith('Guest_')) {
+      try {
+        const gUser = auth.getUserByUsername(guestHeader);
+        if (gUser) { auth.cleanupEmptyGuest(gUser.id); saveDb(); }
+      } catch (e) {}
+    }
+
     req.session.userId = result.user.id;
     req.session.username = result.user.username;
+    req.session.isGuest = false;
+    result.user.isGuest = false;
+    return req.session.save((err) => {
+      if (err) console.error('[Login Session Error]', err);
+      res.json(result);
+    });
   }
   
   res.json(result);
@@ -106,19 +228,161 @@ app.post('/api/login', async (req, res) => {
 
 // Logout
 app.post('/api/logout', (req, res) => {
+  const userId = req.session && req.session.userId;
+  const isGuest = req.session && (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_')));
   req.session.destroy();
+  if (isGuest && userId) {
+    try {
+      auth.cleanupEmptyGuest(userId);
+      saveDb();
+    } catch (e) {
+      console.warn('[Logout Guest Cleanup Error]', e);
+    }
+  }
   res.json({ success: true });
+});
+
+// Precomputed dummy bcrypt hash for guests to avoid CPU event-loop blocking
+const GUEST_DUMMY_HASH = '$2a$10$e8kP09k4t3FmBvB4Y0FfjeU1K6r1sK2c0N1V6e5U4V3m2P1o0N9qW';
+
+// Guest Login
+app.post('/api/guest', async (req, res) => {
+  try {
+    // If user is already logged in with a registered account, do not allow guest login
+    if (req.session.userId || (req.session.username && !req.session.username.startsWith('Guest_'))) {
+      const uId = req.session.userId;
+      const existingUser = uId ? auth.getUserById(uId) : auth.getUserByUsername(req.session.username);
+      if (existingUser && !existingUser.username.startsWith('Guest_')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Already logged in as a registered user. Please log out first.'
+        });
+      }
+    }
+
+    let username = req.body && req.body.username;
+    let user = null;
+
+    if (username && /^Guest_\d{4}$/.test(username)) {
+      user = auth.getUserByUsername(username);
+    }
+
+    if (!user) {
+      if (!username || !/^Guest_\d{4}$/.test(username) || auth.getUserByUsername(username)) {
+        username = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      let existing = auth.getUserByUsername(username);
+      let attempts = 0;
+      while (existing && attempts < 100) {
+        username = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+        existing = auth.getUserByUsername(username);
+        attempts++;
+      }
+
+      if (existing) {
+        username = `Guest_${Date.now().toString().slice(-4)}`;
+      }
+
+      let regRes = auth.registerUser(username, GUEST_DUMMY_HASH);
+      if (regRes && regRes.success) saveDb();
+      user = regRes && regRes.success ? auth.getUserByUsername(username) : null;
+    }
+
+    if (!user) {
+      // Fallback unique username if race condition occurred
+      username = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+      auth.registerUser(username, GUEST_DUMMY_HASH);
+      saveDb();
+      user = auth.getUserByUsername(username);
+    }
+
+    if (user) {
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      req.session.isGuest = true;
+      return req.session.save((err) => {
+        if (err) console.error('[Session Error]', err);
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            elo: user.elo || 1200,
+            wins: user.wins || 0,
+            losses: user.losses || 0,
+            draws: user.draws || 0,
+            coins: user.coins || 0,
+            isGuest: true
+          }
+        });
+      });
+    }
+
+    res.status(500).json({ success: false, message: 'Failed to create guest user' });
+  } catch (err) {
+    console.error('Guest login error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create guest session'
+    });
+  }
 });
 
 // Get current user
 app.get('/api/me', (req, res) => {
+  const gHeader = req.headers['x-guest-username'] || (req.query && req.query.guestUsername);
   if (!req.session.userId) {
+    const gName = (req.session && req.session.username) || gHeader;
+    if (((req.session && (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_')))) || (gHeader && gHeader.startsWith('Guest_'))) && gName) {
+      let gUser = auth.getUserByUsername(gName);
+      if (!gUser && gName.startsWith('Guest_')) {
+        auth.registerUser(gName, GUEST_DUMMY_HASH);
+        saveDb();
+        gUser = auth.getUserByUsername(gName);
+      }
+      if (gUser) {
+        if (req.session) {
+          req.session.userId = gUser.id;
+          req.session.username = gUser.username;
+          req.session.isGuest = true;
+          try { req.session.save(); } catch (e) {}
+        }
+        return res.json({
+          user: {
+            id: gUser.id,
+            username: gUser.username,
+            elo: gUser.elo || 1200,
+            wins: gUser.wins || 0,
+            losses: gUser.losses || 0,
+            draws: gUser.draws || 0,
+            coins: gUser.coins || 0,
+            isGuest: true
+          }
+        });
+      }
+    }
     return res.json({ user: null });
   }
   
   let user = auth.getUserById(req.session.userId);
+  if (!user) {
+    req.session.destroy();
+    return res.json({ user: null });
+  }
+  if (user.is_banned === 1) {
+    req.session.destroy();
+    return res.json({ user: null, banned: true, message: user.banned_reason || 'Bu hesap yönetici tarafından engellenmiştir.' });
+  }
   
   if (user) {
+    if (user.username && user.username.startsWith('Guest_')) {
+      user.isGuest = true;
+      req.session.isGuest = true;
+    } else {
+      user.isGuest = false;
+      req.session.isGuest = false;
+    }
     let changed = false;
     if (user.wins >= 1 && auth.unlockAchievement(user.id, 'first_win')) changed = true;
     if (user.elo >= 1500 && auth.unlockAchievement(user.id, 'elo_1500')) changed = true;
@@ -127,6 +391,13 @@ app.get('/api/me', (req, res) => {
     
     if (changed) {
       user = auth.getUserById(req.session.userId);
+      if (user.username && user.username.startsWith('Guest_')) {
+        user.isGuest = true;
+        req.session.isGuest = true;
+      } else {
+        user.isGuest = false;
+        req.session.isGuest = false;
+      }
     }
   }
 
@@ -194,6 +465,10 @@ const avatarUpload = multer({
 });
 
 app.post('/api/me/avatar', requireAuth, avatarUpload.single('avatar'), (req, res) => {
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    if (req.file) fs.unlink(req.file.path, () => {});
+    return res.json({ success: false, isGuest: true, message: 'Please create an account to customize your profile' });
+  }
   if (!req.file) {
     return res.json({ success: false, message: 'No file uploaded or invalid type.' });
   }
@@ -302,14 +577,14 @@ app.get('/api/games/:gameUuid', async (req, res) => {
     const database = await getDb();
     const stmt = database.prepare(
       `SELECT g.*, 
-        w.username as white_username, w.elo as white_elo,
-        b.username as black_username, b.elo as black_elo
+        COALESCE(w.username, 'Unknown Player') as white_username, COALESCE(w.elo, 1200) as white_elo,
+        COALESCE(b.username, 'Unknown Player') as black_username, COALESCE(b.elo, 1200) as black_elo
        FROM games g
-       JOIN users w ON g.white_id = w.id
-       JOIN users b ON g.black_id = b.id
-       WHERE g.game_uuid = ?`
+       LEFT JOIN users w ON g.white_id = w.id
+       LEFT JOIN users b ON g.black_id = b.id
+       WHERE g.game_uuid = ? OR CAST(g.id AS TEXT) = ?`
     );
-    stmt.bind([gameUuid]);
+    stmt.bind([gameUuid, gameUuid]);
     
     let row = null;
     if (stmt.step()) {
@@ -420,6 +695,9 @@ app.get('/api/users/:userId/games', async (req, res) => {
 // ==================== Friends API ====================
 
 app.post('/api/friends/request', requireAuth, (req, res) => {
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    return res.json({ success: false, isGuest: true, message: 'Please create an account to add friends' });
+  }
   const { friendUsername } = req.body;
   if (!friendUsername) return res.json({ success: false, message: 'Username required' });
   const result = auth.sendFriendRequest(req.session.userId, friendUsername);
@@ -517,9 +795,313 @@ function requireAdmin(req, res, next) {
 }
 
 // Get all users (admin only)
-app.get('/api/admin/users', requireAdmin, (req, res) => {
-  const users = auth.getAllUsers();
-  res.json({ success: true, users });
+// By default, returns registered users in data.users so guest profiles don't flood the table.
+// Supports ?type=registered | guests | all | banned
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  const all = auth.getAllUsers();
+  const registered = all.filter(u => !u.username.startsWith('Guest_'));
+  const guests = all.filter(u => u.username.startsWith('Guest_'));
+  const banned = all.filter(u => u.is_banned === 1);
+
+  let totalGamesCount = 0;
+  try {
+    const database = await getDb();
+    const s = database.prepare('SELECT COUNT(*) as count FROM games');
+    totalGamesCount = s.getAsObject().count || 0;
+    s.free();
+  } catch (e) {}
+
+  const guestCounts = auth.getGuestCounts ? auth.getGuestCounts() : { total: guests.length, empty: 0, active: 0 };
+
+  const filterType = req.query.type;
+  let returnedUsers = registered;
+  if (filterType === 'all') {
+    returnedUsers = all;
+  } else if (filterType === 'guests') {
+    returnedUsers = guests;
+  } else if (filterType === 'banned') {
+    returnedUsers = banned;
+  }
+
+  res.json({
+    success: true,
+    users: returnedUsers,
+    registeredUsers: registered,
+    guestUsers: guests,
+    stats: {
+      totalUsers: all.length,
+      registeredCount: registered.length,
+      guestCount: guests.length,
+      emptyGuestCount: guestCounts.empty,
+      activeGuestCount: guestCounts.active,
+      bannedCount: banned.length,
+      totalGamesCount,
+      activeGamesCount: activeGames ? activeGames.size : 0,
+      onlineCount: userSockets ? userSockets.size : 0,
+      standardQueueCount: matchmaker.getQueueSize(),
+      diceQueueCount: diceMatchmaker.getQueueSize(),
+      uptimeSeconds: Math.floor(process.uptime()),
+      memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+    }
+  });
+});
+
+// Ban a user (admin only)
+// Guests cannot be banned as they are ephemeral profiles.
+app.post('/api/admin/users/:userId/ban', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const { reason } = req.body || {};
+
+  if (userId === req.session.userId) {
+    return res.json({ success: false, message: 'Kendi admin hesabınızı banlayamazsınız.' });
+  }
+
+  const target = auth.getUserById(userId);
+  if (!target) {
+    return res.json({ success: false, message: 'Kullanıcı bulunamadı.' });
+  }
+
+  if (target.username.startsWith('Guest_')) {
+    return res.json({
+      success: false,
+      message: 'Misafir profilleri geçicidir ve banlanamaz. Temizlemek için misafir temizliği veya silme kullanın.'
+    });
+  }
+
+  if (target.is_admin === 1) {
+    return res.json({ success: false, message: 'Yönetici hesapları banlanamaz.' });
+  }
+
+  const result = auth.banUser(userId, reason);
+  if (result.success) {
+    saveDb();
+    // Disconnect any active sockets for this user
+    const socks = userSockets.get(userId);
+    if (socks) {
+      for (const sId of socks) {
+        const s = io.sockets.sockets.get(sId);
+        if (s) {
+          s.emit('banned', { reason: reason || 'Hesabınız yönetici tarafından engellenmiştir.' });
+          s.disconnect(true);
+        }
+      }
+    }
+    // Remove from queues if present
+    matchmaker.leaveQueue(userId);
+    diceMatchmaker.leaveQueue(userId);
+
+    // If user is in an active game, immediately forfeit/terminate the game
+    const activeGame = getGameByUserId(userId);
+    if (activeGame && !activeGame.isOver) {
+      const color = getPlayerColor(activeGame, userId);
+      if (color) {
+        const winResult = color === 'white' ? 'black_wins' : 'white_wins';
+        handleGameOver(activeGame, winResult);
+      }
+    }
+  }
+  res.json(result);
+});
+
+// Unban a user (admin only)
+app.post('/api/admin/users/:userId/unban', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const result = auth.unbanUser(userId);
+  if (result.success) saveDb();
+  res.json(result);
+});
+
+// Toggle admin role (admin only)
+app.post('/api/admin/users/:userId/toggle-admin', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  if (userId === req.session.userId) {
+    return res.json({ success: false, message: 'Kendi admin yetkinizi kaldıramazsınız.' });
+  }
+  const user = auth.getUserById(userId);
+  if (!user) return res.json({ success: false, message: 'Kullanıcı bulunamadı.' });
+  if (user.username.startsWith('Guest_')) {
+    return res.json({ success: false, message: 'Misafir profillerine admin yetkisi verilemez.' });
+  }
+
+  const newAdminStatus = user.is_admin === 1 ? 0 : 1;
+  auth.setAdminRole(userId, newAdminStatus);
+  saveDb();
+  res.json({
+    success: true,
+    isAdmin: newAdminStatus === 1,
+    message: newAdminStatus === 1 ? `"${user.username}" artık bir yönetici.` : `"${user.username}" yöneticilik yetkisi kaldırıldı.`
+  });
+});
+
+// Grant coins to a user (admin only)
+app.post('/api/admin/users/:userId/grant-coins', requireAdmin, (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const amount = parseInt(req.body.amount);
+  if (!Number.isInteger(amount)) {
+    return res.json({ success: false, message: 'Miktar geçerli bir tam sayı olmalıdır.' });
+  }
+  const user = auth.getUserById(userId);
+  if (!user) return res.json({ success: false, message: 'Kullanıcı bulunamadı.' });
+
+  if (user.username.startsWith('Guest_')) {
+    return res.json({ success: false, message: 'Misafir profillerine altın tanımlanamaz.' });
+  }
+
+  auth.addCoins(userId, amount);
+  saveDb();
+  const updatedUser = auth.getUserById(userId);
+  res.json({
+    success: true,
+    message: `"${user.username}" kullanıcısına ${amount} altın tanımlandı.`,
+    coins: updatedUser ? updatedUser.coins : 0
+  });
+});
+
+// Clean up temporary guest profiles (admin only)
+app.post('/api/admin/cleanup-guests', requireAdmin, (req, res) => {
+  const emptyOnly = req.body && req.body.emptyOnly !== false;
+  const olderThanMinutes = req.body && req.body.olderThanMinutes ? parseInt(req.body.olderThanMinutes) : null;
+  const result = auth.cleanupGuests({ emptyOnly, olderThanMinutes });
+  saveDb();
+
+  if (result.deletedIds && result.deletedIds.length > 0) {
+    for (const dId of result.deletedIds) {
+      const socks = userSockets.get(dId);
+      if (socks) {
+        for (const sId of socks) {
+          const s = io.sockets.sockets.get(sId);
+          if (s) {
+            s.emit('guest_expired', { message: 'Misafir oturumu temizlendi.' });
+            s.disconnect(true);
+          }
+        }
+        userSockets.delete(dId);
+      }
+      matchmaker.leaveQueue(dId);
+      diceMatchmaker.leaveQueue(dId);
+    }
+  }
+
+  res.json({
+    success: true,
+    deletedCount: result.deletedCount,
+    message: `${result.deletedCount} misafir profili temizlendi.`
+  });
+});
+
+// Admin system & game stats (admin only)
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const all = auth.getAllUsers();
+    const registered = all.filter(u => !u.username.startsWith('Guest_'));
+    const guests = all.filter(u => u.username.startsWith('Guest_'));
+    const banned = all.filter(u => u.is_banned === 1);
+
+    let totalGamesCount = 0;
+    try {
+      const database = await getDb();
+      const s = database.prepare('SELECT COUNT(*) as count FROM games');
+      totalGamesCount = s.getAsObject().count || 0;
+      s.free();
+    } catch (e) {}
+
+    const guestCounts = auth.getGuestCounts ? auth.getGuestCounts() : { total: guests.length, empty: 0, active: 0 };
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers: all.length,
+        registeredCount: registered.length,
+        guestCount: guests.length,
+        emptyGuestCount: guestCounts.empty,
+        activeGuestCount: guestCounts.active,
+        bannedCount: banned.length,
+        totalGamesCount,
+        activeGamesCount: activeGames ? activeGames.size : 0,
+        onlineCount: userSockets ? userSockets.size : 0,
+        standardQueueCount: matchmaker.getQueueSize(),
+        diceQueueCount: diceMatchmaker.getQueueSize(),
+        uptimeSeconds: Math.floor(process.uptime()),
+        memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
+      }
+    });
+  } catch (err) {
+    res.json({ success: false, message: 'Failed to compute stats' });
+  }
+});
+
+// Get active ongoing games (admin only)
+app.get('/api/admin/games/active', requireAdmin, (req, res) => {
+  const list = [];
+  if (activeGames) {
+    for (const [gameId, g] of activeGames.entries()) {
+      list.push({
+        gameId,
+        white: { id: g.whiteId, username: g.whiteUsername, elo: g.whiteElo },
+        black: { id: g.blackId, username: g.blackUsername, elo: g.blackElo },
+        mode: g.mode || 'standard',
+        moveCount: g.state && g.state.moveHistory ? g.state.moveHistory.length : 0,
+        turn: g.state ? g.state.activeColor : null,
+        whiteTime: g.whiteTime,
+        blackTime: g.blackTime,
+        startedAt: g.createdAt || null
+      });
+    }
+  }
+  res.json({ success: true, games: list });
+});
+
+// Terminate an active game (admin only)
+app.post('/api/admin/games/:gameId/terminate', requireAdmin, (req, res) => {
+  const gameId = req.params.gameId;
+  const game = activeGames.get(gameId);
+  if (!game) {
+    return res.json({ success: false, message: 'Game not found or already ended' });
+  }
+
+  handleGameOver(game, 'draw');
+  res.json({ success: true, message: 'Oyun başarıyla sonlandırıldı.' });
+});
+
+// Get recent matches (admin only)
+app.get('/api/admin/games/recent', requireAdmin, async (req, res) => {
+  try {
+    const database = await getDb();
+    const s = database.prepare(`
+      SELECT g.id, g.game_uuid, g.result, g.created_at,
+             w.username AS white_username, w.elo AS white_elo,
+             b.username AS black_username, b.elo AS black_elo
+      FROM games g
+      LEFT JOIN users w ON w.id = g.white_id
+      LEFT JOIN users b ON b.id = g.black_id
+      ORDER BY g.id DESC
+      LIMIT 25
+    `);
+    const games = [];
+    while (s.step()) {
+      games.push(s.getAsObject());
+    }
+    s.free();
+    res.json({ success: true, games });
+  } catch (e) {
+    res.json({ success: false, message: 'Failed to fetch games', games: [] });
+  }
+});
+
+// Global system announcement broadcast (admin only)
+app.post('/api/admin/broadcast', requireAdmin, (req, res) => {
+  const { message, type } = req.body || {};
+  if (!message || !message.trim()) {
+    return res.json({ success: false, message: 'Duyuru mesajı gereklidir.' });
+  }
+
+  io.emit('system_announcement', {
+    message: message.trim(),
+    type: type || 'info',
+    timestamp: new Date().toISOString()
+  });
+
+  res.json({ success: true, message: 'Duyuru tüm kullanıcılara gönderildi.' });
 });
 
 // Delete a user (admin only)
@@ -530,9 +1112,40 @@ app.delete('/api/admin/users/:userId', requireAdmin, (req, res) => {
   if (userId === req.session.userId) {
     return res.json({ success: false, message: 'Cannot delete your own admin account' });
   }
+
+  const target = auth.getUserById(userId);
+  if (!target) {
+    return res.json({ success: false, message: 'User not found' });
+  }
+
+  // Disconnect active sockets
+  const socks = userSockets.get(userId);
+  if (socks) {
+    for (const sId of socks) {
+      const s = io.sockets.sockets.get(sId);
+      if (s) {
+        s.emit('account_deleted', { message: 'Hesabınız silinmiştir.' });
+        s.disconnect(true);
+      }
+    }
+    userSockets.delete(userId);
+  }
+  matchmaker.leaveQueue(userId);
+  diceMatchmaker.leaveQueue(userId);
+
+  // Terminate active game if user is in one
+  const activeGame = getGameByUserId(userId);
+  if (activeGame && !activeGame.isOver) {
+    const color = getPlayerColor(activeGame, userId);
+    if (color) {
+      const winResult = color === 'white' ? 'black_wins' : 'white_wins';
+      handleGameOver(activeGame, winResult);
+    }
+  }
   
   const deleted = auth.deleteUser(userId);
   if (deleted) {
+    saveDb();
     res.json({ success: true, message: 'User deleted' });
   } else {
     res.json({ success: false, message: 'User not found' });
@@ -542,8 +1155,14 @@ app.delete('/api/admin/users/:userId', requireAdmin, (req, res) => {
 // Reset a single user's stats (admin only)
 app.post('/api/admin/users/:userId/reset-stats', requireAdmin, (req, res) => {
   const userId = parseInt(req.params.userId);
+  const target = auth.getUserById(userId);
+  if (!target) return res.json({ success: false, message: 'User not found' });
+  if (target.username.startsWith('Guest_')) {
+    return res.json({ success: false, message: 'Misafir hesapların istatistikleri sıfırlanamaz.' });
+  }
   const result = auth.resetUserStats(userId);
   if (result) {
+    saveDb();
     res.json({ success: true, message: 'User stats reset' });
   } else {
     res.json({ success: false, message: 'User not found' });
@@ -553,6 +1172,7 @@ app.post('/api/admin/users/:userId/reset-stats', requireAdmin, (req, res) => {
 // Reset all stats (admin only)
 app.post('/api/admin/reset-stats', requireAdmin, (req, res) => {
   auth.resetAllStats();
+  saveDb();
   res.json({ success: true, message: 'All stats have been reset' });
 });
 
@@ -569,6 +1189,10 @@ app.post('/api/admin/users/:userId/grant-xp', requireAdmin, (req, res) => {
   const user = auth.getUserById(userId);
   if (!user) {
     return res.json({ success: false, message: 'User not found' });
+  }
+
+  if (user.username.startsWith('Guest_')) {
+    return res.json({ success: false, message: 'Misafir hesaplara XP tanımlanamaz.' });
   }
 
   const bpResult = battlepass.grantXP(userId, amount);
@@ -597,6 +1221,10 @@ app.post('/api/admin/users/:userId/reset-battlepass', requireAdmin, (req, res) =
   const user = auth.getUserById(userId);
   if (!user) {
     return res.json({ success: false, message: 'User not found' });
+  }
+
+  if (user.username.startsWith('Guest_')) {
+    return res.json({ success: false, message: 'Misafir hesapların savaş bileti sıfırlanamaz.' });
   }
 
   const result = battlepass.resetBattlepass(userId);
@@ -745,13 +1373,173 @@ io.on('connection', (socket) => {
   console.log(`[Socket] Connected: ${socket.id}`);
 
   // Ensure user is authenticated
-  const userId = socket.request.session.userId;
-  const username = socket.request.session.username;
-  
+  let userId = (socket.request && socket.request.session) ? socket.request.session.userId : null;
+  let username = (socket.request && socket.request.session) ? socket.request.session.username : null;
+  let guestName = socket.guestUsername ||
+                  (socket.request && socket.request.session && socket.request.session.username) ||
+                  (socket.handshake && socket.handshake.auth && socket.handshake.auth.guestUsername) ||
+                  (socket.handshake && socket.handshake.query && socket.handshake.query.guestUsername) ||
+                  (socket.handshake && socket.handshake.headers && socket.handshake.headers['x-guest-username']);
+
+  function ensureUserAuth(data) {
+    const candidateGuest = (data && data.guestUsername) ||
+                           socket.guestUsername ||
+                           (socket.handshake && socket.handshake.auth && socket.handshake.auth.guestUsername) ||
+                           (socket.handshake && socket.handshake.query && socket.handshake.query.guestUsername) ||
+                           (socket.handshake && socket.handshake.headers && socket.handshake.headers['x-guest-username']) ||
+                           (socket.request && socket.request.session && socket.request.session.username) ||
+                           guestName;
+
+    if (candidateGuest && candidateGuest.startsWith('Guest_')) {
+      const currentIsRegistered = userId && auth.getUserById(userId) && !auth.getUserById(userId).username.startsWith('Guest_');
+      if (!currentIsRegistered) {
+        let requestedUser = auth.getUserByUsername(candidateGuest);
+        if (!requestedUser) {
+          auth.registerUser(candidateGuest, GUEST_DUMMY_HASH);
+          saveDb();
+          requestedUser = auth.getUserByUsername(candidateGuest);
+        }
+        if (requestedUser) {
+          if (userId && userId !== requestedUser.id && userSockets.has(userId)) {
+            userSockets.get(userId).delete(socket.id);
+          }
+          userId = requestedUser.id;
+          username = requestedUser.username;
+          guestName = requestedUser.username;
+          socket.guestUsername = requestedUser.username;
+          if (socket.request && socket.request.session) {
+            socket.request.session.userId = requestedUser.id;
+            socket.request.session.username = requestedUser.username;
+            socket.request.session.isGuest = true;
+            try { socket.request.session.save(); } catch (e) {}
+          }
+        }
+      }
+    }
+
+    if (userId) {
+      if (!auth.getUserById(userId)) {
+        userId = null;
+        username = null;
+      } else {
+        if (!userSockets.has(userId)) {
+          userSockets.set(userId, new Set());
+        }
+        userSockets.get(userId).add(socket.id);
+        return userId;
+      }
+    }
+
+    const sess = socket.request ? socket.request.session : null;
+    if (sess && sess.userId) {
+      const u = auth.getUserById(sess.userId);
+      if (u) {
+        userId = u.id;
+        username = u.username;
+      } else {
+        sess.userId = null;
+      }
+    }
+
+    if (!userId) {
+      let gName = candidateGuest;
+      if (!gName || !gName.startsWith('Guest_')) {
+        gName = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+        let attempts = 0;
+        while (auth.getUserByUsername(gName) && attempts < 50) {
+          gName = `Guest_${Math.floor(1000 + Math.random() * 9000)}`;
+          attempts++;
+        }
+      }
+      if (gName && gName.startsWith('Guest_')) {
+        let gUser = auth.getUserByUsername(gName);
+        if (!gUser) {
+          auth.registerUser(gName, GUEST_DUMMY_HASH);
+          saveDb();
+          gUser = auth.getUserByUsername(gName);
+        }
+        if (gUser) {
+          userId = gUser.id;
+          username = gUser.username;
+          guestName = gUser.username;
+          socket.guestUsername = gUser.username;
+          if (sess) {
+            sess.userId = gUser.id;
+            sess.username = gUser.username;
+            sess.isGuest = true;
+            try { sess.save(); } catch (e) {}
+          }
+        }
+      }
+    }
+
+    if (userId) {
+      if (!userSockets.has(userId)) {
+        userSockets.set(userId, new Set());
+      }
+      userSockets.get(userId).add(socket.id);
+      broadcastQueueCounts();
+    }
+    return userId;
+  }
+
+  ensureUserAuth();
+
   if (!userId) {
     socket.emit('auth_required', { message: 'Please log in' });
     // Don't disconnect — wait for login via socket
   }
+
+  socket.on('authenticate', (data) => {
+    // If socket session already belongs to a registered user, NEVER downgrade or overwrite to guest!
+    if (socket.request.session && socket.request.session.userId) {
+      const u = auth.getUserById(socket.request.session.userId);
+      if (u) {
+        if (u.is_banned === 1) {
+          socket.emit('banned', { reason: u.banned_reason || 'Bu hesap yönetici tarafından engellenmiştir.' });
+          socket.disconnect(true);
+          return;
+        }
+        if (!u.username.startsWith('Guest_')) {
+          userId = u.id;
+          username = u.username;
+          socket.request.session.isGuest = false;
+          socket.emit('authenticated', { userId, username });
+          return;
+        }
+      }
+    }
+    if (data && data.guestUsername && data.guestUsername.startsWith('Guest_')) {
+      guestName = data.guestUsername;
+      let gUser = auth.getUserByUsername(data.guestUsername);
+      if (!gUser) {
+        auth.registerUser(data.guestUsername, GUEST_DUMMY_HASH);
+        saveDb();
+        gUser = auth.getUserByUsername(data.guestUsername);
+      }
+      if (gUser) {
+        if (userId && userId !== gUser.id && userSockets.has(userId)) {
+          userSockets.get(userId).delete(socket.id);
+        }
+        userId = gUser.id;
+        username = gUser.username;
+        if (socket.request.session) {
+          socket.request.session.userId = gUser.id;
+          socket.request.session.username = gUser.username;
+          socket.request.session.isGuest = true;
+          try { socket.request.session.save(); } catch (e) {}
+        }
+        if (!userSockets.has(userId)) {
+          userSockets.set(userId, new Set());
+        }
+        userSockets.get(userId).add(socket.id);
+      }
+    }
+    ensureUserAuth(data);
+    if (userId) {
+      socket.emit('authenticated', { userId, username });
+    }
+  });
 
   // Track user sockets
   if (userId) {
@@ -773,7 +1561,8 @@ io.on('connection', (socket) => {
 
   // --- Matchmaking ---
 
-  socket.on('join_queue', () => {
+  socket.on('join_queue', (data) => {
+    ensureUserAuth(data);
     if (!userId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
@@ -827,7 +1616,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('leave_queue', () => {
+  socket.on('leave_queue', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const removed = matchmaker.leaveQueue(userId);
     if (removed) {
@@ -838,7 +1628,8 @@ io.on('connection', (socket) => {
 
   // --- Dice Matchmaking ---
 
-  socket.on('join_dice_queue', () => {
+  socket.on('join_dice_queue', (data) => {
+    ensureUserAuth(data);
     if (!userId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
@@ -891,7 +1682,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('leave_dice_queue', () => {
+  socket.on('leave_dice_queue', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const removed = diceMatchmaker.leaveQueue(userId);
     if (removed) {
@@ -903,6 +1695,7 @@ io.on('connection', (socket) => {
   // --- Game Play ---
 
   socket.on('make_move', (data) => {
+    ensureUserAuth(data);
     if (!userId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
@@ -916,7 +1709,18 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const color = getPlayerColor(game, userId);
+    let color = getPlayerColor(game, userId);
+    if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername || game.blackUsername === data.guestUsername)) {
+      color = game.whiteUsername === data.guestUsername ? 'white' : 'black';
+      const expectedUser = auth.getUserByUsername(data.guestUsername);
+      if (expectedUser) {
+        userId = expectedUser.id;
+        username = expectedUser.username;
+      }
+    }
+    if (!color && username && (game.whiteUsername === username || game.blackUsername === username)) {
+      color = game.whiteUsername === username ? 'white' : 'black';
+    }
     if (!color) {
       socket.emit('error', { message: 'You are not in this game' });
       return;
@@ -1049,12 +1853,16 @@ io.on('connection', (socket) => {
 
   // --- Game: Resign ---
   socket.on('resign', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
     if (!game) return;
     
-    const color = getPlayerColor(game, userId);
+    let color = getPlayerColor(game, userId);
+    if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername || game.blackUsername === data.guestUsername)) {
+      color = game.whiteUsername === data.guestUsername ? 'white' : 'black';
+    }
     if (!color) return;
 
     const result = color === 'white' ? 'black_wins' : 'white_wins';
@@ -1065,6 +1873,7 @@ io.on('connection', (socket) => {
 
   // --- Game: Draw Offer ---
   socket.on('request_draw', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1093,6 +1902,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('accept_draw', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1112,6 +1922,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('decline_draw', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1139,6 +1950,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cancel_draw', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1220,6 +2032,7 @@ io.on('connection', (socket) => {
 
   // --- Reconnect to game ---
   socket.on('reconnect_game', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1228,7 +2041,18 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const color = getPlayerColor(game, userId);
+    let color = getPlayerColor(game, userId);
+    if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername || game.blackUsername === data.guestUsername)) {
+      color = game.whiteUsername === data.guestUsername ? 'white' : 'black';
+      const expectedUser = auth.getUserByUsername(data.guestUsername);
+      if (expectedUser) {
+        userId = expectedUser.id;
+        username = expectedUser.username;
+      }
+    }
+    if (!color && username && (game.whiteUsername === username || game.blackUsername === username)) {
+      color = game.whiteUsername === username ? 'white' : 'black';
+    }
     if (!color) {
       socket.emit('error', { message: 'Not your game' });
       return;
@@ -1291,6 +2115,7 @@ io.on('connection', (socket) => {
   // --- Private Rooms ---
 
   socket.on('join_private_room', (data) => {
+    ensureUserAuth(data);
     if (!userId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
@@ -1359,6 +2184,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('cancel_private_room', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { roomId } = data;
     const room = privateRooms.get(roomId);
@@ -1376,6 +2202,7 @@ io.on('connection', (socket) => {
   // --- Dice Skip ---
 
   socket.on('dice_skip', (data) => {
+    ensureUserAuth(data);
     if (!userId) return;
     const { gameId } = data;
     const game = activeGames.get(gameId);
@@ -1429,6 +2256,7 @@ io.on('connection', (socket) => {
   // --- Bot Game ---
 
   socket.on('start_bot_game', (data) => {
+    ensureUserAuth(data);
     if (!userId) {
       socket.emit('error', { message: 'Not authenticated' });
       return;
@@ -1923,6 +2751,9 @@ app.get('/api/battlepass/tiers', (req, res) => {
 
 // Claim a tier reward
 app.post('/api/battlepass/claim', requireAuth, (req, res) => {
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    return res.json({ success: false, isGuest: true, message: 'Please create an account to claim Battlepass rewards' });
+  }
   const { tier } = req.body;
   if (!tier) return res.json({ success: false, message: 'Tier number required' });
   const result = battlepass.claimTierReward(req.session.userId, tier);
@@ -1953,11 +2784,11 @@ app.get('/api/battlepass/titles', requireAuth, (req, res) => {
 
 const SHOP_ITEMS = {
   board_themes: [
-    { id: 'default', name: 'Classic Wood', price: 0, type: 'theme', cssLight: 'var(--square-light)', cssDark: 'var(--square-dark)' },
-    { id: 'ocean', name: 'Ocean Breeze', price: 200, type: 'theme', cssLight: '#e0f2fe', cssDark: '#0ea5e9' },
-    { id: 'emerald', name: 'Emerald Forest', price: 250, type: 'theme', cssLight: '#dcfce7', cssDark: '#22c55e' },
-    { id: 'midnight', name: 'Midnight Neon', price: 500, type: 'theme', cssLight: '#2e1065', cssDark: '#c084fc' },
-    { id: 'crimson', name: 'Crimson Blood', price: 400, type: 'theme', cssLight: '#fee2e2', cssDark: '#dc2626' }
+    { id: 'default', name: 'Obsidian Slate', price: 0, type: 'theme', cssLight: '#475569', cssDark: '#1e293b' },
+    { id: 'ocean', name: 'Ocean Breeze', price: 200, type: 'theme', cssLight: '#cbd5e1', cssDark: '#0284c7' },
+    { id: 'emerald', name: 'Emerald Forest', price: 250, type: 'theme', cssLight: '#d1fae5', cssDark: '#059669' },
+    { id: 'midnight', name: 'Midnight Neon', price: 500, type: 'theme', cssLight: '#e9d5ff', cssDark: '#6d28d9' },
+    { id: 'crimson', name: 'Crimson Blood', price: 400, type: 'theme', cssLight: '#ffe4e6', cssDark: '#e11d48' }
   ],
   win_effects: [
     { id: 'none', name: 'None', price: 0, type: 'effect' },
@@ -1977,6 +2808,9 @@ app.get('/api/shop/items', requireAuth, (req, res) => {
 });
 
 app.post('/api/shop/buy', requireAuth, (req, res) => {
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    return res.json({ success: false, isGuest: true, message: 'Please create an account to purchase shop items and save your progress' });
+  }
   const { itemId, category } = req.body;
   
   if (!SHOP_ITEMS[category]) return res.json({ success: false, message: 'Invalid category' });
@@ -2041,6 +2875,26 @@ async function start() {
   auth.setDb(database);
   battlepass.setDb(database);
 
+  // Startup cleanup of empty guests older than 30 minutes
+  try {
+    const startupCleanup = auth.cleanupGuests({ emptyOnly: true, olderThanMinutes: 30 });
+    if (startupCleanup && startupCleanup.deletedCount > 0) {
+      saveDb();
+      console.log(`[Startup Maintenance] Cleaned up ${startupCleanup.deletedCount} orphaned empty guest profiles.`);
+    }
+  } catch (err) {}
+
+  // Periodic background cleanup every 15 minutes
+  setInterval(() => {
+    try {
+      const periodicCleanup = auth.cleanupGuests({ emptyOnly: true, olderThanMinutes: 30 });
+      if (periodicCleanup && periodicCleanup.deletedCount > 0) {
+        saveDb();
+        console.log(`[Auto-Cleanup] Pruned ${periodicCleanup.deletedCount} abandoned empty guest profiles.`);
+      }
+    } catch (err) {}
+  }, 15 * 60 * 1000);
+
   server.listen(PORT, () => {
     console.log(`\n♟  MiniChess Server`);
     console.log(`   Running on http://localhost:${PORT}`);
@@ -2049,3 +2903,5 @@ async function start() {
 }
 
 start();
+
+module.exports = { app, server, io };

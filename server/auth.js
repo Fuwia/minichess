@@ -30,12 +30,22 @@ function registerUser(username, passwordHash) {
 }
 
 function loginUser(username, plainPassword) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, is_banned, banned_reason FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   
   if (!row.id) {
     return { success: false, message: 'Invalid username or password' };
+  }
+  
+  if (row.is_banned === 1) {
+    return {
+      success: false,
+      banned: true,
+      message: row.banned_reason
+        ? `Hesabınız engellendi: ${row.banned_reason}`
+        : 'Bu hesap yönetici tarafından engellenmiştir.'
+    };
   }
   
   const valid = bcrypt.compareSync(plainPassword, row.password_hash);
@@ -57,21 +67,21 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, is_admin, is_banned, banned_reason, banned_at FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, is_admin, is_banned, banned_reason, banned_at FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getLeaderboard(limit = 50) {
-  const stmt = db.prepare('SELECT username, elo, wins, losses, draws, username_color FROM users ORDER BY elo DESC');
+  const stmt = db.prepare("SELECT username, elo, wins, losses, draws, username_color FROM users WHERE username NOT LIKE 'Guest_%' ORDER BY elo DESC");
   const results = [];
   stmt.bind([]);
   while (stmt.step()) {
@@ -334,8 +344,8 @@ function isAdmin(userId) {
 
 function getAllUsers() {
   const stmt = db.prepare(`
-    SELECT u.id, u.username, u.elo, u.wins, u.losses, u.draws, u.created_at,
-           u.avatar_url, u.is_admin,
+    SELECT u.id, u.username, u.elo, u.wins, u.losses, u.draws, u.coins, u.created_at,
+           u.avatar_url, u.is_admin, u.is_banned, u.banned_reason, u.banned_at,
            COALESCE(b.xp, 0) AS bp_xp,
            COALESCE(b.tier, 1) AS bp_tier
     FROM users u
@@ -344,10 +354,131 @@ function getAllUsers() {
   `);
   const results = [];
   while (stmt.step()) {
-    results.push(stmt.getAsObject());
+    const row = stmt.getAsObject();
+    results.push({
+      ...row,
+      is_guest: row.username.startsWith('Guest_') ? 1 : 0
+    });
   }
   stmt.free();
   return results;
+}
+
+function banUser(userId, reason = '') {
+  const user = getUserById(userId);
+  if (!user) return { success: false, message: 'User not found' };
+  if (user.username.startsWith('Guest_')) {
+    return { success: false, message: 'Misafir hesaplar geçicidir ve banlanamaz. Silme veya temizleme kullanın.' };
+  }
+  if (user.is_admin === 1) {
+    return { success: false, message: 'Yönetici hesabı banlanamaz' };
+  }
+  const stmt = db.prepare("UPDATE users SET is_banned = 1, banned_reason = ?, banned_at = datetime('now') WHERE id = ?");
+  stmt.run([reason || 'Yönetici tarafından engellendi', userId]);
+  stmt.free();
+  return { success: true, message: `"${user.username}" başarıyla banlandı.` };
+}
+
+function unbanUser(userId) {
+  const user = getUserById(userId);
+  if (!user) return { success: false, message: 'User not found' };
+  const stmt = db.prepare('UPDATE users SET is_banned = 0, banned_reason = NULL, banned_at = NULL WHERE id = ?');
+  stmt.run([userId]);
+  stmt.free();
+  return { success: true, message: `"${user.username}" banı kaldırıldı.` };
+}
+
+function setAdminRole(userId, isAdmin) {
+  const stmt = db.prepare('UPDATE users SET is_admin = ? WHERE id = ?');
+  stmt.run([isAdmin ? 1 : 0, userId]);
+  stmt.free();
+  return true;
+}
+
+function cleanupEmptyGuest(userId) {
+  const user = getUserById(userId);
+  if (!user || !user.username.startsWith('Guest_')) return false;
+  if (user.wins === 0 && user.losses === 0 && user.draws === 0) {
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM games WHERE white_id = ? OR black_id = ?');
+    const countRow = countStmt.getAsObject([userId]);
+    countStmt.free();
+    if (countRow.count === 0) {
+      return deleteUser(userId);
+    }
+  }
+  return false;
+}
+
+function getGuestCounts() {
+  const query = "SELECT id, wins, losses, draws FROM users WHERE username LIKE 'Guest_%'";
+  const stmt = db.prepare(query);
+  let total = 0;
+  let empty = 0;
+  let active = 0;
+  const candidateEmptyIds = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    total++;
+    if (row.wins === 0 && row.losses === 0 && row.draws === 0) {
+      candidateEmptyIds.push(row.id);
+    } else {
+      active++;
+    }
+  }
+  stmt.free();
+
+  for (const gId of candidateEmptyIds) {
+    const countStmt = db.prepare('SELECT COUNT(*) as count FROM games WHERE white_id = ? OR black_id = ?');
+    const c = countStmt.getAsObject([gId]);
+    countStmt.free();
+    if (c.count === 0) {
+      empty++;
+    } else {
+      active++;
+    }
+  }
+
+  return { total, empty, active };
+}
+
+function cleanupGuests(options = { emptyOnly: true }) {
+  let query = "SELECT id, username, wins, losses, draws, created_at FROM users WHERE username LIKE 'Guest_%'";
+  const params = [];
+
+  if (options && options.olderThanMinutes && Number.isInteger(options.olderThanMinutes)) {
+    query += " AND created_at <= datetime('now', '-' || ? || ' minutes')";
+    params.push(options.olderThanMinutes);
+  }
+
+  const stmt = db.prepare(query);
+  if (params.length > 0) stmt.bind(params);
+  const guests = [];
+  while (stmt.step()) {
+    guests.push(stmt.getAsObject());
+  }
+  stmt.free();
+
+  let deletedCount = 0;
+  const deletedIds = [];
+  for (const g of guests) {
+    if (options.emptyOnly !== false) {
+      if (g.wins === 0 && g.losses === 0 && g.draws === 0) {
+        const countStmt = db.prepare('SELECT COUNT(*) as count FROM games WHERE white_id = ? OR black_id = ?');
+        const countRow = countStmt.getAsObject([g.id]);
+        countStmt.free();
+        if (countRow.count === 0) {
+          deleteUser(g.id);
+          deletedCount++;
+          deletedIds.push(g.id);
+        }
+      }
+    } else {
+      deleteUser(g.id);
+      deletedCount++;
+      deletedIds.push(g.id);
+    }
+  }
+  return { success: true, deletedCount, deletedIds };
 }
 
 function deleteUser(userId) {
@@ -355,6 +486,7 @@ function deleteUser(userId) {
   db.run('DELETE FROM games WHERE white_id = ? OR black_id = ?', [userId, userId]);
   db.run('DELETE FROM friends WHERE user_id = ? OR friend_id = ?', [userId, userId]);
   db.run('DELETE FROM private_rooms WHERE creator_id = ? OR joiner_id = ?', [userId, userId]);
+  db.run('DELETE FROM user_battlepass WHERE user_id = ?', [userId]);
   
   const stmt = db.prepare('DELETE FROM users WHERE id = ?');
   stmt.run([userId]);
@@ -403,6 +535,12 @@ module.exports = {
   deleteUser,
   resetAllStats,
   resetUserStats,
+  banUser,
+  unbanUser,
+  setAdminRole,
+  cleanupGuests,
+  cleanupEmptyGuest,
+  getGuestCounts,
   addCoins,
   deductCoins,
   unlockItem,

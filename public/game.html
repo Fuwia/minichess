@@ -7,7 +7,8 @@
   <title>MiniChess - Game</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="game-page">
@@ -17,14 +18,27 @@
         <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
       </div>
       <nav class="sidebar-nav">
-        <a href="lobby.html" class="active" id="navPlay"><span class="nav-icon">▶</span> Play</a>
-        <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
-        <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
-        <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
-        <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
-        <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+        <a href="lobby.html" class="active" id="navPlay" data-i18n="nav_play">
+          <i data-lucide="play" class="nav-icon"></i> Play
+        </a>
+        <a href="leaderboard.html" id="navLeaderboard" data-i18n="nav_leaderboard">
+          <i data-lucide="trophy" class="nav-icon"></i> Leaderboard
+        </a>
+        <a href="battlepass.html" id="navBattlepass" data-i18n="nav_battlepass">
+          <i data-lucide="award" class="nav-icon"></i> Battlepass
+        </a>
+        <a href="shop.html" id="navShop" data-i18n="nav_shop">
+          <i data-lucide="shopping-bag" class="nav-icon"></i> Shop
+        </a>
+        <a href="profile.html" id="navProfile" data-i18n="nav_profile">
+          <i data-lucide="user" class="nav-icon"></i> Profile
+        </a>
+        <a href="admin.html" id="navAdmin" style="display:none;" data-i18n="nav_admin">
+          <i data-lucide="settings" class="nav-icon"></i> Admin
+        </a>
       </nav>
       <div class="sidebar-footer">
+        <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
         <div class="user-mini">
           <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
           <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -34,11 +48,14 @@
           </div>
         </div>
         <div class="sidebar-stats">
-          <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
-          <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
-          <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+          <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl" data-i18n="stat_w">W</div></div>
+          <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl" data-i18n="stat_l">L</div></div>
+          <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl" data-i18n="stat_d">D</div></div>
         </div>
-        <button class="logout-btn" onclick="logout()">Sign Out</button>
+        <div class="sidebar-footer-actions">
+          <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+          <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+        </div>
       </div>
     </aside>
 
@@ -46,30 +63,16 @@
       <div class="game-shell">
         <!-- Replay badge (only visible in replay mode) -->
         <div id="replayBanner" class="replay-banner" style="display:none;">
-          <span>📋 Replay</span>
+          <span><i data-lucide="history"></i> Replay</span>
           <span id="replayResult"></span>
         </div>
-
-        <section class="game-top-card">
-          <div>
-            <div class="section-title">Live Board</div>
-            <h1>6×6 Minichess</h1>
-            <p>Drop captured pieces from your pocket and fight for the mini board.</p>
-          </div>
-          <!-- Live-mode controls (hidden in replay) -->
-          <div id="liveControls" class="game-actions">
-            <button id="drawBtn" class="secondary" onclick="toggleDraw()">Draw</button>
-            <button class="secondary danger-action" onclick="resignGame()">Resign</button>
-            <button class="secondary" onclick="window.location.href='lobby.html'">Leave</button>
-          </div>
-        </section>
 
         <div class="game-layout">
           <section class="game-board-card">
             <div class="board-wrapper">
               <!-- Opponent pocket strip -->
               <div class="pocket-strip opponent-pocket">
-                <span class="pocket-strip-label">Opponent's Pocket</span>
+                <span class="pocket-strip-label" data-i18n="opponents_pocket">Opponent's Pocket</span>
                 <div class="pocket-strip-pieces" id="opponentPocket"></div>
               </div>
 
@@ -86,15 +89,15 @@
                 </div>
                 <div class="player-state">
                   <div class="clock" id="opponentClock">2:00</div>
-                  <div class="turn-indicator" id="turnIndicator">...</div>
+                  <div class="turn-indicator" id="opponentTurnIndicator" style="display:none;" data-i18n="opponents_turn">Opponent's Turn</div>
                 </div>
               </div>
 
               <!-- Dice display (hidden in standard mode) -->
               <div class="dice-display" id="diceDisplay" style="display:none;">
-                <div class="dice-icon">🎲</div>
+                <div class="dice-icon"><i data-lucide="dices"></i></div>
                 <div class="dice-info">Roll: <span id="diceRollNum">-</span> — <span id="dicePieceName">-</span></div>
-                <button id="skipBtn" class="btn-skip" style="display:none;" onclick="skipDiceTurn()">Skip Turn</button>
+                <button id="skipBtn" class="btn-skip" style="display:none;" onclick="skipDiceTurn()" data-i18n="skip_turn">Skip Turn</button>
               </div>
 
               <!-- Chess board -->
@@ -116,12 +119,15 @@
                     <span class="player-elo" id="playerElo">1200</span>
                   </div>
                 </div>
-                <div class="clock" id="playerClock">2:00</div>
+                <div class="player-state">
+                  <div class="clock" id="playerClock">2:00</div>
+                  <div class="turn-indicator" id="turnIndicator" style="display:none;" data-i18n="your_turn">Your Turn</div>
+                </div>
               </div>
 
               <!-- Player pocket strip -->
               <div class="pocket-strip your-pocket">
-                <span class="pocket-strip-label">Your Pocket</span>
+                <span class="pocket-strip-label" data-i18n="your_pocket">Your Pocket</span>
                 <div class="pocket-strip-pieces" id="playerPocket"></div>
               </div>
             </div>
@@ -130,30 +136,46 @@
           <aside class="game-side-panel">
             <section class="game-panel-card pocket-help-card">
               <div class="panel-eyebrow">Variant</div>
-              <h2>Crazyhouse Pockets</h2>
-              <p>Captured pieces become pocket pieces. Select or drag from your pocket to drop them onto empty squares.</p>
+              <h2 data-i18n="crazyhouse_pockets">Crazyhouse Pockets</h2>
+              <p data-i18n="crazyhouse_desc">Captured pieces become pocket pieces. Select or drag from your pocket to drop them onto empty squares.</p>
             </section>
 
             <section class="game-panel-card replay-controls-card" id="replayControls" style="display:none;">
-              <div class="panel-eyebrow">Replay</div>
-              <h2>Move Review</h2>
-              <p>Use ← / → on your keyboard, or the buttons below, to review the game.</p>
+              <div class="panel-eyebrow" data-i18n="replay">Replay</div>
+              <h2 data-i18n="move_review">Move Review</h2>
+              <p data-i18n="move_review_desc">Use ← / → on your keyboard, or the buttons below, to review the game.</p>
               <div class="replay-controls-row">
-                <button class="replay-nav-btn" id="replayStartBtn" onclick="goReplayStart()" aria-label="Go to start">⏮</button>
-                <button class="replay-nav-btn" id="replayPrevBtn" onclick="stepReplay(-1)" aria-label="Previous move">←</button>
+                <button class="replay-nav-btn" id="replayStartBtn" onclick="goReplayStart()" aria-label="Go to start"><i data-lucide="chevrons-left"></i></button>
+                <button class="replay-nav-btn" id="replayPrevBtn" onclick="stepReplay(-1)" aria-label="Previous move"><i data-lucide="chevron-left"></i></button>
                 <div class="replay-move-counter" id="replayMoveCounter">0 / 0</div>
-                <button class="replay-nav-btn" id="replayNextBtn" onclick="stepReplay(1)" aria-label="Next move">→</button>
-                <button class="replay-nav-btn" id="replayEndBtn" onclick="goReplayEnd()" aria-label="Go to end">⏭</button>
+                <button class="replay-nav-btn" id="replayNextBtn" onclick="stepReplay(1)" aria-label="Next move"><i data-lucide="chevron-right"></i></button>
+                <button class="replay-nav-btn" id="replayEndBtn" onclick="goReplayEnd()" aria-label="Go to end"><i data-lucide="chevrons-right"></i></button>
               </div>
             </section>
 
             <!-- Move History strip -->
             <section class="game-panel-card moves-strip">
-              <div class="moves-strip-label">Moves</div>
+              <div class="moves-strip-label" data-i18n="moves">Moves</div>
               <div class="move-history" id="moveHistory">
-                <span class="moves-placeholder">Game starting...</span>
+                <span class="moves-placeholder" data-i18n="game_starting">Game starting...</span>
               </div>
             </section>
+
+            <!-- Live-mode action buttons (hidden in replay) -->
+            <div id="liveControls" class="game-controls-bar">
+              <button id="drawBtn" class="game-action-btn" onclick="toggleDraw()" title="Offer / Accept Draw">
+                <i data-lucide="handshake"></i>
+                <span data-i18n="draw">Draw</span>
+              </button>
+              <button class="game-action-btn danger-action" onclick="resignGame()" title="Resign Match">
+                <i data-lucide="flag"></i>
+                <span data-i18n="resign">Resign</span>
+              </button>
+              <button class="game-action-btn" onclick="window.location.href='lobby.html'" title="Leave Game">
+                <i data-lucide="log-out"></i>
+                <span data-i18n="leave">Leave</span>
+              </button>
+            </div>
           </aside>
         </div>
       </div>
@@ -169,6 +191,7 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/socket.js"></script>
   <script src="js/engine.js"></script>
@@ -205,7 +228,7 @@
 
     function getMatchIdFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      return params.get('matchId') || null;
+      return params.get('matchId') || params.get('game') || params.get('replay') || null;
     }
 
     async function init() {
@@ -215,6 +238,12 @@
         return;
       }
       renderGameSidebar(user);
+      if (window.renderGuestBadges) {
+        renderGuestBadges(user);
+      }
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
 
       const matchId = getMatchIdFromUrl();
 
@@ -230,7 +259,7 @@
             gameId = matchId;
             myColor = null;
             boardState = null;
-            initSocket();
+            initSocket(user);
             setupLiveSocket(user, matchId);
             // Live socket will send 'game_state' event with full state
             // Render an empty board while waiting
@@ -304,7 +333,7 @@
         document.getElementById('playerName').style.color = user.username_color;
       }
       
-      if (user.board_theme && user.board_theme !== 'default') {
+      if (user.board_theme) {
         fetch('/api/shop/items').then(r => r.json()).then(data => {
           if (data.success && data.items && data.items.board_themes) {
             const theme = data.items.board_themes.find(t => t.id === user.board_theme);
@@ -505,9 +534,12 @@
       card.innerHTML = `
         <h2 class="${titleClass}">${titleText}</h2>
         <p class="elo-change">Replay — ${serverResult.replace('_', ' ')}</p>
-        <button onclick="window.location.href='lobby.html'">Back to Lobby</button>
+        <button class="go-back-btn" onclick="window.location.href='lobby.html'"><i data-lucide="home"></i> Back to Lobby</button>
       `;
       overlay.style.display = 'flex';
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     }
 
     function cloneReplayState(state) {
@@ -653,8 +685,12 @@
       const banner = document.getElementById('replayBanner');
       banner.style.display = 'flex';
       const span = banner.querySelector('span:first-child');
-      span.textContent = type === 'error' ? '⚠ ' + text : '📋 ' + text;
+      const icon = type === 'error' ? 'alert-triangle' : 'history';
+      span.innerHTML = `<i data-lucide="${icon}"></i> <span>${text}</span>`;
       span.className = '';
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     }
 
     function renderEmptyBoard() {
@@ -696,7 +732,7 @@
         // Check if we have a matchId from URL — if so, try it as reconnect to active game
         const matchId = getMatchIdFromUrl();
         if (matchId) {
-          initSocket();
+          initSocket(user);
           // Will attempt reconnect — if game not active, we get an error
           setupLiveSocket(user, matchId);
           return;
@@ -732,7 +768,7 @@
       activeColor = boardState.activeColor;
       pockets = boardState.pockets;
 
-      initSocket();
+      initSocket(user);
       setupLiveSocket(user, gameId);
 
       // Render board
@@ -751,17 +787,18 @@
 
     function setupLiveSocket(user, gId) {
       const effectiveGameId = gId || gameId;
+      const guestName = (user && user.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
 
       // Register socket with the game
       socket.on('connect', () => {
         if (effectiveGameId) {
-          socket.emit('reconnect_game', { gameId: effectiveGameId });
+          socket.emit('reconnect_game', { gameId: effectiveGameId, guestUsername: guestName });
         }
       });
 
       // If socket already connected, emit immediately
       if (socket && socket.connected && effectiveGameId) {
-        socket.emit('reconnect_game', { gameId: effectiveGameId });
+        socket.emit('reconnect_game', { gameId: effectiveGameId, guestUsername: guestName });
       }
 
       // Handle reconnection: server sends full game state
@@ -896,7 +933,12 @@
       socket.on('draw_declined', () => {
         drawOffered = false;
         const btn = document.getElementById('drawBtn');
-        if (btn) btn.textContent = 'Draw';
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="handshake"></i> <span>Draw</span>';
+          if (window.lucide) {
+            try { lucide.createIcons(); } catch (e) {}
+          }
+        }
         showToast('Draw offer declined', 'info');
       });
 
@@ -914,7 +956,7 @@
         document.getElementById('diceRollNum').textContent = data.roll;
         document.getElementById('dicePieceName').textContent = data.pieceName;
         if (activeColor === myColor && !gameOver) {
-          showToast(`🎲 Rolled ${data.roll} — must move a ${data.pieceName}`, 'info');
+          showToast(`Dice Roll: ${data.roll} — must move a ${data.pieceName}`, 'info');
         }
       });
 
@@ -927,7 +969,7 @@
       // Battlepass level up notification
       socket.on('battlepass_level_up', (data) => {
         if (data.leveledUp) {
-          let msg = '🎉 Level up! You reached Tier ' + data.newTier + '!';
+          let msg = 'Level up! You reached Tier ' + data.newTier + '!';
           if (data.unlockedTitle) {
             msg += ' Unlocked: ' + data.unlockedTitle + '!';
           }
@@ -1022,6 +1064,9 @@
           boardEl.appendChild(square);
         }
       }
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     }
 
     function onSquareClick(row, col) {
@@ -1036,10 +1081,16 @@
           showToast('Can only drop on empty squares', 'error');
           return;
         }
+        if (selectedPocketPiece === 'p' && (row === 0 || row === 5)) {
+          showToast('Pawns cannot be dropped on rank 1 or 6', 'error');
+          return;
+        }
 
         sendDropMove(sqName);
         selectedPocketPiece = null;
+        possibleMoves = [];
         document.querySelectorAll('.pocket-piece.selected-drop').forEach(el => el.classList.remove('selected-drop'));
+        renderBoard();
         return;
       }
 
@@ -1133,73 +1184,149 @@
       });
     }
 
+    function getPieceTypeName(type) {
+      const names = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
+      return names[(type || '').toLowerCase()] || (type || '').toUpperCase();
+    }
+
+    function getLegalDropMoves(type) {
+      if (!boardState || !boardState.board) return [];
+      const moves = [];
+      const isPawn = type === 'p';
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 6; c++) {
+          if (boardState.board[r][c] === null) {
+            if (isPawn && (r === 0 || r === 5)) continue;
+            moves.push({ to: coordsToSquare(r, c), isDrop: true });
+          }
+        }
+      }
+      return moves;
+    }
+
     function updatePockets() {
+      const SLOT_TYPES = ['p', 'n', 'b', 'r'];
+      const playerColor = myColor || 'white';
+      const opponentColor = playerColor === 'white' ? 'black' : 'white';
+
+      // Count pieces
+      const myPocketList = (pockets && pockets[playerColor]) || [];
+      const oppPocketList = (pockets && pockets[opponentColor]) || [];
+
+      const myCounts = { p: 0, n: 0, b: 0, r: 0 };
+      myPocketList.forEach(t => {
+        const k = (t || '').toLowerCase();
+        if (myCounts[k] !== undefined) myCounts[k]++;
+      });
+
+      const oppCounts = { p: 0, n: 0, b: 0, r: 0 };
+      oppPocketList.forEach(t => {
+        const k = (t || '').toLowerCase();
+        if (oppCounts[k] !== undefined) oppCounts[k]++;
+      });
+
       // Player's pocket
       const playerPocket = document.getElementById('playerPocket');
-      const myPocket = pockets[myColor] || [];
-      if (myPocket.length === 0) {
-        playerPocket.innerHTML = '';
-      } else {
-        playerPocket.innerHTML = myPocket.map((type, i) => {
-          const symbol = getPieceSymbolByType(type, myColor);
-          return `<div class="pocket-piece" data-index="${i}" data-type="${type}">${symbol}</div>`;
+      if (playerPocket) {
+        playerPocket.innerHTML = SLOT_TYPES.map(type => {
+          const count = myCounts[type] || 0;
+          const pieceName = getPieceTypeName(type);
+          if (count === 0) {
+            return `
+              <div class="pocket-slot empty-slot" data-type="${type}" title="${pieceName} (0)">
+                <div class="pocket-piece-visual silhouette">
+                  <img src="img/pieces/${playerColor[0]}${type}.svg" class="piece-img" draggable="false" alt="${type}">
+                </div>
+              </div>
+            `;
+          } else {
+            const isSelected = selectedPocketPiece === type;
+            return `
+              <div class="pocket-slot has-pieces pocket-piece ${isSelected ? 'selected-drop' : ''}" data-type="${type}" data-count="${count}" title="${pieceName} (${count})">
+                <div class="pocket-piece-visual">
+                  <img src="img/pieces/${playerColor[0]}${type}.svg" class="piece-img" draggable="false" alt="${type}">
+                </div>
+                <span class="pocket-count-badge">x${count}</span>
+              </div>
+            `;
+          }
         }).join('');
       }
 
       // Opponent's pocket
-      const opponentColor = myColor === 'white' ? 'black' : 'white';
       const opponentPocket = document.getElementById('opponentPocket');
-      const oppPocket = pockets[opponentColor] || [];
-      if (oppPocket.length === 0) {
-        opponentPocket.innerHTML = '';
-      } else {
-        opponentPocket.innerHTML = oppPocket.map(type => {
-          const symbol = getPieceSymbolByType(type, opponentColor);
-          return `<div class="pocket-piece" style="pointer-events: none;">${symbol}</div>`;
+      if (opponentPocket) {
+        opponentPocket.innerHTML = SLOT_TYPES.map(type => {
+          const count = oppCounts[type] || 0;
+          const pieceName = getPieceTypeName(type);
+          if (count === 0) {
+            return `
+              <div class="pocket-slot empty-slot opponent-slot" data-type="${type}" title="${pieceName} (0)">
+                <div class="pocket-piece-visual silhouette">
+                  <img src="img/pieces/${opponentColor[0]}${type}.svg" class="piece-img" draggable="false" alt="${type}">
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="pocket-slot has-pieces opponent-slot" data-type="${type}" data-count="${count}" style="cursor: default;" title="${pieceName} (${count})">
+                <div class="pocket-piece-visual">
+                  <img src="img/pieces/${opponentColor[0]}${type}.svg" class="piece-img" draggable="false" alt="${type}">
+                </div>
+                <span class="pocket-count-badge">x${count}</span>
+              </div>
+            `;
+          }
         }).join('');
+      }
+
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
       }
 
       if (isReplay) return;
 
       // Add click and drag handlers for player's pocket pieces
-      playerPocket.querySelectorAll('.pocket-piece').forEach(el => {
-        const canDragPocket = !gameOver && myColor === activeColor;
-        if (canDragPocket) {
-          el.draggable = true;
-          el.addEventListener('dragstart', (e) => onPocketDragStart(e, el.dataset.type));
-          el.addEventListener('dragend', onPocketDragEnd);
-        }
-
-        el.addEventListener('click', (e) => {
-          if (gameOver) return;
-          if (myColor !== activeColor) {
-            showToast('Not your turn', 'error');
-            return;
+      if (playerPocket) {
+        playerPocket.querySelectorAll('.pocket-piece').forEach(el => {
+          const canDragPocket = !gameOver && myColor === activeColor;
+          if (canDragPocket) {
+            el.draggable = true;
+            el.addEventListener('dragstart', (e) => onPocketDragStart(e, el.dataset.type));
+            el.addEventListener('dragend', onPocketDragEnd);
           }
 
-          const type = el.dataset.type;
+          el.addEventListener('click', (e) => {
+            if (gameOver) return;
+            if (myColor !== activeColor) {
+              showToast('Not your turn', 'error');
+              return;
+            }
 
-          if (gameMode === 'dice' && currentDice && type !== currentDice.pieceType) {
-            showToast(`Must drop a ${currentDice.pieceName}`, 'error');
-            return;
-          }
+            const type = el.dataset.type;
 
-          if (selectedPocketPiece === type) {
-            selectedPocketPiece = null;
-            el.classList.remove('selected-drop');
-            selectedSquare = null;
-            possibleMoves = [];
-            renderBoard();
-          } else {
-            selectedPocketPiece = type;
-            selectedSquare = null;
-            possibleMoves = [];
-            document.querySelectorAll('.pocket-piece.selected-drop').forEach(p => p.classList.remove('selected-drop'));
-            el.classList.add('selected-drop');
-            renderBoard();
-          }
+            if (gameMode === 'dice' && currentDice && type !== currentDice.pieceType) {
+              showToast(`Must drop a ${currentDice.pieceName}`, 'error');
+              return;
+            }
+
+            if (selectedPocketPiece === type) {
+              selectedPocketPiece = null;
+              el.classList.remove('selected-drop');
+              selectedSquare = null;
+              possibleMoves = [];
+              renderBoard();
+            } else {
+              selectedPocketPiece = type;
+              selectedSquare = null;
+              possibleMoves = getLegalDropMoves(type);
+              document.querySelectorAll('.pocket-piece.selected-drop').forEach(p => p.classList.remove('selected-drop'));
+              el.classList.add('selected-drop');
+              renderBoard();
+            }
+          });
         });
-      });
+      }
     }
 
     function setBoardAvatar(prefix, avatarUrl, username) {
@@ -1219,24 +1346,61 @@
 
     function updateTurnIndicator() {
       const indicator = document.getElementById('turnIndicator');
+      const oppIndicator = document.getElementById('opponentTurnIndicator');
       if (isReplay) {
-        indicator.textContent = 'Finished';
-        indicator.classList.remove('active');
-        return;
-      }
-      if (activeColor === myColor) {
-        indicator.textContent = 'Your Turn';
-        indicator.classList.add('active');
+        if (indicator) {
+          indicator.textContent = replayIndex === replayPositions.length - 1 ? 'Final Position' : 'Move ' + replayIndex;
+          indicator.classList.remove('active');
+          indicator.style.display = 'inline-flex';
+        }
+        if (oppIndicator) {
+          oppIndicator.style.display = 'none';
+          oppIndicator.classList.remove('active');
+        }
+      } else if (gameOver) {
+        if (indicator) {
+          indicator.textContent = 'Finished';
+          indicator.classList.remove('active');
+          indicator.style.display = 'inline-flex';
+        }
+        if (oppIndicator) {
+          oppIndicator.style.display = 'none';
+          oppIndicator.classList.remove('active');
+        }
+      } else if (activeColor === myColor) {
+        if (indicator) {
+          indicator.textContent = (typeof window.t === 'function') ? window.t('your_turn') : 'Your Turn';
+          indicator.classList.add('active');
+          indicator.style.display = 'inline-flex';
+        }
+        if (oppIndicator) {
+          oppIndicator.style.display = 'none';
+          oppIndicator.classList.remove('active');
+        }
       } else {
-        indicator.textContent = 'Opponent\'s Turn';
-        indicator.classList.remove('active');
+        if (indicator) {
+          indicator.style.display = 'none';
+          indicator.classList.remove('active');
+        }
+        if (oppIndicator) {
+          oppIndicator.textContent = (typeof window.t === 'function') ? window.t('opponents_turn') : "Opponent's Turn";
+          oppIndicator.classList.add('active');
+          oppIndicator.style.display = 'inline-flex';
+        }
+      }
+      const playerClock = document.getElementById('playerClock');
+      const opponentClock = document.getElementById('opponentClock');
+      if (!isReplay && playerClock && opponentClock) {
+        playerClock.classList.toggle('active-clock', activeColor === myColor);
+        opponentClock.classList.toggle('active-clock', activeColor !== myColor);
       }
     }
 
     function updateMoveHistory() {
       const historyEl = document.getElementById('moveHistory');
       if (moveHistory.length === 0) {
-        historyEl.innerHTML = '<div style="color: var(--text-secondary);">No moves yet</div>';
+        const noMovesText = (typeof window.t === 'function') ? window.t('no_moves_yet') : 'No moves yet';
+        historyEl.innerHTML = `<div style="color: var(--text-secondary);" data-i18n="no_moves_yet">${noMovesText}</div>`;
         return;
       }
 
@@ -1268,27 +1432,34 @@
       const overlay = document.getElementById('gameOverOverlay');
       const card = document.getElementById('gameOverCard');
 
+      // Clear active clock indicators
+      const playerClock = document.getElementById('playerClock');
+      const opponentClock = document.getElementById('opponentClock');
+      if (playerClock) playerClock.classList.remove('active-clock');
+      if (opponentClock) opponentClock.classList.remove('active-clock');
+      updateTurnIndicator();
+
       let titleText = '';
       let titleClass = '';
 
       if (result === 'white_wins') {
         if (myColor === 'white') {
-          titleText = 'You Win!';
+          titleText = (typeof window.t === 'function') ? window.t('victory') : 'VICTORY!';
           titleClass = 'win-text';
         } else {
-          titleText = 'You Lose';
+          titleText = (typeof window.t === 'function') ? window.t('defeat') : 'DEFEAT';
           titleClass = 'lose-text';
         }
       } else if (result === 'black_wins') {
         if (myColor === 'black') {
-          titleText = 'You Win!';
+          titleText = (typeof window.t === 'function') ? window.t('victory') : 'VICTORY!';
           titleClass = 'win-text';
         } else {
-          titleText = 'You Lose';
+          titleText = (typeof window.t === 'function') ? window.t('defeat') : 'DEFEAT';
           titleClass = 'lose-text';
         }
       } else {
-        titleText = 'Draw!';
+        titleText = (typeof window.t === 'function') ? window.t('game_draw') : 'DRAW';
         titleClass = 'draw-text';
       }
 
@@ -1331,14 +1502,18 @@
         playersHtml = `<p class="elo-change">Result: ${result.replace('_', ' ')}</p>`;
       }
 
+      const backText = (typeof window.t === 'function') ? window.t('back_to_lobby') : 'Back to Lobby';
       card.innerHTML = `
         <h2 class="${titleClass}">${titleText}</h2>
         ${playersHtml}
-        <button class="go-back-btn" onclick="window.location.href='lobby.html'">Back to Lobby</button>
+        <button class="go-back-btn" onclick="window.location.href='lobby.html'"><i data-lucide="home"></i> <span data-i18n="back_to_lobby">${backText}</span></button>
       `;
 
       card.className = 'game-over-card modern';
       overlay.style.display = 'flex';
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
 
       // Win effects
       if (!isReplay && titleClass === 'win-text') {
@@ -1386,12 +1561,22 @@
 
       if (drawOffered) {
         socket.emit('cancel_draw', { gameId: gameId });
-        btn.textContent = 'Draw';
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="handshake"></i> <span>Draw</span>';
+          if (window.lucide) {
+            try { lucide.createIcons(); } catch (e) {}
+          }
+        }
         drawOffered = false;
         showToast('Draw offer cancelled', 'info');
       } else {
         socket.emit('request_draw', { gameId: gameId });
-        btn.textContent = 'Cancel Draw';
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="x"></i> <span>Cancel</span>';
+          if (window.lucide) {
+            try { lucide.createIcons(); } catch (e) {}
+          }
+        }
         drawOffered = true;
         showToast('Draw offered — waiting...', 'info');
       }
@@ -1426,11 +1611,13 @@
     }
 
     function getPieceSymbol(piece) {
-      return `<img src="img/pieces/${piece.color[0]}${piece.type}.svg" class="piece-img" draggable="false">`;
+      const isBlack = piece.color === 'black' || piece.color === 'b';
+      return `<img src="img/pieces/${piece.color[0]}${piece.type}.svg" class="piece-img piece-${piece.color} ${isBlack ? 'piece-black' : 'piece-white'}" draggable="false" alt="${piece.color} ${piece.type}">`;
     }
 
     function getPieceSymbolByType(type, color) {
-      return `<img src="img/pieces/${color[0]}${type}.svg" class="piece-img" draggable="false">`;
+      const isBlack = color === 'black' || color === 'b';
+      return `<img src="img/pieces/${color[0]}${type}.svg" class="piece-img piece-${color} ${isBlack ? 'piece-black' : 'piece-white'}" draggable="false" alt="${color} ${type}">`;
     }
 
     function syncServerTime(whiteTime, blackTime) {
@@ -1713,7 +1900,7 @@
         return;
       }
       ghost.src = `img/pieces/${movingPiece.color[0]}${movingPiece.type}.svg`;
-      ghost.className = 'piece-ghost';
+      ghost.className = 'piece-ghost ' + (movingPiece.color === 'black' || movingPiece.color === 'b' ? 'piece-black' : 'piece-white');
       ghost.style.position = 'absolute';
       ghost.style.transform = `translate(${(fromCenter.x - 24)}px, ${(fromCenter.y - 24)}px)`;
       ghost.style.width = '48px';

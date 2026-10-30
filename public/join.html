@@ -7,29 +7,33 @@
   <title>MiniChess — Join</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
-      --page-bg: #0d1117;
-      --surface: #181b20;
-      --surface2: #1f2229;
-      --surface3: #262930;
-      --border-subtle: rgba(255,255,255,0.06);
-      --border-glass: rgba(255,255,255,0.08);
+      --page-bg: #090c10;
+      --surface: rgba(18, 24, 34, 0.75);
+      --surface2: rgba(26, 34, 48, 0.75);
+      --surface3: rgba(33, 44, 62, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --border-glass: rgba(255, 255, 255, 0.07);
       --text-bright: #f0f3f7;
-      --text-dim: #8b949e;
-      --text-muted: #5c6470;
-      --emerald: #3fb950;
-      --emerald-glow: rgba(63,185,80,0.3);
-      --gold: #d2991d;
-      --red-soft: #f85149;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --gold: #f59e0b;
+      --red-soft: #f43f5e;
       --accent-cyan: #06b6d4;
-      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
-      --glass-border: rgba(255,255,255,0.07);
+      --glass-surface: rgba(18, 24, 34, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.07);
+      --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-main);
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -186,13 +190,14 @@
       <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
     </div>
     <nav class="sidebar-nav">
-      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
-      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
-      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
-      <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
-      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
+      <a href="lobby.html" id="navPlay" data-i18n="nav_play"><i data-lucide="play" class="nav-icon"></i> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard" data-i18n="nav_leaderboard"><i data-lucide="trophy" class="nav-icon"></i> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass" data-i18n="nav_battlepass"><i data-lucide="award" class="nav-icon"></i> Battlepass</a>
+      <a href="shop.html" id="navShop" data-i18n="nav_shop"><i data-lucide="shopping-bag" class="nav-icon"></i> Shop</a>
+      <a href="profile.html" id="navProfile" data-i18n="nav_profile"><i data-lucide="user" class="nav-icon"></i> Profile</a>
     </nav>
     <div class="sidebar-footer">
+      <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
       <div class="user-mini">
         <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
         <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -202,11 +207,14 @@
         </div>
       </div>
       <div class="sidebar-stats">
-        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
-        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
-        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl" data-i18n="stat_w">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl" data-i18n="stat_l">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl" data-i18n="stat_d">D</div></div>
       </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-actions">
+        <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+        <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+      </div>
     </div>
   </aside>
 
@@ -215,12 +223,13 @@
       <h1>Join Private Game</h1>
       <div id="joinStatus" class="join-status loading">Checking room...</div>
       <div id="joinError" class="join-error"></div>
-      <a href="lobby.html" class="btn-back" id="btnBack" style="display:none;">Back to Lobby</a>
+      <a href="lobby.html" class="btn-back" id="btnBack" style="display:none;" data-i18n="back_to_lobby">Back to Lobby</a>
     </div>
   </main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
@@ -234,6 +243,7 @@
       window.location.href = 'index.html';
       return;
     }
+    if (window.renderGuestBadges) renderGuestBadges(currentUser);
 
     document.getElementById('sidebarUsername').textContent = currentUser.username;
     document.getElementById('sidebarElo').textContent = currentUser.elo;
@@ -254,10 +264,17 @@
         const a = document.createElement('a');
         a.href = 'admin.html';
         a.id = 'navAdmin';
-        a.innerHTML = '<span class="nav-icon">⚙</span> Admin';
+        a.innerHTML = '<i data-lucide="settings" class="nav-icon"></i> Admin';
         nav.appendChild(a);
+        if (window.lucide) {
+          try { lucide.createIcons(); } catch (e) {}
+        }
       }
     }).catch(() => {});
+
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
 
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get('room');
@@ -267,7 +284,7 @@
       return;
     }
 
-    initSocket();
+    initSocket(currentUser);
     await joinRoom(roomId);
   }
 
@@ -310,7 +327,8 @@
       showError(data.message);
     });
 
-    socket.emit('join_private_room', { roomId });
+    const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+    socket.emit('join_private_room', { roomId, guestUsername: gUser });
   }
 
   function showError(message) {

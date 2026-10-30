@@ -24,6 +24,9 @@
 
     bindNavClicks();
     bindPopState();
+    if (window.lucide) {
+      try { window.lucide.createIcons(); } catch (e) {}
+    }
   }
 
   // ===== Intercept sidebar nav clicks =====
@@ -31,6 +34,15 @@
     document.addEventListener('click', function (e) {
       var link = e.target.closest(NAV_SELECTOR);
       if (!link) return;
+
+      if (link.classList.contains('guest-locked') || link.getAttribute('data-guest-locked') === 'true') {
+        e.preventDefault();
+        e.stopPropagation();
+        var msg = (typeof window.t === 'function') ? window.t('guest_login_required', 'Giriş yaparsan erişebilirsin') : 'Giriş yaparsan erişebilirsin';
+        if (typeof window.showToast === 'function') window.showToast(msg, 'warning');
+        if (typeof window.promptGuestCreateAccount === 'function') window.promptGuestCreateAccount(msg);
+        return;
+      }
 
       var href = link.getAttribute('href');
       if (!href || href.startsWith('http') || href.startsWith('//')) return;
@@ -116,6 +128,15 @@
               requestAnimationFrame(function () {
                 main.style.opacity = '1';
                 executeScripts(doc);
+                if (window.applyTranslations && typeof window.applyTranslations === 'function') {
+                  window.applyTranslations(main);
+                }
+                if (window.renderGuestBadges && typeof window.renderGuestBadges === 'function') {
+                  window.renderGuestBadges();
+                }
+                if (window.lucide) {
+                  try { window.lucide.createIcons(); } catch (e) {}
+                }
                 isNavigating = false;
               });
             });

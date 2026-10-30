@@ -7,41 +7,53 @@
   <title>MiniChess — Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
-      --page-bg: #0d1117;
-      --surface: #181b20;
-      --surface2: #1f2229;
-      --surface3: #262930;
-      --border-subtle: rgba(255,255,255,0.06);
-      --border-glass: rgba(255,255,255,0.08);
+      --page-bg: #090c10;
+      --surface: rgba(18, 24, 34, 0.75);
+      --surface2: rgba(26, 34, 48, 0.75);
+      --surface3: rgba(33, 44, 62, 0.75);
+      --border-subtle: rgba(255,255,255,0.05);
+      --border-glass: rgba(255,255,255,0.07);
       --text-bright: #f0f3f7;
-      --text-dim: #8b949e;
-      --text-muted: #5c6470;
-      --emerald: #3fb950;
-      --emerald-glow: rgba(63,185,80,0.3);
-      --gold: #d2991d;
-      --gold-glow: rgba(210,153,29,0.25);
-      --red-soft: #f85149;
-      --accent-purple: #7c3aed;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --red-soft: #f43f5e;
+      --accent-purple: #8b5cf6;
       --accent-blue: #3b82f6;
       --accent-cyan: #06b6d4;
-      --difficulty-green: #3fb950;
+      --difficulty-green: #10b981;
       --difficulty-lime: #84cc16;
       --difficulty-yellow: #eab308;
       --difficulty-orange: #f97316;
       --difficulty-red: #ef4444;
       --difficulty-purple: #a855f7;
       --difficulty-neon: #22d3ee;
-      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
-      --glass-border: rgba(255,255,255,0.07);
+      --glass-surface: rgba(18, 24, 34, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.07);
+      --font-main: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    body, h1, h2, h3, h4, h5, h6, p, span, a, label,
+    button, input, select, textarea,
+    .btn, .tab-btn, .mode-card, .mode-card-title, .mode-card-desc,
+    .sidebar-nav a, .btn-play, .btn-play-dice, .btn-create-room,
+    .bot-play-btn, .filter-btn, .card, .bento-card {
+      font-family: var(--font-main);
+    }
+
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -467,8 +479,14 @@
 
     .bot-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .bot-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
     .bot-card {
@@ -489,49 +507,8 @@
     }
 
     .bot-card.selected {
-      border-color: var(--emerald);
-      box-shadow: 0 0 0 1px var(--emerald), 0 8px 24px rgba(63,185,80,0.15);
-    }
-
-    .bot-card[data-bot="toddler"].selected {
-      border-color: #818cf8;
-      box-shadow: 0 0 0 1px #818cf8, 0 8px 24px rgba(129,140,248,0.25);
-    }
-    .bot-card[data-bot="novice"].selected {
-      border-color: #60a5fa;
-      box-shadow: 0 0 0 1px #60a5fa, 0 8px 24px rgba(96,165,250,0.25);
-    }
-    .bot-card[data-bot="apprentice"].selected {
-      border-color: #22d3ee;
-      box-shadow: 0 0 0 1px #22d3ee, 0 8px 24px rgba(34,211,238,0.25);
-    }
-    .bot-card[data-bot="casual"].selected {
-      border-color: #4ade80;
-      box-shadow: 0 0 0 1px #4ade80, 0 8px 24px rgba(74,222,128,0.25);
-    }
-    .bot-card[data-bot="amateur"].selected {
-      border-color: #a3e635;
-      box-shadow: 0 0 0 1px #a3e635, 0 8px 24px rgba(163,230,53,0.25);
-    }
-    .bot-card[data-bot="club_player"].selected {
-      border-color: #facc15;
-      box-shadow: 0 0 0 1px #facc15, 0 8px 24px rgba(250,204,21,0.25);
-    }
-    .bot-card[data-bot="intermediate"].selected {
-      border-color: #fb923c;
-      box-shadow: 0 0 0 1px #fb923c, 0 8px 24px rgba(251,146,60,0.25);
-    }
-    .bot-card[data-bot="advanced"].selected {
-      border-color: #f87171;
-      box-shadow: 0 0 0 1px #f87171, 0 8px 24px rgba(248,113,113,0.25);
-    }
-    .bot-card[data-bot="expert"].selected {
-      border-color: #c084fc;
-      box-shadow: 0 0 0 1px #c084fc, 0 8px 24px rgba(192,132,252,0.25);
-    }
-    .bot-card[data-bot="master"].selected {
-      border-color: #22d3ee;
-      box-shadow: 0 0 0 1px #22d3ee, 0 8px 24px rgba(34,211,238,0.3);
+      border-color: #8b5cf6 !important;
+      box-shadow: 0 0 0 1px #8b5cf6, 0 8px 24px rgba(139, 92, 246, 0.35) !important;
     }
 
     .bot-card .bot-diff-badge {
@@ -594,41 +571,173 @@
       box-shadow: 0 4px 20px rgba(124,58,237,0.3);
     }
 
-    /* ===== Private Room Zone ===== */
+    /* ===== Private Room Zone (Modern 2-Column) ===== */
     .friends-zone {
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
       border-radius: 16px;
-      padding: 28px 32px;
+      padding: 24px;
     }
 
-    .friends-zone .fz-header {
+    .friends-card-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .friends-card-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 22px;
+      transition: border-color 0.2s ease;
+    }
+
+    .friends-card-col:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .friends-card-divider {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
+      justify-content: center;
+      position: relative;
     }
 
-    .friends-zone .fz-title {
-      font-size: 18px;
+    .friends-card-divider::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .friends-card-divider span {
+      position: relative;
+      background: #11141a;
+      padding: 6px 10px;
+      font-size: 11px;
       font-weight: 700;
+      color: var(--text-muted);
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .btn-create-room {
-      padding: 12px 22px;
+    .fz-col-header {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .fz-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .fz-icon-box.glow-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.2);
+    }
+
+    .fz-icon-box.glow-cyan {
+      background: rgba(6, 182, 212, 0.15);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.2);
+    }
+
+    .fz-col-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+    }
+
+    .fz-col-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.45;
+    }
+
+    .room-join-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .room-code-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      color: var(--text-bright);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .room-code-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+    }
+
+    .btn-join-room {
+      padding: 12px 20px;
       background: var(--accent-blue);
       color: #fff;
       border: none;
       border-radius: 10px;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-join-room:hover {
+      background: #2563eb;
+      box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+    }
+
+    .btn-create-room {
+      width: 100%;
+      padding: 14px 22px;
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       transition: all 0.2s ease;
     }
 
     .btn-create-room:hover {
-      background: #4f8ef7;
-      box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+      background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
     }
 
     .room-share-box {
@@ -664,6 +773,9 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       transition: all 0.2s ease;
     }
 
@@ -677,6 +789,7 @@
       margin-top: 10px;
       font-size: 13px;
       color: var(--emerald);
+      font-weight: 600;
     }
 
     .btn-cancel-room {
@@ -694,6 +807,19 @@
     .btn-cancel-room:hover {
       border-color: var(--red-soft);
       color: var(--red-soft);
+    }
+
+    @media (max-width: 900px) {
+      .friends-card-grid {
+        grid-template-columns: 1fr;
+      }
+      .friends-card-divider::before {
+        left: 0;
+        right: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+      }
     }
 
     /* ===== Hero Welcome Banner ===== */
@@ -753,11 +879,15 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
       padding: 12px 18px;
       border-radius: 12px;
+      transition: all 0.25s ease;
     }
 
     .hero-stats-badge .badge-icon {
       font-size: 24px;
       color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .hero-stats-badge .badge-label {
@@ -773,43 +903,278 @@
       color: var(--text-bright);
     }
 
-    /* ===== Mode Tabs ===== */
-    .mode-tabs {
+    .hero-elo-wrap {
       display: flex;
+      align-items: center;
       gap: 10px;
-      background: rgba(24, 27, 32, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-      padding: 6px;
-      border-radius: 12px;
-      margin-bottom: 24px;
+      margin-top: 2px;
     }
 
-    .tab-btn {
-      flex: 1;
+    /* Rank Tier Badges */
+    .rank-tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--tier-color, #94a3b8);
+      color: var(--tier-color, #94a3b8);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.02);
+      transition: all 0.2s ease;
+      line-height: 1;
+    }
+    .rank-tier-badge.sm {
+      padding: 2px 8px;
+      font-size: 11px;
+      gap: 4px;
+    }
+    .rank-tier-badge.md {
+      padding: 4px 11px;
+      font-size: 12px;
+      gap: 6px;
+    }
+    .rank-tier-badge.lg {
+      padding: 6px 14px;
+      font-size: 13px;
+      gap: 7px;
+    }
+    .rank-tier-badge:hover {
+      box-shadow: 0 0 16px var(--tier-color);
+      transform: translateY(-1px);
+    }
+    .rank-tier-badge .rank-badge-icon {
+      width: 13px;
+      height: 13px;
+      stroke-width: 2.4;
+      color: var(--tier-color);
+      filter: drop-shadow(0 0 4px var(--tier-color));
+      display: inline-block;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .rank-tier-badge.sm .rank-badge-icon {
+      width: 11px;
+      height: 11px;
+    }
+    .rank-tier-badge.md .rank-badge-icon {
+      width: 14px;
+      height: 14px;
+    }
+    .rank-tier-badge.lg .rank-badge-icon {
+      width: 16px;
+      height: 16px;
+    }
+    .rank-tier-badge .tier-sep {
+      opacity: 0.45;
+      margin: 0 2px;
+    }
+    .rank-tier-badge .tier-elo {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    /* Searching for Opponent Queue Card & Radar Pulse */
+    .queue-searching-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 14px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(18, 24, 34, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 24px rgba(16, 185, 129, 0.15);
+      position: relative;
+      overflow: hidden;
+      animation: fadeInQueue 0.3s ease;
+    }
+    @keyframes fadeInQueue {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .radar-pulse-container {
+      position: relative;
+      width: 48px;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background: transparent;
-      border: none;
-      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .pulse-ring {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid #10b981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+      animation: pulse-ring 2.4s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+      pointer-events: none;
+    }
+    .pulse-ring.ring-2 {
+      animation-delay: 0.8s;
+    }
+    .pulse-ring.ring-3 {
+      animation-delay: 1.6s;
+    }
+    .radar-sweep {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(16, 185, 129, 0.35) 360deg);
+      animation: radar-sweep 2s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.6);
+        opacity: 0.95;
+      }
+      50% {
+        opacity: 0.45;
+      }
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+    .radar-center-dot {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+      z-index: 2;
+      animation: pulse-dot 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+      }
+      50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.95);
+      }
+    }
+    .radar-center-dot .radar-icon {
+      width: 17px;
+      height: 17px;
+      color: #0d1117;
+      stroke-width: 2.5;
+    }
+    .queue-searching-info {
+      flex: 1;
+    }
+    .queue-searching-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f0f3f7;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .searching-dots .dot {
+      animation: dotBlink 1.4s infinite;
+      opacity: 0;
+    }
+    .searching-dots .dot:nth-child(1) { animation-delay: 0s; }
+    .searching-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+    .searching-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotBlink {
+      0%, 20% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .queue-searching-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .queue-timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .queue-timer-badge .timer-icon {
+      width: 13px;
+      height: 13px;
+    }
+    .queue-mode-badge {
+      font-size: 12px;
       color: var(--text-dim);
-      font-size: 14px;
+      font-weight: 500;
+    }
+    .queue-cancel-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      border-radius: 8px;
+      color: #f43f5e;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.2s ease;
+    }
+    .queue-cancel-btn:hover {
+      background: #f43f5e;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(244, 63, 94, 0.4);
+    }
+    .queue-cancel-btn svg, .queue-cancel-btn .lucide {
+      width: 14px;
+      height: 14px;
     }
 
-    .tab-btn:hover {
-      color: var(--text-bright);
-      background: rgba(255, 255, 255, 0.03);
+    /* ===== Mode Tabs / Bento Mode Selection Cards ===== */
+    .mode-tabs,
+    .mode-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      background: transparent;
+      padding: 0;
+      border: none;
+      margin-bottom: 24px;
     }
 
-    .tab-btn.active {
-      color: var(--emerald);
-      background: rgba(63, 185, 80, 0.08);
-      border: 1px solid rgba(63, 185, 80, 0.15);
+    @media (max-width: 800px) {
+      .mode-tabs,
+      .mode-bento-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ===== Tab Transitions ===== */
@@ -1012,7 +1377,7 @@
       z-index: 9999;
       animation: toastIn 0.3s ease;
       backdrop-filter: blur(12px);
-      font-family: 'Inter', sans-serif;
+      font-family: var(--font-main);
     }
     .toast.info { background: rgba(59,130,246,0.9); }
     .toast.success { background: rgba(34,197,94,0.9); }
@@ -1047,7 +1412,7 @@
       .sidebar-footer { display: none; }
       .right-sidebar { display: none; }
       .main-content { padding: 20px 16px; max-height: none; }
-      .bot-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }
+      .bot-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -1059,30 +1424,31 @@
     <div class="sidebar-logo">
       <img class="logo-img" src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'; document.getElementById('sidebarLogoText').style.display='block'">
       <div class="logo-text" id="sidebarLogoText" style="display:none; padding: 4px 8px;">
-        <span class="logo-icon">♟</span>Mini<span>Chess</span>
+        <span class="logo-icon"><i data-lucide="swords"></i></span>Mini<span>Chess</span>
       </div>
     </div>
     <nav class="sidebar-nav">
-      <a href="lobby.html" class="active" id="navPlay">
-        <span class="nav-icon">▶</span> Play
+      <a href="lobby.html" class="active" id="navPlay" data-i18n="nav_play">
+        <i data-lucide="play" class="nav-icon"></i> Play
       </a>
-      <a href="leaderboard.html" id="navLeaderboard">
-        <span class="nav-icon">🏆</span> Leaderboard
+      <a href="leaderboard.html" id="navLeaderboard" data-i18n="nav_leaderboard">
+        <i data-lucide="trophy" class="nav-icon"></i> Leaderboard
       </a>
-      <a href="battlepass.html" id="navBattlepass">
-        <span class="nav-icon">🎖</span> Battlepass
+      <a href="battlepass.html" id="navBattlepass" data-i18n="nav_battlepass">
+        <i data-lucide="award" class="nav-icon"></i> Battlepass
       </a>
-      <a href="shop.html" id="navShop">
-        <span class="nav-icon">🛒</span> Shop
+      <a href="shop.html" id="navShop" data-i18n="nav_shop">
+        <i data-lucide="shopping-bag" class="nav-icon"></i> Shop
       </a>
-      <a href="profile.html" id="navProfile">
-        <span class="nav-icon">👤</span> Profile
+      <a href="profile.html" id="navProfile" data-i18n="nav_profile">
+        <i data-lucide="user" class="nav-icon"></i> Profile
       </a>
-      <a href="admin.html" id="navAdmin" style="display:none;">
-        <span class="nav-icon">⚙</span> Admin
+      <a href="admin.html" id="navAdmin" style="display:none;" data-i18n="nav_admin">
+        <i data-lucide="settings" class="nav-icon"></i> Admin
       </a>
     </nav>
     <div class="sidebar-footer">
+      <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
       <div class="user-mini">
         <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
         <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -1094,18 +1460,21 @@
       <div class="sidebar-stats">
         <div class="sidebar-stat sb-win">
           <div class="sb-val" id="sbWins">0</div>
-          <div class="sb-lbl">W</div>
+          <div class="sb-lbl" data-i18n="stat_w">W</div>
         </div>
         <div class="sidebar-stat sb-loss">
           <div class="sb-val" id="sbLosses">0</div>
-          <div class="sb-lbl">L</div>
+          <div class="sb-lbl" data-i18n="stat_l">L</div>
         </div>
         <div class="sidebar-stat sb-draw">
           <div class="sb-val" id="sbDraws">0</div>
-          <div class="sb-lbl">D</div>
+          <div class="sb-lbl" data-i18n="stat_d">D</div>
         </div>
       </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-actions">
+        <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+        <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+      </div>
     </div>
   </aside>
 
@@ -1114,40 +1483,57 @@
     <!-- Active game rejoin -->
     <div id="rejoinCard" class="rejoin-card" style="display:none;">
       <div class="rejoin-info">
-        <span class="rejoin-icon">🔁</span>
+        <span class="rejoin-icon"><i data-lucide="rotate-ccw"></i></span>
         <div>
-          <div class="rejoin-text">Game in Progress</div>
+          <div class="rejoin-text" data-i18n="game_in_progress">Game in Progress</div>
           <div class="rejoin-sub" id="rejoinInfo"></div>
         </div>
       </div>
-      <a id="rejoinBtn" href="#" class="rejoin-link">Rejoin Game</a>
+      <a id="rejoinBtn" href="#" class="rejoin-link" data-i18n="rejoin_game">Rejoin Game</a>
     </div>
 
     <!-- Hero Welcome Banner -->
     <div class="hero-welcome">
       <div class="hero-welcome-content">
-        <h1 class="hero-title">Welcome back, <span id="heroUsername">Player</span>!</h1>
-        <p class="hero-subtitle">Choose your game mode and start playing</p>
+        <h1 class="hero-title"><span data-i18n="welcome_back">Welcome back</span>, <span id="heroUsername">Player</span>!</h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">Choose your game mode and start playing</p>
       </div>
-      <div class="hero-stats-badge">
-        <span class="badge-icon">⚡</span>
+      <div class="hero-stats-badge" id="heroEloBadgeContainer">
         <div>
-          <div class="badge-label">CURRENT ELO</div>
-          <div class="badge-value" id="heroElo">1200</div>
+          <div class="badge-label" data-i18n="current_elo">CURRENT ELO</div>
+          <div class="hero-elo-wrap">
+            <span class="badge-value" id="heroElo" style="display:none;">1200</span>
+            <span id="heroRankBadge"></span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Mode Tabs Switcher -->
-    <div class="mode-tabs">
-      <button class="tab-btn active" id="tab-btn-multiplayer" onclick="switchPlayTab('multiplayer')">
-        <span class="tab-icon">🎮</span> Multiplayer
+    <!-- Mode Bento Grid Switcher -->
+    <div class="mode-tabs mode-bento-grid">
+      <button class="tab-btn mode-card active" id="tab-btn-multiplayer" onclick="switchPlayTab('multiplayer')">
+        <div class="mode-card-header">
+          <div class="mode-icon-box glow-emerald"><i data-lucide="swords"></i></div>
+          <span class="mode-pill-badge">Ranked</span>
+        </div>
+        <div class="mode-card-title" data-i18n="tab_multiplayer">Multiplayer</div>
+        <div class="mode-card-desc" data-i18n="mode_ranked_desc">Ranked 6×6 Crazyhouse duels with players worldwide</div>
       </button>
-      <button class="tab-btn" id="tab-btn-computer" onclick="switchPlayTab('computer')">
-        <span class="tab-icon">🤖</span> Vs Computer
+      <button class="tab-btn mode-card" id="tab-btn-computer" onclick="switchPlayTab('computer')">
+        <div class="mode-card-header">
+          <div class="mode-icon-box glow-purple"><i data-lucide="bot"></i></div>
+          <span class="mode-pill-badge">10 Bots</span>
+        </div>
+        <div class="mode-card-title" data-i18n="tab_vs_computer">Vs Computer</div>
+        <div class="mode-card-desc" data-i18n="bot_subtitle">Practice and hone your tactics against AI bots</div>
       </button>
-      <button class="tab-btn" id="tab-btn-friend" onclick="switchPlayTab('friend')">
-        <span class="tab-icon">👥</span> Play a Friend
+      <button class="tab-btn mode-card" id="tab-btn-friend" onclick="switchPlayTab('friend')">
+        <div class="mode-card-header">
+          <div class="mode-icon-box glow-blue"><i data-lucide="users"></i></div>
+          <span class="mode-pill-badge">Custom</span>
+        </div>
+        <div class="mode-card-title" data-i18n="tab_play_friend">Play a Friend</div>
+        <div class="mode-card-desc" data-i18n="friend_subtitle">Create private rooms and challenge friends with a link</div>
       </button>
     </div>
 
@@ -1156,41 +1542,218 @@
       <div class="lobby-layout">
         <!-- Left: Matchmaking (70%) -->
         <div class="lobby-play-zone">
-          <div class="section-title">Multiplayer</div>
+          <div class="section-title" data-i18n="tab_multiplayer">Multiplayer</div>
           <section class="multiplayer-zone">
             <div class="mp-header">
               <div>
-                <div class="mp-title">Find a Match</div>
+                <div class="mp-title" data-i18n="find_a_match">Find a Match</div>
                 <div class="mp-subtitle">6×6 Crazyhouse — 2+5 Time Control</div>
               </div>
               <div class="online-indicator" id="onlineIndicator">
-                <span class="online-dot"></span> Online <span id="queueCountText"></span>
+                <span class="online-dot"></span> <span data-i18n="online_players">Online</span> <span id="queueCountText"></span>
               </div>
             </div>
             <div class="mp-actions">
               <button id="findMatchBtn" class="btn-play" onclick="toggleQueue()">
-                Find Match
+                <i data-lucide="swords"></i> <span data-i18n="find_match">Find Match</span>
               </button>
               <button id="findDiceBtn" class="btn-play-dice" onclick="toggleDiceQueue()">
-                🎲 MiniDice
+                <i data-lucide="dices"></i> <span>MiniDice</span>
               </button>
             </div>
+
+            <!-- Searching for Opponent UI with Radar Pulse & Timer -->
+            <div id="queueSearchingCard" class="queue-searching-card" style="display: none;">
+              <div class="radar-pulse-container">
+                <div class="pulse-ring ring-1"></div>
+                <div class="pulse-ring ring-2"></div>
+                <div class="pulse-ring ring-3"></div>
+                <div class="radar-sweep"></div>
+                <div class="radar-center-dot">
+                  <i data-lucide="swords" class="radar-icon"></i>
+                </div>
+              </div>
+              <div class="queue-searching-info">
+                <div class="queue-searching-title">
+                  <span data-i18n="searching_opponent">Searching for Opponent...</span>
+                </div>
+                <div class="queue-searching-meta">
+                  <span class="queue-timer-badge">
+                    <i data-lucide="clock" class="timer-icon"></i>
+                    <span id="matchQueueTimer">00:00</span>
+                  </span>
+                  <span class="queue-mode-badge">6×6 Crazyhouse • 2+5 Blitz</span>
+                </div>
+              </div>
+              <button class="queue-cancel-btn" onclick="toggleQueue()">
+                <i data-lucide="x"></i> <span data-i18n="cancel_search">Cancel Search</span>
+              </button>
+            </div>
+
             <div class="mp-queue-status" id="queueStatus"></div>
             <div class="mp-queue-status" id="diceQueueStatus" style="margin-top:4px;"></div>
+
+            <!-- Features & Info Strip to fill space and balance with Recent Activity -->
+            <div class="mp-features-grid">
+              <div class="mp-feature-badge">
+                <i data-lucide="grid-3x3" class="mp-feat-icon"></i>
+                <div class="mp-feat-meta">
+                  <span class="mp-feat-val" data-i18n="fast_tactical_grid_desc">6×6 Mini Board</span>
+                  <span class="mp-feat-lbl" data-i18n="fast_tactical_grid">Fast Tactical Grid</span>
+                </div>
+              </div>
+              <div class="mp-feature-badge">
+                <i data-lucide="timer" class="mp-feat-icon"></i>
+                <div class="mp-feat-meta">
+                  <span class="mp-feat-val" data-i18n="increment_2_5">2+5 Increment</span>
+                  <span class="mp-feat-lbl" data-i18n="dynamic_blitz">Dynamic Blitz</span>
+                </div>
+              </div>
+              <div class="mp-feature-badge">
+                <i data-lucide="repeat" class="mp-feat-icon"></i>
+                <div class="mp-feat-meta">
+                  <span class="mp-feat-val" data-i18n="crazyhouse_drops">Crazyhouse Drops</span>
+                  <span class="mp-feat-lbl" data-i18n="deploy_captures">Deploy Captures</span>
+                </div>
+              </div>
+              <div class="mp-feature-badge">
+                <i data-lucide="award" class="mp-feat-icon"></i>
+                <div class="mp-feat-meta">
+                  <span class="mp-feat-val" data-i18n="ranked_elo">Ranked ELO</span>
+                  <span class="mp-feat-lbl" data-i18n="competitive_ladder">Competitive Ladder</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mp-tip-strip">
+              <div class="mp-tip-icon"><i data-lucide="sparkles"></i></div>
+              <div class="mp-tip-content">
+                <strong data-i18n="how_minihouse_works">How Minihouse Works:</strong> <span data-i18n="minihouse_how_desc">Captured pieces enter your pocket. On your turn, drop any pocket piece directly onto any empty square instead of moving!</span>
+              </div>
+            </div>
           </section>
         </div>
 
         <!-- Right: Recent Activity Feed (30%) -->
         <div class="lobby-feed-zone">
-          <div class="section-title">Community Feed</div>
+          <div class="section-title" data-i18n="community_feed">Community Feed</div>
           <div class="feed-card">
             <div class="feed-header">
-              <span class="feed-header-title">Recent Activity</span>
+              <span class="feed-header-title" data-i18n="recent_activity">Recent Activity</span>
               <span class="feed-live-dot"></span>
             </div>
             <div class="feed-list" id="activityFeedList">
-              <div class="feed-loading">Loading live activities...</div>
+              <div class="feed-loading" data-i18n="loading_activities">Loading live activities...</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Grid Bottom Row: Daily Quests / Battlepass & Mini Leaderboard -->
+      <div class="lobby-bottom-bento">
+        <!-- Daily Quests / Battlepass Card -->
+        <div class="bento-card quests-card">
+          <div class="bento-card-header">
+            <div class="bento-title-group">
+              <div class="bento-icon-wrapper"><i data-lucide="award"></i></div>
+              <div>
+                <h3 class="bento-title" data-i18n="daily_quests_battlepass">Daily Quests & Battlepass</h3>
+                <p class="bento-subtitle">Season 1: Cyber Realm • Tier <span id="bpTierVal">1</span></p>
+              </div>
+            </div>
+            <a href="battlepass.html" class="bento-action-link"><span data-i18n="view_pass">View Pass</span> <i data-lucide="chevron-right"></i></a>
+          </div>
+
+          <!-- Main Battlepass Progress Bar -->
+          <div class="bp-progress-wrapper">
+            <div class="bp-progress-header">
+              <span class="bp-xp-label"><i data-lucide="zap"></i> <span data-i18n="battlepass_xp">Battlepass XP</span></span>
+              <span class="bp-xp-count" id="bpXpCount">450 / 1,000 XP</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="bpProgressBar" style="width: 45%;"></div>
+            </div>
+          </div>
+
+          <!-- Quests List -->
+          <div class="quests-list">
+            <div class="quest-item">
+              <div class="quest-info">
+                <span class="quest-name" data-i18n="drop_master">Drop Master</span>
+                <span class="quest-desc" data-i18n="drop_master_desc">Drop 4 captured pieces onto the board</span>
+              </div>
+              <div class="quest-progress-col">
+                <div class="quest-meta">
+                  <span class="quest-count">3/4</span>
+                  <span class="quest-xp">+150 XP</span>
+                </div>
+                <div class="progress-bar-track small">
+                  <div class="progress-bar-fill" style="width: 75%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quest-item">
+              <div class="quest-info">
+                <span class="quest-name" data-i18n="tactical_victory">Tactical Victory</span>
+                <span class="quest-desc" data-i18n="tactical_victory_desc">Win 2 rated multiplayer matches</span>
+              </div>
+              <div class="quest-progress-col">
+                <div class="quest-meta">
+                  <span class="quest-count">1/2</span>
+                  <span class="quest-xp">+200 XP</span>
+                </div>
+                <div class="progress-bar-track small">
+                  <div class="progress-bar-fill" style="width: 50%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quest-item completed">
+              <div class="quest-info">
+                <span class="quest-name" data-i18n="ai_warmup">AI Warmup</span>
+                <span class="quest-desc" data-i18n="ai_warmup_desc">Checkmate any computer bot</span>
+              </div>
+              <div class="quest-progress-col">
+                <div class="quest-meta">
+                  <span class="quest-count completed-badge"><i data-lucide="check"></i> <span data-i18n="done">Done</span></span>
+                  <span class="quest-xp">+100 XP</span>
+                </div>
+                <div class="progress-bar-track small">
+                  <div class="progress-bar-fill" style="width: 100%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Players (Mini Leaderboard) Card -->
+        <div class="bento-card mini-leaderboard-card">
+          <div class="bento-card-header">
+            <div class="bento-title-group">
+              <div class="bento-icon-wrapper"><i data-lucide="trophy"></i></div>
+              <div>
+                <h3 class="bento-title" data-i18n="top_players">Top Players</h3>
+                <p class="bento-subtitle">Global MiniChess Leaderboard</p>
+              </div>
+            </div>
+            <a href="leaderboard.html" class="bento-action-link"><span data-i18n="full_board">Full Board</span> <i data-lucide="chevron-right"></i></a>
+          </div>
+
+          <div class="mini-lb-table-wrapper">
+            <table class="mini-lb-table">
+              <thead>
+                <tr>
+                  <th data-i18n="rank">Rank</th>
+                  <th data-i18n="player">Player</th>
+                  <th data-i18n="record">Record</th>
+                  <th data-i18n="rating">Rating</th>
+                </tr>
+              </thead>
+              <tbody id="miniLeaderboardBody">
+                <tr><td colspan="4" class="lb-loading" data-i18n="loading">Loading top rankings...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1198,36 +1761,67 @@
 
     <!-- Tab Content: VS Computer -->
     <div class="tab-content" id="tab-content-computer" style="display:none;">
-      <div class="section-title">Singleplayer — vs Computer</div>
+      <div class="section-title" data-i18n="singleplayer_vs_computer">Singleplayer — vs Computer</div>
       <div class="bot-filters">
-        <button class="filter-btn active" id="filter-all" onclick="filterBots('all')">All Levels</button>
-        <button class="filter-btn" id="filter-beginner" onclick="filterBots('beginner')">Beginner</button>
-        <button class="filter-btn" id="filter-intermediate" onclick="filterBots('intermediate')">Intermediate</button>
-        <button class="filter-btn" id="filter-expert" onclick="filterBots('expert')">Expert / Master</button>
+        <button class="filter-btn active" id="filter-all" onclick="filterBots('all')" data-i18n="all_levels">All Levels</button>
+        <button class="filter-btn" id="filter-beginner" onclick="filterBots('beginner')" data-i18n="beginner">Beginner</button>
+        <button class="filter-btn" id="filter-intermediate" onclick="filterBots('intermediate')" data-i18n="intermediate">Intermediate</button>
+        <button class="filter-btn" id="filter-expert" onclick="filterBots('expert')" data-i18n="expert_master">Expert / Master</button>
       </div>
       <section class="bot-zone">
         <div class="bot-grid" id="botGrid"></div>
         <button id="botPlayBtn" class="bot-play-btn" onclick="startBotGame()">
-          🤖 Play vs <span id="selectedBotName">Amateur</span>
+          <i data-lucide="bot"></i> <span data-i18n="play_vs">Play vs</span> <span id="selectedBotName">Amateur</span>
         </button>
       </section>
     </div>
 
     <!-- Tab Content: Play with Friend -->
     <div class="tab-content" id="tab-content-friend" style="display:none;">
-      <div class="section-title">Play with a Friend</div>
+      <div class="section-title" data-i18n="tab_play_friend">Play with a Friend</div>
       <section class="friends-zone">
-        <div class="fz-header">
-          <div class="fz-title">Private Room</div>
-          <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()">➕ Create Room</button>
-        </div>
-        <div id="roomSection" style="display:none;">
-          <div class="room-share-box">
-            <input type="text" id="roomLink" readonly placeholder="Generating room link...">
-            <button onclick="copyRoomLink()">Copy</button>
+        <div class="friends-card-grid">
+          <!-- Left Column: Join with Room Code -->
+          <div class="friends-card-col">
+            <div class="fz-col-header">
+              <div class="fz-icon-box glow-blue"><i data-lucide="key-round"></i></div>
+              <div>
+                <h3 class="fz-col-title" data-i18n="join_room_code">Join with Room Code</h3>
+                <p class="fz-col-desc" data-i18n="join_room_desc">Enter room code or shared link to join a private duel immediately.</p>
+              </div>
+            </div>
+            <div class="room-join-group">
+              <input type="text" id="joinRoomInput" placeholder="Enter room code or link..." data-i18n-placeholder="enter_room_code" class="room-code-input" onkeydown="if(event.key==='Enter')joinRoomByCode()">
+              <button class="btn-join-room" onclick="joinRoomByCode()"><i data-lucide="log-in"></i> <span data-i18n="join">Join</span></button>
+            </div>
           </div>
-          <div class="room-status-text" id="roomStatus">Waiting for friend to join...</div>
-          <button class="btn-cancel-room" onclick="cancelRoom()">Cancel Room</button>
+
+          <!-- Divider -->
+          <div class="friends-card-divider">
+            <span data-i18n="or_divider">— OR —</span>
+          </div>
+
+          <!-- Right Column: Create Private Room -->
+          <div class="friends-card-col">
+            <div class="fz-col-header">
+              <div class="fz-icon-box glow-cyan"><i data-lucide="plus-circle"></i></div>
+              <div>
+                <h3 class="fz-col-title" data-i18n="create_private_room">Create Private Room</h3>
+                <p class="fz-col-desc" data-i18n="create_room_desc">Open a private board, send the invite link to a friend, and start playing.</p>
+              </div>
+            </div>
+            <div class="room-create-group">
+              <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()"><i data-lucide="plus"></i> <span data-i18n="btn_create_private_room">+ Create Private Room</span></button>
+            </div>
+            <div id="roomSection" style="display:none;">
+              <div class="room-share-box">
+                <input type="text" id="roomLink" readonly placeholder="Generating room link...">
+                <button onclick="copyRoomLink()"><i data-lucide="copy"></i> <span data-i18n="copy">Copy</span></button>
+              </div>
+              <div class="room-status-text" id="roomStatus" data-i18n="waiting_friend">Waiting for friend to join...</div>
+              <button class="btn-cancel-room" onclick="cancelRoom()" data-i18n="cancel_room">Cancel Room</button>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -1236,6 +1830,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
@@ -1320,6 +1915,7 @@
     if (targetBtn) {
       targetBtn.classList.add('active');
     }
+    if (window.lucide) lucide.createIcons();
   }
 
   // ========== Init ==========
@@ -1333,12 +1929,23 @@
     // Sidebar
     document.getElementById('sidebarUsername').textContent = currentUser.username;
     document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (window.renderGuestBadges) renderGuestBadges(currentUser);
 
     // Hero welcome banner
     const heroUsername = document.getElementById('heroUsername');
     if (heroUsername) heroUsername.textContent = currentUser.username;
     const heroElo = document.getElementById('heroElo');
     if (heroElo) heroElo.textContent = currentUser.elo;
+    const heroRankBadge = document.getElementById('heroRankBadge');
+    if (heroRankBadge) {
+      heroRankBadge.innerHTML = renderRankBadge(currentUser.elo, { size: 'md' });
+    }
+    const heroEloBadgeContainer = document.getElementById('heroEloBadgeContainer');
+    if (heroEloBadgeContainer) {
+      const tier = getRankTier(currentUser.elo);
+      heroEloBadgeContainer.style.borderColor = tier.color + '55';
+      heroEloBadgeContainer.style.boxShadow = `0 4px 18px ${tier.color}22`;
+    }
 
     // Avatar: show profile picture if available, else fallback initial
     if (currentUser.avatar_url) {
@@ -1365,10 +1972,13 @@
       .catch(() => {});
 
     renderBotGrid();
-    initSocket();
+    initSocket(currentUser);
     setupSocketListeners();
     checkActiveGame();
     loadActivities();
+    loadMiniLeaderboard();
+    loadBattlepassSummary();
+    if (window.lucide) lucide.createIcons();
     if (socket && socket.connected) {
       socket.emit('request_queue_counts');
     } else {
@@ -1378,14 +1988,21 @@
     }
   }
 
+  let socketListenersSetup = false;
   function setupSocketListeners() {
+    if (socketListenersSetup) return;
+    socketListenersSetup = true;
+
     socket.on('match_found', (data) => {
+      stopMatchQueueUI();
       sessionStorage.setItem('gameData', JSON.stringify(data));
       window.location.href = 'game.html';
     });
 
     socket.on('queue_joined', () => {
-      document.getElementById('queueStatus').textContent = 'Searching for an opponent...';
+      if (inQueue) {
+        startMatchQueueUI();
+      }
     });
 
     socket.on('queue_update', (data) => {
@@ -1398,7 +2015,40 @@
     });
 
     socket.on('error', (data) => {
+      if (inQueue) {
+        inQueue = false;
+        stopMatchQueueUI();
+        const btn = document.getElementById('findMatchBtn');
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="swords"></i> Find Match';
+          btn.classList.remove('searching');
+        }
+        if (window.lucide) lucide.createIcons();
+      }
+      if (inDiceQueue) {
+        inDiceQueue = false;
+        const btn = document.getElementById('findDiceBtn');
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="dices"></i> <span>MiniDice</span>';
+          btn.classList.remove('searching');
+        }
+        document.getElementById('diceQueueStatus').textContent = '';
+        if (window.lucide) lucide.createIcons();
+      }
       showToast(data.message, 'error');
+    });
+
+    socket.on('disconnect', () => {
+      if (inQueue) {
+        inQueue = false;
+        stopMatchQueueUI();
+        const btn = document.getElementById('findMatchBtn');
+        if (btn) {
+          btn.innerHTML = '<i data-lucide="swords"></i> Find Match';
+          btn.classList.remove('searching');
+        }
+        if (window.lucide) lucide.createIcons();
+      }
     });
 
     socket.on('room_cancelled', () => {
@@ -1424,6 +2074,7 @@
         
         // Prepend to feed
         feedList.insertBefore(itemNode, feedList.firstChild);
+        if (window.lucide) lucide.createIcons();
         
         // Maintain max 15 items in feed
         while (feedList.children.length > 15) {
@@ -1448,16 +2099,16 @@
   }
 
   function renderActivityItem(act) {
-    const emojis = {
-      ranked_win: '⚔️',
-      elo_milestone: '👑',
-      battlepass_tier: '🏆',
-      shop_purchase: '🛒',
-      achievement: '🌟',
-      season_start: '🎉'
+    const iconNames = {
+      ranked_win: 'swords',
+      elo_milestone: 'crown',
+      battlepass_tier: 'award',
+      shop_purchase: 'shopping-bag',
+      achievement: 'sparkles',
+      season_start: 'party-popper'
     };
     
-    const emoji = emojis[act.type] || '🔔';
+    const iconName = iconNames[act.type] || 'bell';
     let textHTML = '';
     const details = act.details || {};
     
@@ -1488,7 +2139,7 @@
     
     return `
       <div class="feed-item">
-        <span class="act-icon">${emoji}</span>
+        <span class="act-icon"><i data-lucide="${iconName}"></i></span>
         <div style="flex: 1;">
           <div class="act-text">${textHTML}</div>
           <div class="act-time">${timeText}</div>
@@ -1500,10 +2151,10 @@
   function escapeHTML(str) {
     if (!str) return '';
     return str.toString()
-      .replace(/&/g, '&')
-      .replace(/</g, '<')
-      .replace(/>/g, '>')
-      .replace(/"/g, '"')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
 
@@ -1518,11 +2169,77 @@
             feedList.innerHTML = '<div class="feed-loading">No recent activity</div>';
           } else {
             feedList.innerHTML = data.activities.map(act => renderActivityItem(act)).join('');
+            if (window.lucide) lucide.createIcons();
           }
         }
       }
     } catch (err) {
       console.error('Failed to load activities:', err);
+    }
+  }
+
+  async function loadMiniLeaderboard() {
+    try {
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      const tbody = document.getElementById('miniLeaderboardBody');
+      if (!tbody) return;
+      const list = (data.leaderboard || []).slice(0, 5);
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="lb-empty" style="text-align:center; padding: 24px; color: var(--text-muted);">No players yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map((user, idx) => {
+        const rank = idx + 1;
+        const rankBadge = `#${rank}`;
+        const record = `${user.wins || 0}W - ${user.losses || 0}L`;
+        return `
+          <tr>
+            <td><span class="mini-lb-rank lb-rank rank-${rank}">${rankBadge}</span></td>
+            <td class="mini-lb-player lb-user">
+              <div class="lb-user-cell">
+                <span class="lb-username">${escapeHTML(user.username)}</span>
+                ${user.title ? `<span class="user-title-badge">${escapeHTML(user.title)}</span>` : ''}
+              </div>
+            </td>
+            <td class="mini-lb-record lb-record">${record}</td>
+            <td class="mini-lb-elo lb-rating">
+              ${renderRankBadge(user.elo, { size: 'sm' })}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      if (window.lucide) lucide.createIcons();
+    } catch (err) {
+      console.error('Failed to load mini leaderboard:', err);
+    }
+  }
+
+  async function loadBattlepassSummary() {
+    try {
+      const res = await fetch('/api/battlepass');
+      if (!res.ok) return;
+      const data = await res.json();
+      const bp = data.battlepass;
+      if (!bp) return;
+
+      const tierEl = document.getElementById('bpTierVal');
+      if (tierEl) tierEl.textContent = bp.tier || 1;
+
+      const xpCountEl = document.getElementById('bpXpCount');
+      const pb = document.getElementById('bpProgressBar');
+      if (bp.xpNeededForNext > 0) {
+        const current = bp.xpInCurrentTier || 0;
+        const needed = bp.xpNeededForNext;
+        const pct = Math.min(100, Math.round((current / needed) * 100));
+        if (xpCountEl) xpCountEl.textContent = `${current.toLocaleString()} / ${needed.toLocaleString()} XP`;
+        if (pb) pb.style.width = pct + '%';
+      } else {
+        if (xpCountEl) xpCountEl.textContent = `${(bp.xp || 0).toLocaleString()} XP (MAX)`;
+        if (pb) pb.style.width = '100%';
+      }
+    } catch (err) {
+      console.error('Failed to load battlepass summary:', err);
     }
   }
 
@@ -1541,72 +2258,137 @@
   }
 
   // ========== Matchmaking ==========
+  let queueTimerInterval = null;
+  let queueSeconds = 0;
+
+  function updateMatchQueueTimerDisplay() {
+    const el = document.getElementById('matchQueueTimer');
+    if (!el) return;
+    const m = Math.floor(queueSeconds / 60);
+    const s = queueSeconds % 60;
+    el.textContent = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  function startMatchQueueUI() {
+    const card = document.getElementById('queueSearchingCard');
+    if (card) card.style.display = 'flex';
+    const qs = document.getElementById('queueStatus');
+    if (qs) qs.textContent = '';
+    
+    if (queueTimerInterval) return; // Already running, preserve timer
+    queueSeconds = 0;
+    updateMatchQueueTimerDisplay();
+    queueTimerInterval = setInterval(() => {
+      queueSeconds++;
+      updateMatchQueueTimerDisplay();
+    }, 1000);
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  function stopMatchQueueUI() {
+    if (queueTimerInterval) {
+      clearInterval(queueTimerInterval);
+      queueTimerInterval = null;
+    }
+    queueSeconds = 0;
+    const card = document.getElementById('queueSearchingCard');
+    if (card) card.style.display = 'none';
+    const qs = document.getElementById('queueStatus');
+    if (qs) qs.textContent = '';
+  }
+
   function toggleQueue() {
     if (!socket || !socket.connected) {
-      showToast('Connecting to server...', 'info');
-      initSocket();
+      showToast(typeof window.t === 'function' ? window.t('connecting_server', 'Connecting to server...') : 'Connecting to server...', 'info');
+      initSocket(currentUser);
       setTimeout(() => toggleQueue(), 500);
       return;
     }
+    const btn = document.getElementById('findMatchBtn');
     if (inQueue) {
       socket.emit('leave_queue');
       inQueue = false;
-      document.getElementById('findMatchBtn').textContent = 'Find Match';
-      document.getElementById('findMatchBtn').classList.remove('searching');
-      document.getElementById('queueStatus').textContent = '';
+      stopMatchQueueUI();
+      if (btn) {
+        const txt = typeof window.t === 'function' ? window.t('find_match', 'Find Match') : 'Find Match';
+        btn.innerHTML = `<i data-lucide="swords"></i> <span data-i18n="find_match">${txt}</span>`;
+        btn.classList.remove('searching');
+      }
+      if (window.lucide) lucide.createIcons();
     } else {
-      socket.emit('join_queue');
+      const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+      socket.emit('join_queue', { guestUsername: gUser });
       inQueue = true;
-      document.getElementById('findMatchBtn').textContent = 'Cancel Search';
-      document.getElementById('findMatchBtn').classList.add('searching');
-      document.getElementById('queueStatus').textContent = 'Searching for an opponent...';
+      startMatchQueueUI();
+      if (btn) {
+        const txt = typeof window.t === 'function' ? window.t('cancel_search', 'Cancel Search') : 'Cancel Search';
+        btn.innerHTML = `<i data-lucide="x"></i> <span data-i18n="cancel_search">${txt}</span>`;
+        btn.classList.add('searching');
+      }
+      if (window.lucide) lucide.createIcons();
     }
   }
 
   function toggleDiceQueue() {
     if (!socket || !socket.connected) {
-      showToast('Connecting to server...', 'info');
-      initSocket();
+      showToast(typeof window.t === 'function' ? window.t('connecting_server', 'Connecting to server...') : 'Connecting to server...', 'info');
+      initSocket(currentUser);
       setTimeout(() => toggleDiceQueue(), 500);
       return;
     }
+    const btn = document.getElementById('findDiceBtn');
     if (inDiceQueue) {
       socket.emit('leave_dice_queue');
       inDiceQueue = false;
-      document.getElementById('findDiceBtn').textContent = '🎲 MiniDice';
-      document.getElementById('findDiceBtn').classList.remove('searching');
+      if (btn) {
+        btn.innerHTML = '<i data-lucide="dices"></i> <span>MiniDice</span>';
+        btn.classList.remove('searching');
+      }
       document.getElementById('diceQueueStatus').textContent = '';
+      if (window.lucide) lucide.createIcons();
     } else {
-      socket.emit('join_dice_queue');
+      const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+      socket.emit('join_dice_queue', { guestUsername: gUser });
       inDiceQueue = true;
-      document.getElementById('findDiceBtn').textContent = 'Cancel';
-      document.getElementById('findDiceBtn').classList.add('searching');
-      document.getElementById('diceQueueStatus').textContent = 'Searching for dice opponent...';
+      if (btn) {
+        const txt = typeof window.t === 'function' ? window.t('cancel_queue', 'Cancel') : 'Cancel';
+        btn.innerHTML = `<i data-lucide="x"></i> <span data-i18n="cancel_queue">${txt}</span>`;
+        btn.classList.add('searching');
+      }
+      const searchingTxt = typeof window.t === 'function' ? window.t('searching_opponent', 'Searching for Opponent...') : 'Searching for Opponent...';
+      document.getElementById('diceQueueStatus').textContent = searchingTxt;
+      if (window.lucide) lucide.createIcons();
     }
   }
 
   // ========== Bot Game ==========
   function startBotGame() {
     if (!socket || !socket.connected) {
-      showToast('Connecting to server...', 'info');
-      initSocket();
+      showToast(typeof window.t === 'function' ? window.t('connecting_server', 'Connecting to server...') : 'Connecting to server...', 'info');
+      initSocket(currentUser);
       setTimeout(() => startBotGame(), 500);
       return;
     }
-    socket.emit('start_bot_game', { difficulty: selectedBot });
-    showToast('Starting game vs Computer...', 'info');
+    const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+    socket.emit('start_bot_game', { difficulty: selectedBot, guestUsername: gUser });
+    showToast(typeof window.t === 'function' ? window.t('game_starting', 'Game starting...') : 'Game starting...', 'info');
   }
 
   // ========== Private Rooms ==========
   async function createRoom() {
     if (!socket || !socket.connected) {
       showToast('Connecting to server...', 'info');
-      initSocket();
+      initSocket(currentUser);
       setTimeout(() => createRoom(), 500);
       return;
     }
     try {
-      const res = await fetch('/api/rooms/create', { method: 'POST' });
+      const headers = {};
+      const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+      if (gUser) headers['x-guest-username'] = gUser;
+      const res = await fetch('/api/rooms/create', { method: 'POST', headers });
       const data = await res.json();
       if (!data.success) { showToast('Failed to create room', 'error'); return; }
       currentRoomId = data.roomId;
@@ -1622,9 +2404,19 @@
 
   function copyRoomLink() {
     const input = document.getElementById('roomLink');
+    if (!input) return;
     input.select();
-    document.execCommand('copy');
-    showToast('Link copied!', 'success');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('Link copied!', 'success');
+      }).catch(() => {
+        document.execCommand('copy');
+        showToast('Link copied!', 'success');
+      });
+    } else {
+      document.execCommand('copy');
+      showToast('Link copied!', 'success');
+    }
   }
 
   function cancelRoom() {
@@ -1634,6 +2426,23 @@
     document.getElementById('roomSection').style.display = 'none';
     document.getElementById('createRoomBtn').style.display = 'inline-block';
     currentRoomId = null;
+  }
+
+  function joinRoomByCode() {
+    const input = document.getElementById('joinRoomInput');
+    let val = (input ? input.value : '').trim();
+    if (!val) {
+      showToast('Please enter room code or link', 'error');
+      return;
+    }
+    if (val.includes('room=')) {
+      try {
+        const url = new URL(val, window.location.origin);
+        const r = url.searchParams.get('room');
+        if (r) val = r;
+      } catch (e) {}
+    }
+    window.location.href = 'join.html?room=' + encodeURIComponent(val);
   }
 
   // ========== Toast ==========
@@ -1653,6 +2462,7 @@
   window.createRoom = createRoom;
   window.copyRoomLink = copyRoomLink;
   window.cancelRoom = cancelRoom;
+  window.joinRoomByCode = joinRoomByCode;
   window.selectBot = selectBot;
   window.filterBots = filterBots;
   window.switchPlayTab = switchPlayTab;

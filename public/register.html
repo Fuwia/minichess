@@ -7,31 +7,36 @@
   <title>MiniChess — Register</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root {
-      --page-bg: #0d1117;
-      --surface: #181b20;
-      --surface2: #1f2229;
-      --border-glass: rgba(255,255,255,0.08);
-      --border-active: rgba(255,255,255,0.2);
+      --page-bg: #090c10;
+      --surface: rgba(18, 24, 34, 0.75);
+      --surface2: rgba(26, 34, 48, 0.75);
+      --border-glass: rgba(255,255,255,0.07);
+      --border-active: rgba(255,255,255,0.18);
       --text-bright: #f0f3f7;
-      --text-dim: #8b949e;
-      --text-muted: #5c6470;
-      --emerald: #3fb950;
-      --emerald-glow: rgba(63,185,80,0.3);
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
       --accent-cyan: #06b6d4;
       --cyan-glow: rgba(6,182,212,0.3);
-      --gold: #d2991d;
-      --red-soft: #f85149;
-      --glass-surface: rgba(24, 27, 32, 0.65);
+      --gold: #f59e0b;
+      --red-soft: #f43f5e;
+      --glass-surface: rgba(18, 24, 34, 0.75);
       --glass-border: rgba(255, 255, 255, 0.07);
+      --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
     }
     
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-main);
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -136,8 +141,8 @@
       justify-content: center;
       position: relative;
     }
-    .cell.dark { background: rgba(31,34,41,0.9); }
-    .cell.light { background: rgba(51,55,66,0.9); }
+    .cell.dark { background: #1e293b; }
+    .cell.light { background: #334155; }
     .cell img {
       width: 70%;
       height: 70%;
@@ -153,8 +158,10 @@
       overflow: hidden;
       position: relative;
       border-radius: 12px;
-      background: rgba(255,255,255,0.03);
+      background: rgba(18, 24, 34, 0.75);
       border: 1px solid var(--border-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .ticker-content {
       display: flex;
@@ -168,11 +175,22 @@
       justify-content: center;
       padding: 0 20px;
       font-size: 15px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-bright);
       text-align: center;
+      gap: 10px;
     }
-    .ticker-item span { color: var(--accent-cyan); font-weight: 700; margin-right: 8px; }
+    .ticker-item .ticker-icon {
+      color: var(--emerald);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ticker-item .ticker-icon svg {
+      width: 20px;
+      height: 20px;
+      filter: drop-shadow(0 0 6px var(--emerald-glow));
+    }
     
     @keyframes tickText {
       0%, 20% { transform: translateY(0); }
@@ -418,6 +436,8 @@
 </head>
 <body>
 
+<div id="langToggleTop" class="lang-toggle-top"></div>
+
 <div class="bg-orbs">
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
@@ -476,10 +496,10 @@
     
     <div class="feature-ticker">
       <div class="ticker-content">
-        <div class="ticker-item"><span>⚔️</span> Fast-paced Minichess Duels</div>
-        <div class="ticker-item"><span>🏆</span> Climb the Global Leaderboards</div>
-        <div class="ticker-item"><span>🤖</span> Challenge Advanced Bots</div>
-        <div class="ticker-item"><span>🎒</span> Unlock Premium Customizations</div>
+        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="swords"></i></span> <span data-i18n="ticker_duels">Fast-paced Minichess Duels</span></div>
+        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="trophy"></i></span> <span data-i18n="ticker_leaderboards">Climb the Global Leaderboards</span></div>
+        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="bot"></i></span> <span data-i18n="ticker_bots">Challenge Advanced Bots</span></div>
+        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="shopping-bag"></i></span> <span data-i18n="ticker_customizations">Unlock Premium Customizations</span></div>
       </div>
     </div>
   </div>
@@ -490,8 +510,8 @@
       <div class="auth-logo">
         <img src="img/logo.png" alt="MiniChess" onerror="this.style.display='none'">
       </div>
-      <h1>Create Account</h1>
-      <p class="subtitle">Join the MiniChess community</p>
+      <h1 data-i18n="register_heading">Create Account</h1>
+      <p class="subtitle" data-i18n="register_subtitle">Join the MiniChess community</p>
       
       <div id="error" class="error-msg">
         <svg viewBox="0 0 24 24">
@@ -504,24 +524,24 @@
       
       <form id="registerForm">
         <div class="form-group">
-          <label for="username">Username</label>
+          <label for="username" data-i18n="username_label">Username</label>
           <div class="input-wrapper">
             <svg class="icon" viewBox="0 0 24 24">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <input type="text" id="username" name="username" placeholder="Choose a username" required minlength="3" maxlength="20" autocomplete="username">
+            <input type="text" id="username" name="username" placeholder="Choose a username" data-i18n-placeholder="username_placeholder" required minlength="3" maxlength="20" autocomplete="username">
           </div>
         </div>
         
         <div class="form-group">
-          <label for="password">Password</label>
+          <label for="password" data-i18n="password_label">Password</label>
           <div class="input-wrapper">
             <svg class="icon" viewBox="0 0 24 24">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <input type="password" id="password" name="password" placeholder="Choose a password" required minlength="4" autocomplete="new-password">
+            <input type="password" id="password" name="password" placeholder="Choose a password" data-i18n-placeholder="password_placeholder" required minlength="4" autocomplete="new-password">
             <button type="button" class="btn-toggle-pass" id="togglePass" tabindex="-1" aria-label="Toggle Password Visibility">
               <svg viewBox="0 0 24 24" class="eye-icon">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -532,12 +552,12 @@
         </div>
 
         <div class="form-group">
-          <label for="confirmPassword">Confirm Password</label>
+          <label for="confirmPassword" data-i18n="confirm_password_label">Confirm Password</label>
           <div class="input-wrapper">
             <svg class="icon" viewBox="0 0 24 24">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
-            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required minlength="4" autocomplete="new-password">
+            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" data-i18n-placeholder="confirm_password_placeholder" required minlength="4" autocomplete="new-password">
             <button type="button" class="btn-toggle-pass" id="toggleConfirmPass" tabindex="-1" aria-label="Toggle Password Visibility">
               <svg viewBox="0 0 24 24" class="eye-icon">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -548,15 +568,16 @@
         </div>
         
         <button type="submit" class="btn-submit" id="submitBtn">
-          <span class="btn-text">Register Account</span>
+          <span class="btn-text" data-i18n="register_btn">Register Account</span>
           <div class="spinner"></div>
         </button>
       </form>
-      <p class="switch-link">Already have an account? <a href="index.html">Log In</a></p>
+      <p class="switch-link"><span data-i18n="already_account">Already have an account?</span> <a href="index.html" data-i18n="log_in">Log In</a></p>
     </div>
   </div>
 </div>
 
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script>
   // Password Visibility Toggle Logic
@@ -588,6 +609,16 @@
 
   setupPasswordToggle('togglePass', 'password');
   setupPasswordToggle('toggleConfirmPass', 'confirmPassword');
+
+  // Check if already logged in with a registered account
+  (async () => {
+    try {
+      const user = await getCurrentUser();
+      if (user && !user.isGuest && !(user.username && user.username.startsWith('Guest_'))) {
+        window.location.href = 'lobby.html';
+      }
+    } catch (e) {}
+  })();
 
   // Register Form Submission
   const registerForm = document.getElementById('registerForm');
@@ -623,7 +654,13 @@
       const result = await register(username, password);
 
       if (result.success) {
-        window.location.href = 'lobby.html';
+        const redirect = sessionStorage.getItem('redirectAfterLogin');
+        if (redirect) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          window.location.href = redirect;
+        } else {
+          window.location.href = 'lobby.html';
+        }
       } else {
         showError(result.message);
       }
@@ -647,6 +684,11 @@
     void errorEl.offsetWidth; // trigger reflow
     errorText.textContent = msg;
     errorEl.classList.add('show');
+  }
+
+  // Initialize Lucide icons
+  if (window.lucide) {
+    lucide.createIcons();
   }
 </script>
 </body>

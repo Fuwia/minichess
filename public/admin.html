@@ -4,35 +4,39 @@
   <meta charset="UTF-8">
   <link rel="icon" type="image/png" href="favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MiniChess — Admin</title>
+  <title>MiniChess — Admin Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
-      --page-bg: #0d1117;
-      --surface: #181b20;
-      --surface2: #1f2229;
-      --surface3: #262930;
-      --border-subtle: rgba(255,255,255,0.06);
-      --border-glass: rgba(255,255,255,0.08);
+      --page-bg: #090c10;
+      --surface: rgba(18, 24, 34, 0.75);
+      --surface2: rgba(26, 34, 48, 0.75);
+      --surface3: rgba(33, 44, 62, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --border-glass: rgba(255, 255, 255, 0.07);
       --text-bright: #f0f3f7;
-      --text-dim: #8b949e;
-      --text-muted: #5c6470;
-      --emerald: #3fb950;
-      --emerald-glow: rgba(63,185,80,0.3);
-      --gold: #d2991d;
-      --gold-glow: rgba(210,153,29,0.25);
-      --red-soft: #f85149;
-      --accent-purple: #7c3aed;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --gold: #f59e0b;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --red-soft: #f43f5e;
+      --accent-purple: #8b5cf6;
       --accent-blue: #3b82f6;
       --accent-cyan: #06b6d4;
-      --glass-surface: linear-gradient(135deg, rgba(24,27,32,0.85), rgba(31,34,41,0.75));
-      --glass-border: rgba(255,255,255,0.07);
+      --glass-surface: rgba(18, 24, 34, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.07);
+      --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-main);
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -100,78 +104,392 @@
     .main-content::-webkit-scrollbar { width: 6px; }
     .main-content::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
 
+    /* Page Header */
     .page-header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 24px;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 16px;
     }
-    .page-header h1 { font-size: 24px; font-weight: 700; }
+    .header-title-wrap h1 {
+      font-size: 26px; font-weight: 800; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px;
+    }
+    .header-title-wrap h1 i { color: var(--emerald); }
+    .header-subtitle { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+    /* Action Buttons in Header */
+    .btn-header {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+      text-decoration: none; border: 1px solid transparent;
+    }
+    .btn-header i { width: 16px; height: 16px; }
+    .btn-header-primary {
+      background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: var(--emerald);
+    }
+    .btn-header-primary:hover {
+      background: var(--emerald); color: #000; box-shadow: 0 4px 14px var(--emerald-glow);
+    }
+    .btn-header-secondary {
+      background: rgba(255, 255, 255, 0.05); border-color: var(--glass-border); color: var(--text-bright);
+    }
+    .btn-header-secondary:hover {
+      background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-header-broadcast {
+      background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.35); color: #c4b5fd;
+    }
+    .btn-header-broadcast:hover {
+      background: var(--accent-purple); color: #fff; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+    }
+    .btn-header-danger {
+      background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.3); color: var(--red-soft);
+    }
+    .btn-header-danger:hover {
+      background: var(--red-soft); color: #fff; box-shadow: 0 4px 14px rgba(244, 63, 94, 0.3);
+    }
+
+    /* ===== KPI STAT CARDS ===== */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 16px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--glass-surface); border: 1px solid var(--glass-border);
+      border-radius: 14px; padding: 18px 20px; position: relative; overflow: hidden;
+      display: flex; flex-direction: column; justify-content: space-between;
+      backdrop-filter: blur(12px); transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.15); }
+    .kpi-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .kpi-icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .kpi-icon-wrap i { width: 18px; height: 18px; }
+    .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+    .kpi-value { font-size: 26px; font-weight: 800; color: var(--text-bright); line-height: 1.1; font-family: var(--font-mono); }
+    .kpi-sub { font-size: 11px; color: var(--text-dim); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .kpi-badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+    }
+
+    /* Colors per KPI */
+    .kpi-reg .kpi-icon-wrap { background: rgba(16, 185, 129, 0.15); color: var(--emerald); }
+    .kpi-guests .kpi-icon-wrap { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+    .kpi-banned .kpi-icon-wrap { background: rgba(244, 63, 94, 0.15); color: var(--red-soft); }
+    .kpi-games .kpi-icon-wrap { background: rgba(245, 158, 11, 0.15); color: var(--gold); }
+    .kpi-online .kpi-icon-wrap { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+    .kpi-totalgames .kpi-icon-wrap { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+
+    /* ===== TABS ===== */
+    .admin-tabs-nav {
+      display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 4px; overflow-x: auto;
+    }
+    .admin-tab-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px 10px 0 0;
+      background: transparent; border: none; border-bottom: 2px solid transparent;
+      color: var(--text-dim); font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .admin-tab-btn:hover { color: var(--text-bright); background: rgba(255, 255, 255, 0.03); }
+    .admin-tab-btn.active {
+      color: var(--emerald); border-bottom-color: var(--emerald); background: rgba(16, 185, 129, 0.08);
+    }
+    .tab-count-pill {
+      font-size: 11px; padding: 2px 7px; border-radius: 10px; font-weight: 700;
+      background: rgba(255, 255, 255, 0.07); color: var(--text-dim); font-family: var(--font-mono);
+    }
+    .admin-tab-btn.active .tab-count-pill {
+      background: rgba(16, 185, 129, 0.25); color: var(--emerald);
+    }
+
+    /* Tab Panes */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ===== CARDS & TABLES ===== */
     .card {
       background: var(--glass-surface); border: 1px solid var(--glass-border);
-      border-radius: 16px; padding: 24px 28px; overflow-x: auto;
+      border-radius: 16px; padding: 20px 24px; overflow-x: auto;
+      backdrop-filter: blur(12px); margin-bottom: 20px;
     }
 
-    .admin-table { width: 100%; border-collapse: collapse; }
-    .admin-table th, .admin-table td { padding: 12px 14px; text-align: left; font-size: 14px; }
+    /* Toolbar inside card */
+    .card-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+    }
+    .search-box-wrap {
+      position: relative; min-width: 260px; max-width: 400px; flex: 1;
+    }
+    .search-box-wrap i {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;
+    }
+    .search-box-input {
+      width: 100%; padding: 9px 14px 9px 38px; background: rgba(13, 17, 23, 0.7);
+      border: 1px solid var(--glass-border); border-radius: 10px;
+      color: var(--text-bright); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .search-box-input:focus { border-color: var(--emerald); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+    .filter-pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .filter-pill {
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border);
+      color: var(--text-dim); cursor: pointer; transition: all 0.2s ease;
+    }
+    .filter-pill:hover { color: var(--text-bright); background: rgba(255, 255, 255, 0.08); }
+    .filter-pill.active { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: var(--emerald); }
+
+    /* Informative Banner Box */
+    .info-banner {
+      background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25);
+      border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .info-banner-icon { color: var(--accent-cyan); flex-shrink: 0; margin-top: 2px; }
+    .info-banner-icon i { width: 20px; height: 20px; }
+    .info-banner-content h4 { font-size: 14px; font-weight: 700; color: #a5f3fc; margin-bottom: 4px; }
+    .info-banner-content p { font-size: 13px; color: #94a3b8; line-height: 1.5; }
+
+    /* Table Styles */
+    .admin-table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    .admin-table th, .admin-table td { padding: 12px 14px; text-align: left; font-size: 13px; vertical-align: middle; }
     .admin-table th {
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
       color: var(--text-muted); border-bottom: 1px solid var(--border-subtle);
+      background: rgba(0, 0, 0, 0.15);
     }
-    .admin-table td { border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-dim); }
-    .admin-table tr:hover td { background: rgba(255,255,255,0.02); color: var(--text-bright); }
+    .admin-table td { border-bottom: 1px solid rgba(255, 255, 255, 0.03); color: var(--text-dim); }
+    .admin-table tr:hover td { background: rgba(255, 255, 255, 0.02); color: var(--text-bright); }
 
+    /* User Row Presentation */
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-avatar-mini {
+      width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff;
+    }
+    .user-names-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .user-name-line { font-weight: 700; color: var(--text-bright); font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    .user-id-sub { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* Badges */
     .badge-admin {
-      display: inline-block; background: rgba(210,153,29,0.15); color: var(--gold);
-      font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-left: 6px;
-      border: 1px solid rgba(210,153,29,0.2);
+      display: inline-flex; align-items: center; gap: 4px; background: rgba(245, 158, 11, 0.15); color: var(--gold);
+      font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;
+      border: 1px solid rgba(245, 158, 11, 0.3); text-transform: uppercase;
+    }
+    .badge-banned {
+      display: inline-flex; align-items: center; gap: 4px; background: rgba(244, 63, 94, 0.18); color: var(--red-soft);
+      font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;
+      border: 1px solid rgba(244, 63, 94, 0.35); text-transform: uppercase;
+    }
+    .badge-active {
+      display: inline-flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.12); color: var(--emerald);
+      font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 4px;
+      border: 1px solid rgba(16, 185, 129, 0.25); text-transform: uppercase;
+    }
+    .badge-guest-pill {
+      display: inline-flex; align-items: center; gap: 4px; background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);
+      font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+      border: 1px solid rgba(6, 182, 212, 0.25); text-transform: uppercase;
     }
 
-    .btn-danger {
-      background: transparent; border: 1px solid var(--red-soft); color: var(--red-soft);
-      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      font-family: inherit; transition: all 0.2s;
+    /* Action Buttons in Tables */
+    .action-btn-group { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
+      font-family: inherit; transition: all 0.2s; border: 1px solid transparent; background: transparent;
+      text-decoration: none;
     }
-    .btn-danger:hover { background: var(--red-soft); color: #fff; }
+    .btn-action i { width: 12px; height: 12px; }
+
+    .btn-ban {
+      border-color: rgba(244, 63, 94, 0.4); color: var(--red-soft); background: rgba(244, 63, 94, 0.08);
+    }
+    .btn-ban:hover { background: var(--red-soft); color: #fff; }
+
+    .btn-unban {
+      border-color: rgba(16, 185, 129, 0.4); color: var(--emerald); background: rgba(16, 185, 129, 0.08);
+    }
+    .btn-unban:hover { background: var(--emerald); color: #000; }
+
     .btn-xp {
-      background: transparent; border: 1px solid var(--accent-purple); color: #a78bfa;
-      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      font-family: inherit; margin-right: 6px; transition: all 0.2s;
+      border-color: rgba(139, 92, 246, 0.4); color: #c4b5fd; background: rgba(139, 92, 246, 0.08);
     }
     .btn-xp:hover { background: var(--accent-purple); color: #fff; }
+
+    .btn-coins {
+      border-color: rgba(245, 158, 11, 0.4); color: var(--gold); background: rgba(245, 158, 11, 0.08);
+    }
+    .btn-coins:hover { background: var(--gold); color: #000; }
+
     .btn-bp-reset {
-      background: transparent; border: 1px solid var(--accent-cyan); color: var(--accent-cyan);
-      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      font-family: inherit; margin-right: 6px; transition: all 0.2s;
+      border-color: rgba(6, 182, 212, 0.4); color: var(--accent-cyan); background: rgba(6, 182, 212, 0.08);
     }
     .btn-bp-reset:hover { background: var(--accent-cyan); color: #000; }
+
     .btn-reset {
-      background: transparent; border: 1px solid var(--gold); color: var(--gold);
-      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      font-family: inherit; margin-right: 6px; transition: all 0.2s;
+      border-color: rgba(255, 255, 255, 0.15); color: var(--text-dim); background: rgba(255, 255, 255, 0.03);
     }
-    .btn-reset:hover { background: var(--gold); color: #000; }
-    .btn-reset-all {
-      padding: 10px 20px; background: var(--red-soft); color: #fff; border: none;
-      border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
-      font-family: inherit; transition: all 0.2s;
-    }
-    .btn-reset-all:hover { background: #ff6b6b; box-shadow: 0 4px 12px rgba(248,81,73,0.3); }
+    .btn-reset:hover { border-color: rgba(255, 255, 255, 0.3); color: var(--text-bright); }
 
-    .access-denied {
-      text-align: center; padding: 80px 20px; color: var(--text-dim);
+    .btn-danger {
+      border-color: rgba(244, 63, 94, 0.3); color: #fda4af; background: transparent;
     }
-    .access-denied h2 { font-size: 24px; margin-bottom: 10px; color: var(--red-soft); }
-    .access-denied a { color: var(--accent-cyan); text-decoration: none; font-weight: 600; }
-    .access-denied a:hover { color: #67e8f9; }
+    .btn-danger:hover { background: rgba(244, 63, 94, 0.25); border-color: var(--red-soft); color: #fff; }
 
+    .btn-admin-toggle {
+      border-color: rgba(245, 158, 11, 0.35); color: #fde68a; background: rgba(245, 158, 11, 0.08);
+    }
+    .btn-admin-toggle:hover { background: rgba(245, 158, 11, 0.25); color: #fff; }
+
+    /* Table Sorting Headers */
+    .th-sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+    .th-sortable:hover {
+      color: var(--text-bright);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .th-sortable .sort-icon {
+      margin-left: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+    .th-sortable.sorted-asc .sort-icon,
+    .th-sortable.sorted-desc .sort-icon {
+      color: var(--emerald);
+      opacity: 1;
+    }
+
+    /* Table Pagination Bar */
+    .table-pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 4px 4px;
+      margin-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-page {
+      min-width: 32px;
+      height: 32px;
+      padding: 0 8px;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-page:hover:not(:disabled) {
+      color: var(--text-bright);
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .btn-page.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--emerald);
+      color: var(--emerald);
+      font-weight: 700;
+    }
+    .btn-page:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .page-size-select {
+      background: rgba(13, 17, 23, 0.8);
+      border: 1px solid var(--glass-border);
+      color: var(--text-dim);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    /* Modals */
+    .admin-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center;
+      z-index: 1000; padding: 16px;
+    }
+    .admin-modal-backdrop.active,
+    .admin-modal-backdrop.open { display: flex; }
+    .admin-modal-card {
+      background: #161b22; border: 1px solid var(--glass-border); border-radius: 16px;
+      width: 100%; max-width: 480px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      animation: modalPop 0.2s ease;
+    }
+    @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-head h3 { font-size: 18px; font-weight: 700; color: var(--text-bright); display: flex; align-items: center; gap: 8px; }
+    .modal-close {
+      background: transparent; border: none; color: var(--text-dim); cursor: pointer; padding: 4px;
+      border-radius: 6px; transition: color 0.2s;
+    }
+    .modal-close:hover { color: var(--red-soft); }
+    .modal-body { margin-bottom: 20px; }
+    .modal-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .modal-input, .modal-textarea, .modal-select {
+      width: 100%; padding: 10px 14px; background: rgba(13, 17, 23, 0.9);
+      border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text-bright);
+      font-size: 14px; font-family: inherit; outline: none; margin-bottom: 14px;
+    }
+    .modal-input:focus, .modal-textarea:focus { border-color: var(--emerald); }
+    .preset-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .preset-chip {
+      padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border);
+      color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+    }
+    .preset-chip:hover { color: var(--text-bright); border-color: var(--emerald); background: rgba(16, 185, 129, 0.1); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+    /* Toast */
     .toast {
       position: fixed; top: 24px; right: 24px; padding: 14px 22px; border-radius: 12px;
       color: #fff; font-size: 14px; font-weight: 500; z-index: 9999;
-      animation: toastIn 0.3s ease; backdrop-filter: blur(12px);
+      animation: toastIn 0.3s ease; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-    .toast-success { background: rgba(34,197,94,0.9); }
-    .toast-error { background: rgba(248,81,73,0.9); }
+    .toast-success { background: rgba(16, 185, 129, 0.95); }
+    .toast-error { background: rgba(244, 63, 94, 0.95); }
+    .toast-info { background: rgba(59, 130, 246, 0.95); }
     @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Access Denied Card */
+    .access-denied {
+      text-align: center; padding: 80px 20px; color: var(--text-dim);
+    }
+    .access-denied h2 { font-size: 26px; margin-bottom: 10px; color: var(--red-soft); font-weight: 800; }
+    .access-denied a { color: var(--accent-cyan); text-decoration: none; font-weight: 600; }
+    .access-denied a:hover { color: #67e8f9; }
 
     @media (max-width: 900px) {
       .dashboard { grid-template-columns: 1fr; }
@@ -186,19 +504,21 @@
 <body>
 
 <div class="dashboard">
+  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
     </div>
     <nav class="sidebar-nav">
-      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
-      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
-      <a href="battlepass.html" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
-      <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
-      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
-      <a href="admin.html" id="navAdmin"><span class="nav-icon">⚙</span> Admin</a>
+      <a href="lobby.html" id="navPlay" data-i18n="nav_play"><i data-lucide="play" class="nav-icon"></i> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard" data-i18n="nav_leaderboard"><i data-lucide="trophy" class="nav-icon"></i> Leaderboard</a>
+      <a href="battlepass.html" id="navBattlepass" data-i18n="nav_battlepass"><i data-lucide="award" class="nav-icon"></i> Battlepass</a>
+      <a href="shop.html" id="navShop" data-i18n="nav_shop"><i data-lucide="shopping-bag" class="nav-icon"></i> Shop</a>
+      <a href="profile.html" id="navProfile" data-i18n="nav_profile"><i data-lucide="user" class="nav-icon"></i> Profile</a>
+      <a href="admin.html" id="navAdmin" class="active" data-i18n="nav_admin"><i data-lucide="settings" class="nav-icon"></i> Admin</a>
     </nav>
     <div class="sidebar-footer">
+      <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
       <div class="user-mini">
         <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
         <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -208,62 +528,551 @@
         </div>
       </div>
       <div class="sidebar-stats">
-        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
-        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
-        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl" data-i18n="stat_w">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl" data-i18n="stat_l">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl" data-i18n="stat_d">D</div></div>
       </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-actions">
+        <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+        <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+      </div>
     </div>
   </aside>
 
+  <!-- MAIN CONTENT -->
   <main class="main-content">
-    <div id="loading" style="text-align:center;color:var(--text-dim);padding:60px;">Loading...</div>
-
-    <div id="accessDenied" style="display:none;" class="access-denied">
-      <h2>Access Denied</h2>
-      <p>You do not have admin privileges.</p>
-      <br>
-      <a href="lobby.html">Back to Lobby</a>
+    <div id="loading" style="text-align:center;color:var(--text-dim);padding:80px 20px;">
+      <i data-lucide="loader-2" class="spin" style="width:36px;height:36px;color:var(--emerald);margin-bottom:12px;"></i>
+      <p>Yönetici paneli yükleniyor...</p>
     </div>
 
+    <!-- ACCESS DENIED -->
+    <div id="accessDenied" style="display:none;" class="access-denied">
+      <i data-lucide="shield-alert" style="width:54px;height:54px;color:var(--red-soft);margin-bottom:14px;"></i>
+      <h2>Erişim Reddedildi</h2>
+      <p>Bu sayfayı görüntülemek için yönetici ayrıcalıklarına sahip olmanız gerekmektedir.</p>
+      <br>
+      <a href="lobby.html"><i data-lucide="arrow-left" style="width:14px;height:14px;vertical-align:middle;"></i> Lobiye Dön</a>
+    </div>
+
+    <!-- ADMIN CONTENT -->
     <div id="adminContent" style="display:none;">
+      
+      <!-- Top Header -->
       <div class="page-header">
-        <h1>⚙ Admin Panel</h1>
-        <button class="btn-reset-all" onclick="resetAllStats()">Reset All Stats</button>
+        <div class="header-title-wrap">
+          <h1><i data-lucide="shield-check"></i> MiniChess Admin</h1>
+          <div class="header-subtitle">Oyuncu yönetimi, misafir temizliği, canlı maç izleme ve sistem bakım paneli</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header btn-header-secondary" onclick="loadAllAdminData()" title="Verileri Yenile">
+            <i data-lucide="refresh-cw"></i> Yenile
+          </button>
+          <button class="btn-header btn-header-broadcast" onclick="openBroadcastModal()">
+            <i data-lucide="megaphone"></i> Genel Duyuru
+          </button>
+          <button class="btn-header btn-header-primary" onclick="cleanupGuests(true)">
+            <i data-lucide="brush"></i> Misafirleri Temizle
+          </button>
+          <button class="btn-header btn-header-danger" onclick="resetAllStats()">
+            <i data-lucide="rotate-ccw"></i> Tüm Stats Sıfırla
+          </button>
+        </div>
       </div>
-      <div class="card">
-        <table class="admin-table" id="userTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Username</th>
-              <th>Elo</th>
-              <th>W / L / D</th>
-              <th>BP Tier</th>
-              <th>BP XP</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="userTableBody"></tbody>
-        </table>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-reg">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Kayıtlı Oyuncu</span>
+            <div class="kpi-icon-wrap"><i data-lucide="users"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiRegCount">0</div>
+          <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(16,185,129,0.15);color:var(--emerald);">Gerçek Hesap</span></div>
+        </div>
+
+        <div class="kpi-card kpi-guests">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Geçici Misafirler</span>
+            <div class="kpi-icon-wrap"><i data-lucide="user-x"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiGuestCount">0</div>
+          <div class="kpi-sub">
+            <span class="kpi-badge" style="background:rgba(6,182,212,0.15);color:var(--accent-cyan);">Geçici Oturum</span>
+            <a href="javascript:void(0)" onclick="cleanupGuests(true)" style="color:var(--accent-cyan);text-decoration:underline;font-size:11px;margin-left:auto;">Temizle</a>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-banned">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Banlı Hesaplar</span>
+            <div class="kpi-icon-wrap"><i data-lucide="shield-alert"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiBannedCount">0</div>
+          <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(244,63,94,0.15);color:var(--red-soft);">Askıya Alınmış</span></div>
+        </div>
+
+        <div class="kpi-card kpi-games">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Canlı Maçlar</span>
+            <div class="kpi-icon-wrap"><i data-lucide="swords"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiActiveGames">0</div>
+          <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(245,158,11,0.15);color:var(--gold);">Şu Anda Oynanıyor</span></div>
+        </div>
+
+        <div class="kpi-card kpi-online">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Çevrimiçi Bağlantı</span>
+            <div class="kpi-icon-wrap"><i data-lucide="radio"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiOnlineCount">0</div>
+          <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(59,130,246,0.15);color:var(--accent-blue);">Aktif Socket</span></div>
+        </div>
+
+        <div class="kpi-card kpi-totalgames">
+          <div class="kpi-card-top">
+            <span class="kpi-label">Toplam Maç</span>
+            <div class="kpi-icon-wrap"><i data-lucide="trophy"></i></div>
+          </div>
+          <div class="kpi-value" id="kpiTotalGames">0</div>
+          <div class="kpi-sub"><span class="kpi-badge" style="background:rgba(139,92,246,0.15);color:var(--accent-purple);">Oynanan Oyun</span></div>
+        </div>
       </div>
+
+      <!-- TABS BAR -->
+      <div class="admin-tabs-nav">
+        <button class="admin-tab-btn active" onclick="switchAdminTab('registered', this)">
+          <i data-lucide="user-check"></i> Kayıtlı Kullanıcılar
+          <span class="tab-count-pill" id="tabRegPill">0</span>
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('guests', this)">
+          <i data-lucide="user-x"></i> Misafir Profilleri
+          <span class="tab-count-pill" id="tabGuestPill">0</span>
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('games', this)">
+          <i data-lucide="swords"></i> Canlı Oyunlar & Sıra
+          <span class="tab-count-pill" id="tabGamesPill">0</span>
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('recent', this)">
+          <i data-lucide="history"></i> Son Tamamlanan Maçlar
+        </button>
+        <button class="admin-tab-btn" onclick="switchAdminTab('system', this)">
+          <i data-lucide="wrench"></i> Sistem Araçları & Bakım
+        </button>
+      </div>
+
+      <!-- TAB 1: REGISTERED USERS -->
+      <div class="tab-pane active" id="pane-registered">
+        <div class="card">
+          <div class="card-toolbar">
+            <div class="search-box-wrap">
+              <i data-lucide="search"></i>
+              <input type="text" id="regSearchInput" class="search-box-input" placeholder="Kullanıcı adı veya ID ile filtrele..." oninput="onRegSearchInput()">
+            </div>
+            <div class="filter-pills">
+              <span class="filter-pill active" data-filter="all" onclick="setRegFilter('all', this)">Tümü</span>
+              <span class="filter-pill" data-filter="admin" onclick="setRegFilter('admin', this)">Yöneticiler</span>
+              <span class="filter-pill" data-filter="banned" onclick="setRegFilter('banned', this)">Banlılar</span>
+              <span class="filter-pill" data-filter="active" onclick="setRegFilter('active', this)">Aktif</span>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th class="th-sortable" onclick="sortRegisteredUsers('id')" style="width:70px;">ID <span class="sort-icon" id="sort-reg-id">▲</span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('username')">Kullanıcı <span class="sort-icon" id="sort-reg-username"></span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('elo')">ELO & Kademe <span class="sort-icon" id="sort-reg-elo"></span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('winrate')">G / M / B (Kazanma) <span class="sort-icon" id="sort-reg-winrate"></span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('coins')">Altın <span class="sort-icon" id="sort-reg-coins"></span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('bp_tier')">Savaş Bileti <span class="sort-icon" id="sort-reg-bp_tier"></span></th>
+                <th class="th-sortable" onclick="sortRegisteredUsers('created_at')">Kayıt Tarihi <span class="sort-icon" id="sort-reg-created_at"></span></th>
+                <th style="text-align:right;">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody id="registeredTableBody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-dim);">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+          <div id="regPaginationBar" class="table-pagination-bar"></div>
+        </div>
+      </div>
+
+      <!-- TAB 2: GUEST ACCOUNTS -->
+      <div class="tab-pane" id="pane-guests">
+        <!-- Notice banner explaining why guests are separated and not bannable -->
+        <div class="info-banner">
+          <div class="info-banner-icon"><i data-lucide="info"></i></div>
+          <div class="info-banner-content">
+            <h4>Misafir Profilleri Hakkında & Otomatik Temizleme</h4>
+            <p>
+              Misafir oyuncular oyuna giriş-çıkış yaptıkça sisteme geçici <code>Guest_XXXX</code> profilleri açılır.
+              Bu hesaplar geçici oturumlar olduğu için <strong>banlanabilir olarak listelenmez</strong> (banlansa dahi yeni oturum açılacağından panelin dolmasına neden olur).
+              Sunucu artık 30 dakikadan eski boş misafir profillerini arka planda otomatik temizler; panel karmaşasını önlemek için aşağıdaki hızlı araçları da kullanabilirsiniz.
+            </p>
+          </div>
+        </div>
+
+        <div class="card">
+          <!-- Summary count pills -->
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+            <span class="kpi-badge" style="background:rgba(255,255,255,0.06);color:var(--text-bright);padding:4px 10px;font-size:12px;">
+              Toplam Misafir: <strong id="guestStatTotal" style="margin-left:4px;color:var(--accent-cyan);">0</strong>
+            </span>
+            <span class="kpi-badge" style="background:rgba(244,63,94,0.12);color:var(--red-soft);padding:4px 10px;font-size:12px;">
+              Boş (0 Maç): <strong id="guestStatEmpty" style="margin-left:4px;color:#fecdd3;">0</strong>
+            </span>
+            <span class="kpi-badge" style="background:rgba(16,185,129,0.12);color:var(--emerald);padding:4px 10px;font-size:12px;">
+              Aktif (1+ Maç): <strong id="guestStatActive" style="margin-left:4px;color:#a7f3d0;">0</strong>
+            </span>
+          </div>
+
+          <div class="card-toolbar">
+            <div class="search-box-wrap">
+              <i data-lucide="search"></i>
+              <input type="text" id="guestSearchInput" class="search-box-input" placeholder="Misafir ara (Guest_...)" oninput="onGuestSearchInput()">
+            </div>
+            <div class="filter-pills">
+              <span class="filter-pill active" data-guest-filter="all" onclick="setGuestFilter('all', this)">Tümü</span>
+              <span class="filter-pill" data-guest-filter="empty" onclick="setGuestFilter('empty', this)">Sadece Boş (0 Maç)</span>
+              <span class="filter-pill" data-guest-filter="active" onclick="setGuestFilter('active', this)">Aktif (1+ Maç)</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-action btn-unban" style="padding:8px 12px;" onclick="cleanupGuests(true)">
+                <i data-lucide="brush"></i> Boşları Temizle (0 Maç)
+              </button>
+              <button class="btn-action btn-bp-reset" style="padding:8px 12px;" onclick="cleanupGuests(true, 30)">
+                <i data-lucide="clock"></i> 30 Dk Eski Boşları Sil
+              </button>
+              <button class="btn-action btn-danger" style="padding:8px 12px;" onclick="cleanupGuests(false)">
+                <i data-lucide="trash-2"></i> Tüm Misafirleri Temizle
+              </button>
+            </div>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th class="th-sortable" onclick="sortGuestUsers('id')" style="width:70px;">ID <span class="sort-icon" id="sort-guest-id">▲</span></th>
+                <th class="th-sortable" onclick="sortGuestUsers('username')">Misafir Profili <span class="sort-icon" id="sort-guest-username"></span></th>
+                <th class="th-sortable" onclick="sortGuestUsers('elo')">ELO <span class="sort-icon" id="sort-guest-elo"></span></th>
+                <th class="th-sortable" onclick="sortGuestUsers('matches')">G / M / B (Toplam) <span class="sort-icon" id="sort-guest-matches"></span></th>
+                <th class="th-sortable" onclick="sortGuestUsers('created_at')">Oluşturulma <span class="sort-icon" id="sort-guest-created_at"></span></th>
+                <th style="text-align:right;">İşlemler (Ban uygulanamaz)</th>
+              </tr>
+            </thead>
+            <tbody id="guestTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-dim);">Misafirler yükleniyor...</td></tr>
+            </tbody>
+          </table>
+          <div id="guestPaginationBar" class="table-pagination-bar"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: ACTIVE GAMES & QUEUE -->
+      <div class="tab-pane" id="pane-games">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+          <div class="card" style="margin-bottom:0;">
+            <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-bright);display:flex;align-items:center;gap:8px;">
+              <i data-lucide="clock" style="color:var(--emerald);"></i> Standart Sıra (Ranked)
+            </h3>
+            <div style="font-size:28px;font-weight:800;font-family:var(--font-mono);color:var(--emerald);" id="stdQueueCount">0</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">Eşleşme bekleyen oyuncu sayısı</div>
+          </div>
+          <div class="card" style="margin-bottom:0;">
+            <h3 style="font-size:15px;margin-bottom:12px;color:var(--text-bright);display:flex;align-items:center;gap:8px;">
+              <i data-lucide="dice-5" style="color:var(--accent-cyan);"></i> MiniDice Sırası
+            </h3>
+            <div style="font-size:28px;font-weight:800;font-family:var(--font-mono);color:var(--accent-cyan);" id="diceQueueCount">0</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">Eşleşme bekleyen oyuncu sayısı</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-toolbar">
+            <h3 style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="swords" style="color:var(--gold);"></i> Devam Eden Canlı Maçlar
+            </h3>
+            <button class="btn-action btn-reset" onclick="loadActiveGames()"><i data-lucide="refresh-cw"></i> Maçları Güncelle</button>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Game ID / Mod</th>
+                <th>Beyaz Oyuncu</th>
+                <th>Siyah Oyuncu</th>
+                <th>Hamle</th>
+                <th>Sıra</th>
+                <th>Kalan Süre</th>
+                <th style="text-align:right;">İşlem</th>
+              </tr>
+            </thead>
+            <tbody id="activeGamesTableBody">
+              <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-dim);">Aktif maç bulunamadı.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: RECENT MATCHES -->
+      <div class="tab-pane" id="pane-recent">
+        <div class="card">
+          <div class="card-toolbar">
+            <h3 style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="history" style="color:var(--accent-purple);"></i> Son Tamamlanan 25 Maç
+            </h3>
+            <button class="btn-action btn-reset" onclick="loadRecentGames()"><i data-lucide="refresh-cw"></i> Güncelle</button>
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Beyaz</th>
+                <th>Siyah</th>
+                <th>Sonuç</th>
+                <th>Tarih</th>
+                <th style="text-align:right;">Detay</th>
+              </tr>
+            </thead>
+            <tbody id="recentGamesTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-dim);">Geçmiş maçlar yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 5: SYSTEM & TOOLS -->
+      <div class="tab-pane" id="pane-system">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px;">
+          <!-- Broadcast Card -->
+          <div class="card">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="megaphone" style="color:var(--accent-purple);"></i> Canlı Sistem Duyurusu
+            </h3>
+            <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+              Bağlı olan tüm çevrimiçi oyunculara anlık bildirim / duyuru banner'ı gönderin.
+            </p>
+            <div style="margin-bottom:12px;">
+              <label class="modal-label">Duyuru Mesajı</label>
+              <input type="text" id="broadcastInput" class="modal-input" placeholder="Örn: Sunucu bakımı 10 dakika sonra başlayacaktır.">
+            </div>
+            <div style="margin-bottom:16px;">
+              <label class="modal-label">Bildirim Türü</label>
+              <select id="broadcastType" class="modal-select">
+                <option value="info">Bilgi (Mavi)</option>
+                <option value="warning">Uyarı (Sarı)</option>
+                <option value="error">Kritik (Kırmızı)</option>
+                <option value="success">Başarı (Yeşil)</option>
+              </select>
+            </div>
+            <button class="btn-header btn-header-broadcast" style="width:100%;justify-content:center;" onclick="sendBroadcast()">
+              <i data-lucide="send"></i> Tüm Oyunculara Gönder
+            </button>
+          </div>
+
+          <!-- Server Health Card -->
+          <div class="card">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="server" style="color:var(--emerald);"></i> Sunucu & Sistem Durumu
+            </h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div style="background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;border:1px solid var(--glass-border);">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Çalışma Süresi</div>
+                <div style="font-size:16px;font-weight:700;color:var(--emerald);font-family:var(--font-mono);" id="sysUptime">0s</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;border:1px solid var(--glass-border);">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Bellek Kullanımı</div>
+                <div style="font-size:16px;font-weight:700;color:var(--accent-cyan);font-family:var(--font-mono);" id="sysMemory">0 MB</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;border:1px solid var(--glass-border);">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Aktif Socket</div>
+                <div style="font-size:16px;font-weight:700;color:var(--accent-blue);font-family:var(--font-mono);" id="sysOnline">0</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;border:1px solid var(--glass-border);">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">Oto-Temizleme</div>
+                <div style="font-size:13px;font-weight:700;color:var(--emerald);">Aktif (15 dk)</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--text-dim);line-height:1.5;">
+              Boş (0 maçlı) misafir oturumları her 15 dakikada bir otomatik taranıp veritabanından ayıklanır.
+            </p>
+          </div>
+
+          <!-- Guest Management Card -->
+          <div class="card">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+              <i data-lucide="brush" style="color:var(--accent-cyan);"></i> Misafir Profili Bakımı
+            </h3>
+            <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+              Kullanıcılar sürekli gir-çık yaptıkça biriken yüzlerce boş misafir kaydını temizleyerek veritabanını hızlandırın.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn-header btn-header-primary" style="justify-content:center;" onclick="cleanupGuests(true)">
+                <i data-lucide="brush"></i> İnaktif Misafirleri Temizle (0 Maç Olanlar)
+              </button>
+              <button class="btn-header btn-header-secondary" style="justify-content:center;" onclick="cleanupGuests(true, 30)">
+                <i data-lucide="clock"></i> 30 Dakikadan Eski Boş Misafirleri Temizle
+              </button>
+              <button class="btn-header btn-header-danger" style="justify-content:center;" onclick="cleanupGuests(false)">
+                <i data-lucide="trash-2"></i> Tüm Misafir Hesaplarını Sıfırla / Temizle
+              </button>
+            </div>
+          </div>
+
+          <!-- Danger Zone Card -->
+          <div class="card" style="border-color:rgba(244,63,94,0.3);background:rgba(244,63,94,0.03);">
+            <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--red-soft);display:flex;align-items:center;gap:8px;">
+              <i data-lucide="alert-triangle"></i> Tehlikeli Bölge
+            </h3>
+            <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+              Tüm kullanıcıların ELO puanını 1200'e çeker ve Galibiyet/Mağlubiyet/Beraberlik skorlarını sıfırlar. Bu işlem geri alınamaz!
+            </p>
+            <button class="btn-header btn-header-danger" style="width:100%;justify-content:center;" onclick="resetAllStats()">
+              <i data-lucide="rotate-ccw"></i> Tüm İstatistikleri Sıfırla (Reset All)
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
 
+<!-- MODAL: BAN USER -->
+<div id="banModal" class="admin-modal-backdrop">
+  <div class="admin-modal-card">
+    <div class="modal-head">
+      <h3><i data-lucide="ban" style="color:var(--red-soft);"></i> Kullanıcıyı Banla</h3>
+      <button class="modal-close" onclick="closeModal('banModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-dim);margin-bottom:14px;">
+        <strong id="banModalUsername" style="color:var(--text-bright);"></strong> kullanıcısının hesabı askıya alınacak ve oturumu kapatılacaktır.
+      </p>
+      <label class="modal-label">Hızlı Ban Sebebi Seçin</label>
+      <div class="preset-chips">
+        <span class="preset-chip" onclick="setBanReason('Hile ve üçüncü parti yazılım kullanımı')">Hile / Cheat</span>
+        <span class="preset-chip" onclick="setBanReason('Hakaret ve toksik davranış')">Toksiklik</span>
+        <span class="preset-chip" onclick="setBanReason('Kasıtlı oyun bozma / süre uzatma')">Griefing</span>
+        <span class="preset-chip" onclick="setBanReason('Sohbet ve lobi spamı')">Spam</span>
+      </div>
+      <label class="modal-label">Ban Açıklaması / Gerekçe</label>
+      <input type="text" id="banReasonInput" class="modal-input" placeholder="Gerekçe yazın veya yukarıdan seçin...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-action btn-reset" onclick="closeModal('banModal')">İptal</button>
+      <button class="btn-header btn-header-danger" onclick="confirmBanUser()">Hesabı Banla</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GRANT XP -->
+<div id="xpModal" class="admin-modal-backdrop">
+  <div class="admin-modal-card">
+    <div class="modal-head">
+      <h3><i data-lucide="award" style="color:var(--accent-purple);"></i> Savaş Bileti XP Tanımla</h3>
+      <button class="modal-close" onclick="closeModal('xpModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-dim);margin-bottom:14px;">
+        <strong id="xpModalUsername" style="color:var(--text-bright);"></strong> kullanıcısına verilecek XP miktarını seçin:
+      </p>
+      <label class="modal-label">Hızlı Seçim</label>
+      <div class="preset-chips">
+        <span class="preset-chip" onclick="setXpAmount(50)">+50 XP (1 Tier)</span>
+        <span class="preset-chip" onclick="setXpAmount(150)">+150 XP</span>
+        <span class="preset-chip" onclick="setXpAmount(500)">+500 XP</span>
+        <span class="preset-chip" onclick="setXpAmount(1000)">+1000 XP</span>
+        <span class="preset-chip" onclick="setXpAmount(5230)">Max Seviye (5230 XP)</span>
+      </div>
+      <label class="modal-label">Özel XP Miktarı</label>
+      <input type="number" id="xpAmountInput" class="modal-input" min="1" placeholder="Örn: 250">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-action btn-reset" onclick="closeModal('xpModal')">İptal</button>
+      <button class="btn-header btn-header-primary" onclick="confirmGrantXp()">XP Yükle</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GRANT COINS -->
+<div id="coinsModal" class="admin-modal-backdrop">
+  <div class="admin-modal-card">
+    <div class="modal-head">
+      <h3><i data-lucide="coins" style="color:var(--gold);"></i> Mağaza Altını Tanımla</h3>
+      <button class="modal-close" onclick="closeModal('coinsModal')"><i data-lucide="x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text-dim);margin-bottom:14px;">
+        <strong id="coinsModalUsername" style="color:var(--text-bright);"></strong> kullanıcısına verilecek altın miktarı:
+      </p>
+      <label class="modal-label">Hızlı Seçim</label>
+      <div class="preset-chips">
+        <span class="preset-chip" onclick="setCoinsAmount(100)">+100 Altın</span>
+        <span class="preset-chip" onclick="setCoinsAmount(500)">+500 Altın</span>
+        <span class="preset-chip" onclick="setCoinsAmount(1000)">+1.000 Altın</span>
+        <span class="preset-chip" onclick="setCoinsAmount(5000)">+5.000 Altın</span>
+      </div>
+      <label class="modal-label">Özel Altın Miktarı</label>
+      <input type="number" id="coinsAmountInput" class="modal-input" placeholder="Örn: 250">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-action btn-reset" onclick="closeModal('coinsModal')">İptal</button>
+      <button class="btn-header btn-header-primary" onclick="confirmGrantCoins()">Altın Yükle</button>
+    </div>
+  </div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
+
 <script>
   let currentUserId = null;
   let currentUser = null;
+  let allRegisteredUsers = [];
+  let allGuestUsers = [];
+  let regCurrentFilter = 'all';
+  let guestCurrentFilter = 'all';
+
+  // Sorting state
+  let regSortField = 'id';
+  let regSortAsc = true;
+  let guestSortField = 'id';
+  let guestSortAsc = true;
+
+  // Pagination state
+  let regPage = 1;
+  let regPageSize = 10;
+  let guestPage = 1;
+  let guestPageSize = 10;
+
+  // Search debounce
+  let regSearchTimer = null;
+  let guestSearchTimer = null;
+
+  // Modal Context
+  let activeModalUserId = null;
+  let activeModalUsername = '';
 
   async function init() {
     currentUser = await getCurrentUser();
     if (!currentUser) { window.location.href = 'index.html'; return; }
-    initSocket();
+    
+    const sock = initSocket(currentUser);
+    if (sock) {
+      sock.on('queue_counts', (counts) => {
+        if (counts) {
+          const stdEl = document.getElementById('stdQueueCount');
+          const diceEl = document.getElementById('diceQueueCount');
+          if (stdEl && counts.standard !== undefined) stdEl.textContent = counts.standard;
+          if (diceEl && counts.dice !== undefined) diceEl.textContent = counts.dice;
+        }
+      });
+    }
+
+    if (window.renderGuestBadges) renderGuestBadges(currentUser);
     currentUserId = currentUser.id;
 
     document.getElementById('sidebarUsername').textContent = currentUser.username;
@@ -279,9 +1088,7 @@
     document.getElementById('sbLosses').textContent = currentUser.losses || 0;
     document.getElementById('sbDraws').textContent = currentUser.draws || 0;
 
-    // Set active nav
-    document.getElementById('navAdmin').classList.add('active');
-
+    // Check admin privilege
     try {
       const res = await fetch('/api/me/admin');
       const data = await res.json();
@@ -289,132 +1096,972 @@
       if (!data.isAdmin) {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('accessDenied').style.display = 'block';
+        if (window.lucide) lucide.createIcons();
         return;
       }
 
       document.getElementById('loading').style.display = 'none';
       document.getElementById('adminContent').style.display = 'block';
-      loadUsers();
+
+      await loadAllAdminData();
+
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     } catch (err) {
-      document.getElementById('loading').textContent = 'Failed to load.';
+      document.getElementById('loading').innerHTML = '<span style="color:var(--red-soft);">Yükleme başarısız oldu. Lütfen sayfayı yenileyin.</span>';
     }
   }
 
-  async function loadUsers() {
+  function formatUptime(seconds) {
+    if (!seconds || seconds <= 0) return '0s';
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}g`);
+    if (h > 0) parts.push(`${h}s`);
+    if (m > 0) parts.push(`${m}d`);
+    if (parts.length === 0 || s > 0) parts.push(`${s}sn`);
+    return parts.join(' ');
+  }
+
+  // Load all users and dashboard stats
+  async function loadAllAdminData() {
     try {
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      renderUsers(data.users);
+      // Fetch users and detailed stats in parallel
+      const [usersRes, statsRes] = await Promise.all([
+        fetch('/api/admin/users?type=all').then(r => r.json()).catch(() => ({})),
+        fetch('/api/admin/stats').then(r => r.json()).catch(() => ({}))
+      ]);
+
+      const data = usersRes;
+      const stats = (statsRes && statsRes.stats) || (data && data.stats) || {};
+
+      if (data && data.success) {
+        allRegisteredUsers = data.registeredUsers || (data.users || []).filter(u => !u.username.startsWith('Guest_'));
+        allGuestUsers = data.guestUsers || (data.users || []).filter(u => u.username.startsWith('Guest_'));
+
+        // Update Top KPI Counters
+        const regCount = allRegisteredUsers.length;
+        const guestCount = allGuestUsers.length;
+        const bannedCount = allRegisteredUsers.filter(u => u.is_banned === 1).length;
+
+        document.getElementById('kpiRegCount').textContent = regCount;
+        document.getElementById('kpiGuestCount').textContent = guestCount;
+        document.getElementById('kpiBannedCount').textContent = bannedCount;
+        document.getElementById('tabRegPill').textContent = regCount;
+        document.getElementById('tabGuestPill').textContent = guestCount;
+
+        // Accurate total games
+        const totalGames = stats.totalGamesCount !== undefined ? stats.totalGamesCount : 0;
+        document.getElementById('kpiTotalGames').textContent = totalGames;
+        document.getElementById('kpiActiveGames').textContent = stats.activeGamesCount || 0;
+        document.getElementById('kpiOnlineCount').textContent = stats.onlineCount || 0;
+        document.getElementById('tabGamesPill').textContent = stats.activeGamesCount || 0;
+
+        // Live queues
+        const stdQueueEl = document.getElementById('stdQueueCount');
+        const diceQueueEl = document.getElementById('diceQueueCount');
+        if (stdQueueEl) stdQueueEl.textContent = stats.standardQueueCount || 0;
+        if (diceQueueEl) diceQueueEl.textContent = stats.diceQueueCount || 0;
+
+        // Guest breakdown chips
+        const emptyGuests = stats.emptyGuestCount !== undefined
+          ? stats.emptyGuestCount
+          : allGuestUsers.filter(u => (u.wins || 0) === 0 && (u.losses || 0) === 0 && (u.draws || 0) === 0).length;
+        const activeGuests = stats.activeGuestCount !== undefined
+          ? stats.activeGuestCount
+          : (guestCount - emptyGuests);
+
+        const gTotalEl = document.getElementById('guestStatTotal');
+        const gEmptyEl = document.getElementById('guestStatEmpty');
+        const gActiveEl = document.getElementById('guestStatActive');
+        if (gTotalEl) gTotalEl.textContent = guestCount;
+        if (gEmptyEl) gEmptyEl.textContent = emptyGuests;
+        if (gActiveEl) gActiveEl.textContent = activeGuests;
+
+        // System health card in Tab 5
+        const sysUptimeEl = document.getElementById('sysUptime');
+        const sysMemEl = document.getElementById('sysMemory');
+        const sysOnlineEl = document.getElementById('sysOnline');
+        if (sysUptimeEl) sysUptimeEl.textContent = formatUptime(stats.uptimeSeconds);
+        if (sysMemEl) sysMemEl.textContent = (stats.memoryMb || 0) + ' MB';
+        if (sysOnlineEl) sysOnlineEl.textContent = stats.onlineCount || 0;
+
+        renderRegisteredTable();
+        renderGuestTable();
+      }
+
+      // Fetch Active Games & Queues & Recent Matches
+      await Promise.all([
+        loadActiveGames(),
+        loadRecentGames()
+      ]);
+
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     } catch (err) {
-      showToast('Failed to load users', 'error');
+      console.error('[Admin Data Load Error]', err);
+      showToast('Veriler güncellenirken bir hata oluştu', 'error');
     }
   }
 
-  function renderUsers(users) {
-    const tbody = document.getElementById('userTableBody');
-    tbody.innerHTML = users.map(u => {
+  // ===== SEARCH INPUT DEBOUNCES =====
+  function onRegSearchInput() {
+    clearTimeout(regSearchTimer);
+    regSearchTimer = setTimeout(() => {
+      regPage = 1;
+      renderRegisteredTable();
+    }, 180);
+  }
+
+  function onGuestSearchInput() {
+    clearTimeout(guestSearchTimer);
+    guestSearchTimer = setTimeout(() => {
+      guestPage = 1;
+      renderGuestTable();
+    }, 180);
+  }
+
+  // ===== SORTING HELPERS =====
+  function sortRegisteredUsers(field) {
+    if (regSortField === field) {
+      regSortAsc = !regSortAsc;
+    } else {
+      regSortField = field;
+      regSortAsc = true;
+    }
+    updateSortIcons('reg', regSortField, regSortAsc);
+    renderRegisteredTable();
+  }
+
+  function sortGuestUsers(field) {
+    if (guestSortField === field) {
+      guestSortAsc = !guestSortAsc;
+    } else {
+      guestSortField = field;
+      guestSortAsc = true;
+    }
+    updateSortIcons('guest', guestSortField, guestSortAsc);
+    renderGuestTable();
+  }
+
+  function updateSortIcons(prefix, field, isAsc) {
+    document.querySelectorAll(`[id^="sort-${prefix}-"]`).forEach(el => {
+      el.textContent = '';
+      if (el.parentElement) {
+        el.parentElement.classList.remove('sorted-asc', 'sorted-desc');
+      }
+    });
+    const target = document.getElementById(`sort-${prefix}-${field}`);
+    if (target) {
+      target.textContent = isAsc ? '▲' : '▼';
+      if (target.parentElement) {
+        target.parentElement.classList.add(isAsc ? 'sorted-asc' : 'sorted-desc');
+      }
+    }
+  }
+
+  // ===== TAB 1: REGISTERED USERS =====
+  function getFilteredRegisteredUsers() {
+    const query = (document.getElementById('regSearchInput')?.value || '').toLowerCase().trim();
+    let list = allRegisteredUsers.filter(u => {
+      const matchQuery = !query || String(u.id).includes(query) || (u.username && u.username.toLowerCase().includes(query));
+      if (!matchQuery) return false;
+
+      if (regCurrentFilter === 'admin') return u.is_admin === 1;
+      if (regCurrentFilter === 'banned') return u.is_banned === 1;
+      if (regCurrentFilter === 'active') return u.is_banned !== 1;
+      return true;
+    });
+
+    list.sort((a, b) => {
+      let valA = a[regSortField];
+      let valB = b[regSortField];
+
+      if (regSortField === 'winrate') {
+        const tA = (a.wins || 0) + (a.losses || 0) + (a.draws || 0);
+        const tB = (b.wins || 0) + (b.losses || 0) + (b.draws || 0);
+        valA = tA > 0 ? (a.wins || 0) / tA : 0;
+        valB = tB > 0 ? (b.wins || 0) / tB : 0;
+      } else if (regSortField === 'username') {
+        valA = (valA || '').toLowerCase();
+        valB = (valB || '').toLowerCase();
+      } else if (regSortField === 'created_at') {
+        valA = valA || '';
+        valB = valB || '';
+      } else {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+      }
+
+      if (valA < valB) return regSortAsc ? -1 : 1;
+      if (valA > valB) return regSortAsc ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }
+
+  function renderRegisteredTable() {
+    const tbody = document.getElementById('registeredTableBody');
+    const filtered = getFilteredRegisteredUsers();
+    const total = filtered.length;
+
+    if (!tbody) return;
+
+    if (total === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-dim);">Kriterlere uygun kayıtlı kullanıcı bulunamadı.</td></tr>';
+      renderPaginationBar('reg', 0, 0, 0, regPage, regPageSize);
+      return;
+    }
+
+    // Page boundaries
+    const totalPages = Math.ceil(total / regPageSize) || 1;
+    if (regPage > totalPages) regPage = totalPages;
+    if (regPage < 1) regPage = 1;
+
+    const startIdx = (regPage - 1) * regPageSize;
+    const endIdx = Math.min(startIdx + regPageSize, total);
+    const pageItems = filtered.slice(startIdx, endIdx);
+
+    tbody.innerHTML = pageItems.map(u => {
       const isAdmin = u.is_admin === 1;
+      const isBanned = u.is_banned === 1;
       const isSelf = u.id === currentUserId;
-      const bpActions = `<button class="btn-xp" onclick="grantUserXp(${u.id}, '${esc(u.username)}')">+ XP</button>
-             <button class="btn-bp-reset" onclick="resetUserBattlepass(${u.id}, '${esc(u.username)}')">Reset BP</button>`;
+
+      const totalMatches = (u.wins || 0) + (u.losses || 0) + (u.draws || 0);
+      const winRate = totalMatches > 0 ? Math.round(((u.wins || 0) / totalMatches) * 100) : 0;
+
+      // Status badge
+      let statusBadge = '<span class="badge-active">Aktif</span>';
+      if (isBanned) {
+        statusBadge = `<span class="badge-banned" title="${esc(u.banned_reason || 'Banned')}">BANLI</span>`;
+      } else if (isAdmin) {
+        statusBadge = '<span class="badge-admin">ADMIN</span>';
+      }
+
+      // Rank badge
+      const rankBadge = (typeof window.renderRankBadge === 'function')
+        ? window.renderRankBadge(u.elo, { size: 'sm' })
+        : `<span style="color:var(--gold);font-weight:700;">${u.elo || 1200}</span>`;
+
+      // Avatar
+      const avatarHtml = u.avatar_url
+        ? `<img class="user-avatar-mini" src="${esc(u.avatar_url)}" alt="">`
+        : `<div class="user-avatar-mini">${esc(u.username || '?').charAt(0).toUpperCase()}</div>`;
+
+      // Ban button
+      const banBtn = isBanned
+        ? `<button class="btn-action btn-unban" onclick="unbanUser(${u.id})"><i data-lucide="shield-check"></i> Banı Kaldır</button>`
+        : `<button class="btn-action btn-ban" onclick="openBanModal(${u.id})"><i data-lucide="ban"></i> Banla</button>`;
+
       return `<tr>
-        <td>${u.id}</td>
-        <td>${esc(u.username)}${isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}</td>
-        <td style="color:var(--gold);font-weight:700;">${u.elo}</td>
-        <td>${u.wins} / ${u.losses} / ${u.draws}</td>
-        <td style="color:var(--accent-purple);font-weight:700;">${u.bp_tier || 1}</td>
-        <td style="color:var(--accent-cyan);font-weight:600;">${u.bp_xp || 0}</td>
-        <td>${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
-        <td>${bpActions}${isSelf
-          ? '<span style="color:var(--text-muted);font-size:12px;margin-left:6px;">You</span>'
-          : `<button class="btn-reset" onclick="resetUserStats(${u.id}, '${esc(u.username)}')">Reset</button>
-             <button class="btn-danger" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>`}</td>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${u.id}</td>
+        <td>
+          <div class="user-cell">
+            ${avatarHtml}
+            <div class="user-names-wrap">
+              <div class="user-name-line">
+                ${esc(u.username)}
+                ${statusBadge}
+              </div>
+              <div class="user-id-sub">${u.banned_reason ? `<span style="color:var(--red-soft);">Sebep: ${esc(u.banned_reason)}</span>` : `ID: #${u.id}`}</div>
+            </div>
+          </div>
+        </td>
+        <td>${rankBadge}</td>
+        <td>
+          <span style="font-weight:700;color:var(--emerald);">${u.wins || 0}</span> / 
+          <span style="font-weight:700;color:var(--red-soft);">${u.losses || 0}</span> / 
+          <span style="color:var(--text-dim);">${u.draws || 0}</span>
+          <div style="font-size:10px;color:var(--text-muted);">${winRate}% Kazanma (${totalMatches} Maç)</div>
+        </td>
+        <td style="color:var(--gold);font-weight:700;font-family:var(--font-mono);">
+          <i data-lucide="coins" style="width:12px;height:12px;vertical-align:middle;display:inline;"></i> ${u.coins || 0}
+        </td>
+        <td>
+          <span style="color:var(--accent-purple);font-weight:700;">T${u.bp_tier || 1}</span>
+          <span style="font-size:11px;color:var(--accent-cyan);margin-left:4px;">(${u.bp_xp || 0} XP)</span>
+        </td>
+        <td style="font-size:12px;color:var(--text-muted);">${u.created_at ? u.created_at.substring(0, 10) : '—'}</td>
+        <td style="text-align:right;">
+          <div class="action-btn-group" style="justify-content:flex-end;">
+            <button class="btn-action btn-xp" onclick="openXpModal(${u.id})">+ XP</button>
+            <button class="btn-action btn-coins" onclick="openCoinsModal(${u.id})">+ Altın</button>
+            ${isSelf
+              ? '<span style="color:var(--emerald);font-size:12px;font-weight:700;padding:4px 8px;">(Siz)</span>'
+              : `
+                ${banBtn}
+                <button class="btn-action btn-admin-toggle" onclick="toggleAdminRole(${u.id}, ${isAdmin})" title="${isAdmin ? 'Yöneticilikten çıkar' : 'Yönetici yap'}">
+                  ${isAdmin ? 'Admin Al' : 'Admin Yap'}
+                </button>
+                <button class="btn-action btn-reset" onclick="resetUserStats(${u.id})" title="Stats Sıfırla">
+                  <i data-lucide="rotate-ccw"></i>
+                </button>
+                <button class="btn-action btn-bp-reset" onclick="resetUserBattlepass(${u.id})" title="Battlepass Sıfırla">
+                  BP
+                </button>
+                <button class="btn-action btn-danger" onclick="deleteUser(${u.id})" title="Kullanıcıyı Sil">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              `}
+          </div>
+        </td>
       </tr>`;
     }).join('');
+
+    renderPaginationBar('reg', startIdx + 1, endIdx, total, regPage, regPageSize);
+
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
 
-  function esc(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+  function setRegFilter(filter, el) {
+    regCurrentFilter = filter;
+    document.querySelectorAll('#pane-registered .filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+    if (el) el.classList.add('active');
+    regPage = 1;
+    renderRegisteredTable();
   }
 
-  async function deleteUser(userId, username) {
-    if (!confirm(`Are you sure you want to delete "${username}"? This will remove all their data permanently.`)) return;
+  // ===== TAB 2: GUEST ACCOUNTS (NO BAN BUTTON!) =====
+  function getFilteredGuestUsers() {
+    const query = (document.getElementById('guestSearchInput')?.value || '').toLowerCase().trim();
+    let list = allGuestUsers.filter(u => {
+      const matchQuery = !query || String(u.id).includes(query) || (u.username && u.username.toLowerCase().includes(query));
+      if (!matchQuery) return false;
+
+      const totalMatches = (u.wins || 0) + (u.losses || 0) + (u.draws || 0);
+      if (guestCurrentFilter === 'empty') return totalMatches === 0;
+      if (guestCurrentFilter === 'active') return totalMatches > 0;
+      return true;
+    });
+
+    list.sort((a, b) => {
+      let valA = a[guestSortField];
+      let valB = b[guestSortField];
+
+      if (guestSortField === 'matches') {
+        valA = (a.wins || 0) + (a.losses || 0) + (a.draws || 0);
+        valB = (b.wins || 0) + (b.losses || 0) + (b.draws || 0);
+      } else if (guestSortField === 'username') {
+        valA = (valA || '').toLowerCase();
+        valB = (valB || '').toLowerCase();
+      } else if (guestSortField === 'created_at') {
+        valA = valA || '';
+        valB = valB || '';
+      } else {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+      }
+
+      if (valA < valB) return guestSortAsc ? -1 : 1;
+      if (valA > valB) return guestSortAsc ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }
+
+  function renderGuestTable() {
+    const tbody = document.getElementById('guestTableBody');
+    const filtered = getFilteredGuestUsers();
+    const total = filtered.length;
+
+    if (!tbody) return;
+
+    if (total === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-dim);"><i data-lucide="check-circle" style="width:24px;height:24px;color:var(--emerald);display:inline;vertical-align:middle;margin-right:6px;"></i> Kriterlere uygun misafir oturumu bulunmuyor.</td></tr>';
+      renderPaginationBar('guest', 0, 0, 0, guestPage, guestPageSize);
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    const totalPages = Math.ceil(total / guestPageSize) || 1;
+    if (guestPage > totalPages) guestPage = totalPages;
+    if (guestPage < 1) guestPage = 1;
+
+    const startIdx = (guestPage - 1) * guestPageSize;
+    const endIdx = Math.min(startIdx + guestPageSize, total);
+    const pageItems = filtered.slice(startIdx, endIdx);
+
+    tbody.innerHTML = pageItems.map(u => {
+      const totalMatches = (u.wins || 0) + (u.losses || 0) + (u.draws || 0);
+      return `<tr>
+        <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${u.id}</td>
+        <td>
+          <div class="user-cell">
+            <div class="user-avatar-mini" style="background:rgba(6,182,212,0.15);color:var(--accent-cyan);border-color:rgba(6,182,212,0.3);">
+              <i data-lucide="user-x" style="width:14px;height:14px;"></i>
+            </div>
+            <div class="user-names-wrap">
+              <div class="user-name-line">
+                ${esc(u.username)}
+                <span class="badge-guest-pill">MİSAFİR</span>
+              </div>
+              <div class="user-id-sub">Geçici Oturum • Ban uygulanamaz</div>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--gold);font-weight:700;font-family:var(--font-mono);">${u.elo || 1200}</td>
+        <td>
+          <span style="font-weight:700;color:var(--emerald);">${u.wins || 0}</span> / 
+          <span style="font-weight:700;color:var(--red-soft);">${u.losses || 0}</span> / 
+          <span style="color:var(--text-dim);">${u.draws || 0}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">(${totalMatches} Maç)</span>
+        </td>
+        <td style="font-size:12px;color:var(--text-muted);">${u.created_at ? u.created_at.substring(0, 16) : '—'}</td>
+        <td style="text-align:right;">
+          <div class="action-btn-group" style="justify-content:flex-end;">
+            <button class="btn-action btn-danger" onclick="deleteUser(${u.id})" title="Misafir Profilini Sil">
+              <i data-lucide="trash-2"></i> Sil
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    renderPaginationBar('guest', startIdx + 1, endIdx, total, guestPage, guestPageSize);
+
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  function setGuestFilter(filter, el) {
+    guestCurrentFilter = filter;
+    document.querySelectorAll('#pane-guests .filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+    if (el) el.classList.add('active');
+    guestPage = 1;
+    renderGuestTable();
+  }
+
+  // ===== PAGINATION RENDERER =====
+  function renderPaginationBar(prefix, start, end, total, page, pageSize) {
+    const container = document.getElementById(`${prefix}PaginationBar`);
+    if (!container) return;
+
+    if (total === 0) {
+      container.innerHTML = '<span>Kayıt bulunamadı.</span>';
+      return;
+    }
+
+    const totalPages = Math.ceil(total / pageSize) || 1;
+    let btns = '';
+
+    // Prev Button
+    btns += `<button class="btn-page" onclick="changePage('${prefix}', ${page - 1})" ${page <= 1 ? 'disabled' : ''}>«</button>`;
+
+    // Page numbers (max 5 visible)
+    let pStart = Math.max(1, page - 2);
+    let pEnd = Math.min(totalPages, pStart + 4);
+    if (pEnd - pStart < 4) pStart = Math.max(1, pEnd - 4);
+
+    for (let p = pStart; p <= pEnd; p++) {
+      btns += `<button class="btn-page ${p === page ? 'active' : ''}" onclick="changePage('${prefix}', ${p})">${p}</button>`;
+    }
+
+    // Next Button
+    btns += `<button class="btn-page" onclick="changePage('${prefix}', ${page + 1})" ${page >= totalPages ? 'disabled' : ''}>»</button>`;
+
+    container.innerHTML = `
+      <div>Toplam <strong>${total}</strong> kayıttan <strong>${start} - ${end}</strong> arası gösteriliyor</div>
+      <div class="pagination-controls">
+        <label style="margin-right:8px;font-size:12px;">Sayfa başı:
+          <select class="page-size-select" onchange="changePageSize('${prefix}', this.value)">
+            <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
+            <option value="25" ${pageSize === 25 ? 'selected' : ''}>25</option>
+            <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
+            <option value="999999" ${pageSize > 100 ? 'selected' : ''}>Tümü</option>
+          </select>
+        </label>
+        ${btns}
+      </div>
+    `;
+  }
+
+  function changePage(prefix, page) {
+    if (prefix === 'reg') {
+      regPage = page;
+      renderRegisteredTable();
+    } else {
+      guestPage = page;
+      renderGuestTable();
+    }
+  }
+
+  function changePageSize(prefix, size) {
+    const parsed = parseInt(size, 10) || 10;
+    if (prefix === 'reg') {
+      regPageSize = parsed;
+      regPage = 1;
+      renderRegisteredTable();
+    } else {
+      guestPageSize = parsed;
+      guestPage = 1;
+      renderGuestTable();
+    }
+  }
+
+  // ===== TAB 3: ACTIVE GAMES =====
+  async function loadActiveGames() {
     try {
-      const res = await fetch('/api/admin/users/' + userId, { method: 'DELETE' });
+      const res = await fetch('/api/admin/games/active');
       const data = await res.json();
-      if (data.success) { showToast('User deleted', 'success'); loadUsers(); }
-      else { showToast(data.message || 'Failed to delete user', 'error'); }
-    } catch (err) { showToast('Failed to delete user', 'error'); }
+      const tbody = document.getElementById('activeGamesTableBody');
+
+      if (!data.success || !data.games || data.games.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-dim);">Şu anda devam eden aktif canlı maç bulunmuyor.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.games.map(g => {
+        const whiteName = g.white ? g.white.username : 'Bilinmiyor';
+        const blackName = g.black ? g.black.username : 'Bilinmiyor';
+        const turnColor = g.turn === 'white' ? 'Beyaz' : 'Siyah';
+
+        return `<tr>
+          <td>
+            <div style="font-weight:700;color:var(--text-bright);">${esc(g.gameId.substring(0, 8))}</div>
+            <span class="kpi-badge" style="background:rgba(245,158,11,0.15);color:var(--gold);">${esc(g.mode || 'standard')}</span>
+          </td>
+          <td><strong>${esc(whiteName)}</strong> (${g.white ? g.white.elo : 1200})</td>
+          <td><strong>${esc(blackName)}</strong> (${g.black ? g.black.elo : 1200})</td>
+          <td>${g.moveCount || 0} Hamle</td>
+          <td><span style="color:var(--accent-cyan);font-weight:600;">${turnColor}</span></td>
+          <td style="font-family:var(--font-mono);font-size:12px;">${Math.round((g.whiteTime || 0)/1000)}s / ${Math.round((g.blackTime || 0)/1000)}s</td>
+          <td style="text-align:right;">
+            <div class="action-btn-group" style="justify-content:flex-end;">
+              <a href="game.html?matchId=${encodeURIComponent(g.gameId)}" target="_blank" class="btn-action btn-bp-reset">
+                <i data-lucide="eye"></i> İzle
+              </a>
+              <button class="btn-action btn-danger" onclick="terminateGame('${esc(g.gameId)}')">
+                <i data-lucide="square"></i> Sonlandır
+              </button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.warn('Failed to load active games:', e);
+    }
   }
 
-  async function resetUserStats(userId, username) {
-    if (!confirm(`Reset stats for "${username}"? Elo → 1200, W/L/D → 0.`)) return;
+  // ===== TAB 4: RECENT MATCHES =====
+  async function loadRecentGames() {
     try {
-      const res = await fetch('/api/admin/users/' + userId + '/reset-stats', { method: 'POST' });
+      const res = await fetch('/api/admin/games/recent');
       const data = await res.json();
-      if (data.success) { showToast('Stats reset for ' + username, 'success'); loadUsers(); }
-      else { showToast(data.message || 'Failed to reset stats', 'error'); }
-    } catch (err) { showToast('Failed to reset stats', 'error'); }
+      const tbody = document.getElementById('recentGamesTableBody');
+
+      if (!data.success || !data.games || data.games.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-dim);">Kayıtlı maç geçmişi bulunamadı.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.games.map(g => {
+        let resultBadge = '<span class="kpi-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim);">Berabere</span>';
+        if (g.result === 'white_wins') {
+          resultBadge = '<span class="kpi-badge" style="background:rgba(16,185,129,0.15);color:var(--emerald);">Beyaz Kazandı</span>';
+        } else if (g.result === 'black_wins') {
+          resultBadge = '<span class="kpi-badge" style="background:rgba(244,63,94,0.15);color:var(--red-soft);">Siyah Kazandı</span>';
+        }
+
+        const matchUuid = g.game_uuid || g.id;
+        return `<tr>
+          <td style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">${g.id}</td>
+          <td><strong>${esc(g.white_username || 'Beyaz')}</strong> (${g.white_elo || 1200})</td>
+          <td><strong>${esc(g.black_username || 'Siyah')}</strong> (${g.black_elo || 1200})</td>
+          <td>${resultBadge}</td>
+          <td style="font-size:12px;color:var(--text-muted);">${g.created_at ? g.created_at.substring(0, 16) : '—'}</td>
+          <td style="text-align:right;">
+            <a href="game.html?matchId=${encodeURIComponent(matchUuid)}" target="_blank" class="btn-action btn-reset">
+              <i data-lucide="play"></i> Tekrar İzle
+            </a>
+          </td>
+        </tr>`;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      console.warn('Failed to load recent games:', e);
+    }
   }
 
-  async function resetAllStats() {
-    if (!confirm('Are you sure you want to reset ALL stats? This will set everyone\'s Elo to 1200 and wins/losses/draws to 0. This cannot be undone.')) return;
+  // ===== USER LOOKUP HELPER =====
+  function findUserById(userId) {
+    return allRegisteredUsers.find(u => u.id === userId) || allGuestUsers.find(u => u.id === userId) || null;
+  }
+
+  // ===== ACTIONS =====
+
+  // Ban User
+  function openBanModal(userId) {
+    const user = findUserById(userId);
+    if (!user) return;
+    activeModalUserId = userId;
+    activeModalUsername = user.username;
+    document.getElementById('banModalUsername').textContent = user.username;
+    document.getElementById('banReasonInput').value = '';
+    openModal('banModal');
+  }
+
+  function setBanReason(reason) {
+    document.getElementById('banReasonInput').value = reason;
+  }
+
+  async function confirmBanUser() {
+    if (!activeModalUserId) return;
+    const reason = document.getElementById('banReasonInput').value.trim();
     try {
-      const res = await fetch('/api/admin/reset-stats', { method: 'POST' });
+      const res = await fetch(`/api/admin/users/${activeModalUserId}/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
       const data = await res.json();
-      if (data.success) { showToast('All stats have been reset', 'success'); loadUsers(); }
-      else { showToast(data.message || 'Failed to reset stats', 'error'); }
-    } catch (err) { showToast('Failed to reset stats', 'error'); }
+      closeModal('banModal');
+      if (data.success) {
+        showToast(data.message || `"${activeModalUsername}" hesabı banlandı.`, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Banlama işlemi başarısız oldu.', 'error');
+      }
+    } catch (e) {
+      showToast('Ban isteği sırasında bir hata oluştu.', 'error');
+    }
   }
 
-  async function grantUserXp(userId, username) {
-    const input = prompt(`Grant battlepass XP to "${username}".\n\nEnter XP amount (positive integer).\n\nTip: Tier thresholds are 50, 100, 160, 230 (Pioneer), 730 (Founder), 2480 (Veteran), 3730 (Legend), 5230 (Champion).`);
-    if (input === null) return;
-    const amount = parseInt(input, 10);
+  async function unbanUser(userId) {
+    const user = findUserById(userId);
+    const username = user ? user.username : `#${userId}`;
+    if (!confirm(`"${username}" kullanıcısının banını kaldırmak istediğinize emin misiniz?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/unban`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `"${username}" banı kaldırıldı.`, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'İşlem başarısız.', 'error');
+      }
+    } catch (e) {
+      showToast('İşlem başarısız oldu.', 'error');
+    }
+  }
+
+  // Toggle Admin Role
+  async function toggleAdminRole(userId, currentAdmin) {
+    const user = findUserById(userId);
+    const username = user ? user.username : `#${userId}`;
+    const actionText = currentAdmin ? 'yöneticilik yetkisini geri almak' : 'yönetici yapmak';
+    if (!confirm(`"${username}" kullanıcısını ${actionText} istediğinize emin misiniz?`)) return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/toggle-admin`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Yetki değiştirilemedi.', 'error');
+      }
+    } catch (e) {
+      showToast('İşlem başarısız oldu.', 'error');
+    }
+  }
+
+  // Grant XP Modal
+  function openXpModal(userId) {
+    const user = findUserById(userId);
+    if (!user) return;
+    activeModalUserId = userId;
+    activeModalUsername = user.username;
+    document.getElementById('xpModalUsername').textContent = user.username;
+    document.getElementById('xpAmountInput').value = '100';
+    openModal('xpModal');
+  }
+
+  function setXpAmount(amt) {
+    document.getElementById('xpAmountInput').value = amt;
+  }
+
+  async function confirmGrantXp() {
+    if (!activeModalUserId) return;
+    const amount = parseInt(document.getElementById('xpAmountInput').value, 10);
     if (!Number.isInteger(amount) || amount <= 0) {
-      showToast('Please enter a valid positive integer', 'error');
+      showToast('Geçerli bir pozitif sayı giriniz.', 'error');
       return;
     }
     try {
-      const res = await fetch('/api/admin/users/' + userId + '/grant-xp', {
+      const res = await fetch(`/api/admin/users/${activeModalUserId}/grant-xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount })
       });
       const data = await res.json();
+      closeModal('xpModal');
       if (data.success) {
-        let msg = `Granted ${amount} XP to ${username}`;
-        if (data.leveledUp) {
-          msg += ` — reached Tier ${data.newTier}`;
-          if (data.unlockedTitle) msg += ` (unlocked "${data.unlockedTitle}")`;
-        }
+        let msg = `${amount} XP yüklendi: ${activeModalUsername}`;
+        if (data.leveledUp) msg += ` — Seviye ${data.newTier}'e ulaştı!`;
         showToast(msg, 'success');
-        loadUsers();
+        loadAllAdminData();
       } else {
-        showToast(data.message || 'Failed to grant XP', 'error');
+        showToast(data.message || 'XP yüklenemedi.', 'error');
       }
-    } catch (err) { showToast('Failed to grant XP', 'error'); }
+    } catch (e) {
+      showToast('İşlem sırasında hata oluştu.', 'error');
+    }
   }
 
-  async function resetUserBattlepass(userId, username) {
-    if (!confirm(`Reset battlepass for "${username}"?\n\nThis will set XP to 0, tier to 1, and clear all unlocked/equipped titles. This cannot be undone.`)) return;
+  // Grant Coins Modal
+  function openCoinsModal(userId) {
+    const user = findUserById(userId);
+    if (!user) return;
+    activeModalUserId = userId;
+    activeModalUsername = user.username;
+    document.getElementById('coinsModalUsername').textContent = user.username;
+    document.getElementById('coinsAmountInput').value = '500';
+    openModal('coinsModal');
+  }
+
+  function setCoinsAmount(amt) {
+    document.getElementById('coinsAmountInput').value = amt;
+  }
+
+  async function confirmGrantCoins() {
+    if (!activeModalUserId) return;
+    const amount = parseInt(document.getElementById('coinsAmountInput').value, 10);
+    if (!Number.isInteger(amount)) {
+      showToast('Geçerli bir sayı giriniz.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/users/${activeModalUserId}/grant-coins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+      });
+      const data = await res.json();
+      closeModal('coinsModal');
+      if (data.success) {
+        showToast(data.message || 'Altın tanımlandı.', 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'İşlem başarısız.', 'error');
+      }
+    } catch (e) {
+      showToast('İşlem sırasında hata oluştu.', 'error');
+    }
+  }
+
+  // Clean Up Inactive or All Guests (optional olderThanMinutes)
+  async function cleanupGuests(emptyOnly = true, olderThanMinutes = null) {
+    let confirmMsg = 'Hiç oyun oynamamış (0 maçlı) geçici misafir profillerini temizlemek istiyor musunuz?';
+    if (olderThanMinutes) {
+      confirmMsg = `30 dakikadan daha eski ve hiç oyun oynamamış misafir profillerini temizlemek istiyor musunuz?`;
+    } else if (!emptyOnly) {
+      confirmMsg = 'DİKKAT: Veritabanındaki TÜM misafir hesaplarını silmek üzeresiniz. Onaylıyor musunuz?';
+    }
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch('/api/admin/cleanup-guests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emptyOnly, olderThanMinutes })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `${data.deletedCount} misafir profili temizlendi.`, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Misafir temizliği başarısız oldu.', 'error');
+      }
+    } catch (e) {
+      showToast('Misafir temizliği sırasında hata oluştu.', 'error');
+    }
+  }
+
+  // Terminate Game
+  async function terminateGame(gameId) {
+    if (!confirm(`Bu maçı zorla sonlandırmak istediğinize emin misiniz? (${gameId})`)) return;
+    try {
+      const res = await fetch(`/api/admin/games/${gameId}/terminate`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Oyun sonlandırıldı.', 'success');
+        loadActiveGames();
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Oyun sonlandırılamadı.', 'error');
+      }
+    } catch (e) {
+      showToast('İşlem başarısız.', 'error');
+    }
+  }
+
+  // System Broadcast
+  function openBroadcastModal() {
+    switchAdminTab('system');
+    document.getElementById('broadcastInput')?.focus();
+  }
+
+  async function sendBroadcast() {
+    const message = (document.getElementById('broadcastInput').value || '').trim();
+    const type = document.getElementById('broadcastType').value || 'info';
+    if (!message) {
+      showToast('Lütfen bir duyuru metni giriniz.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, type })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Duyuru tüm kullanıcılara gönderildi!', 'success');
+        document.getElementById('broadcastInput').value = '';
+      } else {
+        showToast(data.message || 'Duyuru gönderilemedi.', 'error');
+      }
+    } catch (e) {
+      showToast('Duyuru gönderilirken hata oluştu.', 'error');
+    }
+  }
+
+  // Delete User
+  async function deleteUser(userId) {
+    const user = findUserById(userId);
+    const username = user ? user.username : `#${userId}`;
+    if (!confirm(`"${username}" kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm verileri siler.`)) return;
+    try {
+      const res = await fetch('/api/admin/users/' + userId, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Kullanıcı başarıyla silindi.', 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Kullanıcı silinemedi.', 'error');
+      }
+    } catch (err) { showToast('Kullanıcı silinirken hata oluştu.', 'error'); }
+  }
+
+  // Reset User Stats
+  async function resetUserStats(userId) {
+    const user = findUserById(userId);
+    const username = user ? user.username : `#${userId}`;
+    if (!confirm(`"${username}" için istatistikler sıfırlansın mı? (ELO: 1200, G/M/B: 0)`)) return;
+    try {
+      const res = await fetch('/api/admin/users/' + userId + '/reset-stats', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`"${username}" istatistikleri sıfırlandı.`, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Sıfırlama başarısız.', 'error');
+      }
+    } catch (err) { showToast('Hata oluştu.', 'error'); }
+  }
+
+  // Reset BP
+  async function resetUserBattlepass(userId) {
+    const user = findUserById(userId);
+    const username = user ? user.username : `#${userId}`;
+    if (!confirm(`"${username}" Savaş Bileti ilerlemesi sıfırlansın mı?\n\nXP: 0, Aşama: 1 yapılacak ve unvanlar temizlenecek.`)) return;
     try {
       const res = await fetch('/api/admin/users/' + userId + '/reset-battlepass', { method: 'POST' });
       const data = await res.json();
-      if (data.success) { showToast('Battlepass reset for ' + username, 'success'); loadUsers(); }
-      else { showToast(data.message || 'Failed to reset battlepass', 'error'); }
-    } catch (err) { showToast('Failed to reset battlepass', 'error'); }
+      if (data.success) {
+        showToast(`"${username}" Savaş Bileti sıfırlandı.`, 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Sıfırlama başarısız.', 'error');
+      }
+    } catch (err) { showToast('Hata oluştu.', 'error'); }
   }
 
-  function showToast(message, type) {
+  // Reset All Stats
+  async function resetAllStats() {
+    if (!confirm('DİKKAT: TÜM OYUNCULARIN istatistiklerini sıfırlamak üzeresiniz!\n\nHerkesin ELO puanı 1200 yapılacak ve maç skorları 0 olacaktır. Bu işlem GERİ ALINAMAZ.')) return;
+    if (!confirm('Gerçekten emin misiniz? Bu işlem veritabanındaki tüm rekabetçi sıralamayı sıfırlayacaktır.')) return;
+
+    try {
+      const res = await fetch('/api/admin/reset-stats', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Tüm istatistikler sıfırlandı.', 'success');
+        loadAllAdminData();
+      } else {
+        showToast(data.message || 'Sıfırlama başarısız.', 'error');
+      }
+    } catch (err) { showToast('Hata oluştu.', 'error'); }
+  }
+
+  // Tab switcher
+  function switchAdminTab(tabName, btnEl) {
+    document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+    const targetPane = document.getElementById('pane-' + tabName);
+    if (targetPane) targetPane.classList.add('active');
+
+    if (btnEl) {
+      btnEl.classList.add('active');
+    } else {
+      const b = Array.from(document.querySelectorAll('.admin-tab-btn')).find(el => el.getAttribute('onclick')?.includes(tabName));
+      if (b) b.classList.add('active');
+    }
+
+    if (tabName === 'games') loadActiveGames();
+    if (tabName === 'recent') loadRecentGames();
+
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  // Modal helpers
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.add('active');
+  }
+
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) m.classList.remove('active');
+    activeModalUserId = null;
+    activeModalUsername = '';
+  }
+
+  function esc(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast toast-' + type;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
   }
+
+  // Close modals on clicking outside
+  document.querySelectorAll('.admin-modal-backdrop').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal(modal.id);
+    });
+  });
 
   init();
 </script>

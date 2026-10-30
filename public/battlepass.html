@@ -7,7 +7,9 @@
   <title>MiniChess — Battlepass</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
       --page-bg: #0d1117;
@@ -37,7 +39,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       background: var(--page-bg);
       color: var(--text-bright);
       min-height: 100vh;
@@ -215,26 +217,29 @@
     .tier-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 28px;
     }
     .tier-card {
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: 14px;
+      padding: 16px 14px;
       text-align: center;
-      transition: all 0.2s ease;
+      transition: all 0.25s ease;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    .tier-card.tier-locked { opacity: 0.5; }
+    .tier-card.tier-locked { opacity: 0.45; }
     .tier-card.tier-current {
       border-color: var(--tier-current);
-      box-shadow: 0 0 0 1px var(--tier-current), 0 4px 16px rgba(63,185,80,0.12);
+      box-shadow: 0 0 0 1px var(--tier-current), 0 4px 20px rgba(16, 185, 129, 0.25);
     }
     .tier-card.tier-completed {
-      border-color: var(--tier-completed);
-      background: rgba(26,107,46,0.1);
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.08);
     }
     .tier-card .tier-number {
       font-size: 12px;
@@ -244,13 +249,17 @@
     }
     .tier-card.tier-current .tier-number { color: var(--emerald); }
     .tier-card .tier-badge {
-      font-size: 24px;
-      margin-bottom: 4px;
+      font-size: 26px;
+      margin-bottom: 6px;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .tier-card .tier-xp-req {
       font-size: 11px;
       color: var(--text-muted);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .tier-card .tier-title-name {
       font-size: 12px;
@@ -262,8 +271,8 @@
       margin-top: 2px;
     }
     .tier-card .tier-claim-btn {
-      margin-top: 8px;
-      padding: 6px 16px;
+      margin-top: auto;
+      padding: 7px 18px;
       background: var(--emerald);
       color: #000;
       border: none;
@@ -273,7 +282,7 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .tier-card .tier-claim-btn:hover { box-shadow: 0 2px 12px var(--emerald-glow); }
+    .tier-card .tier-claim-btn:hover { box-shadow: 0 2px 14px var(--emerald-glow); transform: translateY(-1px); }
     .tier-card .tier-claim-btn:disabled {
       background: var(--tier-completed);
       color: rgba(255,255,255,0.6);
@@ -281,59 +290,330 @@
       box-shadow: none;
     }
     .tier-card .tier-completed-check {
-      margin-top: 8px;
+      margin-top: auto;
       font-size: 20px;
       color: var(--emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 6px;
     }
 
-    /* Titles Showcase */
-    .titles-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 8px;
+    /* Epic Tiers (Tier 5, 10, 15, 20) */
+    .tier-card.tier-epic {
+      background: linear-gradient(145deg, rgba(139, 92, 246, 0.18) 0%, rgba(24, 27, 34, 0.9) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      box-shadow: 0 0 18px rgba(139, 92, 246, 0.22), inset 0 0 14px rgba(139, 92, 246, 0.08);
     }
-    .title-item {
+    .tier-card.tier-epic:hover {
+      box-shadow: 0 0 26px rgba(139, 92, 246, 0.42), inset 0 0 16px rgba(139, 92, 246, 0.15);
+      transform: translateY(-2px);
+    }
+    .tier-card.tier-epic.tier-locked {
+      opacity: 0.65;
+    }
+    .tier-card.tier-epic .tier-number {
+      color: #c4b5fd;
+    }
+    .tier-card.tier-epic .tier-badge {
+      color: #a78bfa;
+      filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.55));
+    }
+    .tier-card.tier-epic .tier-title-name {
+      background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    /* Legendary Tiers (Tier 25, 30) */
+    .tier-card.tier-legendary {
+      background: linear-gradient(145deg, rgba(245, 158, 11, 0.22) 0%, rgba(35, 24, 10, 0.94) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.65);
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.32), inset 0 0 16px rgba(245, 158, 11, 0.12);
+    }
+    .tier-card.tier-legendary:hover {
+      box-shadow: 0 0 34px rgba(245, 158, 11, 0.55), inset 0 0 20px rgba(245, 158, 11, 0.2);
+      transform: translateY(-2px);
+    }
+    .tier-card.tier-legendary.tier-locked {
+      opacity: 0.7;
+    }
+    .tier-card.tier-legendary .tier-number {
+      color: #fde68a;
+    }
+    .tier-card.tier-legendary .tier-badge {
+      color: #f59e0b;
+      filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.75));
+    }
+    .tier-card.tier-legendary .tier-title-name {
+      background: linear-gradient(135deg, #fef08a, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    /* Rarity Pill Tags */
+    .tier-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .tier-pill-epic {
+      background: rgba(139, 92, 246, 0.22);
+      border: 1px solid rgba(139, 92, 246, 0.5);
+      color: #c4b5fd;
+    }
+    .tier-pill-ultimate {
+      background: rgba(245, 158, 11, 0.25);
+      border: 1px solid rgba(245, 158, 11, 0.7);
+      color: #fbbf24;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+    }
+    .tier-pill svg, .tier-pill .lucide {
+      width: 10px;
+      height: 10px;
+    }
+
+    /* Standard Cards Coin Badge & Styling */
+    .tier-badge.tier-badge-coins,
+    .tier-card .tier-coin-icon {
+      color: #fbbf24 !important;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.45));
+    }
+    .tier-coin-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fbbf24 !important;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .tier-coin-subtext {
+      font-size: 11px;
+      font-weight: 700;
+      color: #fbbf24;
+      margin-top: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: rgba(251, 191, 36, 0.12);
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+    .tier-card.tier-epic.tier-current {
+      border-color: #8b5cf6 !important;
+      box-shadow: 0 0 0 1px #8b5cf6, 0 0 24px rgba(139, 92, 246, 0.45) !important;
+    }
+    .tier-card.tier-legendary.tier-current {
+      border-color: #f59e0b !important;
+      box-shadow: 0 0 0 1px #f59e0b, 0 0 30px rgba(245, 158, 11, 0.6) !important;
+    }
+
+    /* Titles Empty Card */
+    .titles-empty-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 36px 20px;
+      background: var(--glass-surface);
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      margin-top: 8px;
+    }
+    .titles-empty-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(139, 92, 246, 0.15);
+      color: #c4b5fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .titles-empty-icon svg, .titles-empty-icon .lucide {
+      width: 22px;
+      height: 22px;
+    }
+    .titles-empty-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+    }
+    .titles-empty-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      max-width: 320px;
+      line-height: 1.45;
+    }
+
+    /* Titles Showcase - Selectable Badge Cards */
+    .titles-badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .title-badge-card {
       background: var(--glass-surface);
       border: 1px solid var(--glass-border);
-      border-radius: 10px;
-      padding: 12px 14px;
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .title-badge-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .title-badge-card.is-epic {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: linear-gradient(145deg, rgba(139, 92, 246, 0.1) 0%, rgba(24, 27, 32, 0.85) 100%);
+    }
+    .title-badge-card.is-legendary {
+      border-color: rgba(245, 158, 11, 0.45);
+      background: linear-gradient(145deg, rgba(245, 158, 11, 0.12) 0%, rgba(24, 27, 32, 0.85) 100%);
+    }
+    .title-badge-card.is-equipped {
+      border-color: var(--emerald) !important;
+      background: linear-gradient(145deg, rgba(16, 185, 129, 0.12) 0%, rgba(24, 27, 32, 0.85) 100%);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+    }
+    .tbc-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
     }
-    .title-item .ti-name {
-      font-size: 14px;
-      font-weight: 700;
-      background: var(--bp-gradient);
+    .tbc-icon-wrap {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+    }
+    .title-badge-card.is-epic .tbc-icon-wrap {
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+    }
+    .title-badge-card.is-legendary .tbc-icon-wrap {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+    .title-badge-card.is-equipped .tbc-icon-wrap {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--emerald);
+    }
+    .tbc-icon-wrap svg, .tbc-icon-wrap .lucide {
+      width: 18px;
+      height: 18px;
+    }
+    .tbc-season-pill {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .tbc-name {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      color: var(--text-bright);
+    }
+    .title-badge-card.is-epic .tbc-name {
+      background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .title-item .ti-season {
-      font-size: 10px;
-      color: var(--text-muted);
+    .title-badge-card.is-legendary .tbc-name {
+      background: linear-gradient(135deg, #fde68a, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
-    .title-item .ti-equip-btn {
+    .tbc-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .tbc-status {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .title-badge-card.is-equipped .tbc-status {
+      color: var(--emerald);
+    }
+    .tbc-status svg, .tbc-status .lucide {
+      width: 14px;
+      height: 14px;
+    }
+    .tbc-btn {
       padding: 5px 12px;
-      background: var(--accent-blue);
-      color: #fff;
-      border: none;
       border-radius: 6px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      border: none;
       transition: all 0.2s;
-      white-space: nowrap;
     }
-    .title-item .ti-equip-btn:hover { background: #4f8ef7; }
-    .title-item .ti-equip-btn.equipped {
-      background: var(--emerald);
-      color: #000;
+    .tbc-btn.equip-btn {
+      background: var(--accent-blue);
+      color: #fff;
     }
-    .title-item .ti-equip-btn.equipped:hover { background: var(--red-soft); color: #fff; }
+    .tbc-btn.equip-btn:hover {
+      background: #4f8ef7;
+      box-shadow: 0 2px 10px rgba(59,130,246,0.3);
+    }
+    .tbc-btn.unequip-btn {
+      background: transparent;
+      border: 1px solid var(--border-glass);
+      color: var(--text-dim);
+    }
+    .tbc-btn.unequip-btn:hover {
+      border-color: var(--red-soft);
+      color: var(--red-soft);
+    }
 
-    .empty-state { color: var(--text-muted); font-size: 13px; padding: 12px 0; text-align: center; }
+    .empty-state { color: var(--text-muted); font-size: 13px; padding: 18px 0; text-align: center; }
 
     /* Toast */
     .toast {
@@ -348,7 +628,7 @@
       z-index: 9999;
       animation: toastIn 0.3s ease;
       backdrop-filter: blur(12px);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
     }
     .toast.info { background: rgba(59,130,246,0.9); }
     .toast.success { background: rgba(34,197,94,0.9); }
@@ -374,14 +654,15 @@
       <img src="img/logo.png" alt="MiniChess" style="width:100%;max-height:180px;object-fit:contain;object-position:left;" onerror="this.style.display='none'">
     </div>
     <nav class="sidebar-nav">
-      <a href="lobby.html" id="navPlay"><span class="nav-icon">▶</span> Play</a>
-      <a href="leaderboard.html" id="navLeaderboard"><span class="nav-icon">🏆</span> Leaderboard</a>
-      <a href="battlepass.html" class="active" id="navBattlepass"><span class="nav-icon">🎖</span> Battlepass</a>
-      <a href="shop.html" id="navShop"><span class="nav-icon">🛒</span> Shop</a>
-      <a href="profile.html" id="navProfile"><span class="nav-icon">👤</span> Profile</a>
-      <a href="admin.html" id="navAdmin" style="display:none;"><span class="nav-icon">⚙</span> Admin</a>
+      <a href="lobby.html" id="navPlay" data-i18n="nav_play"><i data-lucide="play" class="nav-icon"></i> Play</a>
+      <a href="leaderboard.html" id="navLeaderboard" data-i18n="nav_leaderboard"><i data-lucide="trophy" class="nav-icon"></i> Leaderboard</a>
+      <a href="battlepass.html" class="active" id="navBattlepass" data-i18n="nav_battlepass"><i data-lucide="award" class="nav-icon"></i> Battlepass</a>
+      <a href="shop.html" id="navShop" data-i18n="nav_shop"><i data-lucide="shopping-bag" class="nav-icon"></i> Shop</a>
+      <a href="profile.html" id="navProfile" data-i18n="nav_profile"><i data-lucide="user" class="nav-icon"></i> Profile</a>
+      <a href="admin.html" id="navAdmin" style="display:none;" data-i18n="nav_admin"><i data-lucide="settings" class="nav-icon"></i> Admin</a>
     </nav>
     <div class="sidebar-footer">
+      <div id="sidebarLangContainer" class="sidebar-lang-container"></div>
       <div class="user-mini">
         <img class="user-avatar-img" id="sidebarAvatarImg" src="" alt="" style="display:none;">
         <div class="user-avatar" id="sidebarAvatarFallback">?</div>
@@ -391,11 +672,14 @@
         </div>
       </div>
       <div class="sidebar-stats">
-        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl">W</div></div>
-        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl">L</div></div>
-        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl">D</div></div>
+        <div class="sidebar-stat sb-win"><div class="sb-val" id="sbWins">0</div><div class="sb-lbl" data-i18n="stat_w">W</div></div>
+        <div class="sidebar-stat sb-loss"><div class="sb-val" id="sbLosses">0</div><div class="sb-lbl" data-i18n="stat_l">L</div></div>
+        <div class="sidebar-stat sb-draw"><div class="sb-val" id="sbDraws">0</div><div class="sb-lbl" data-i18n="stat_d">D</div></div>
       </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="sidebar-footer-actions">
+        <button class="logout-btn" onclick="logout()" data-i18n="sign_out">Sign Out</button>
+        <a href="register.html" class="guest-create-acc-btn" id="guestCreateAccBtn" style="display:none;" data-i18n="create_account">Create Account</a>
+      </div>
     </div>
   </aside>
 
@@ -403,12 +687,12 @@
     <!-- Hero -->
     <div class="bp-hero">
       <div class="bp-hero-content">
-        <span class="bp-season-badge">🎖 Season 1</span>
-        <h1>Founders Season</h1>
-        <p class="bp-subtitle">Play games, earn XP, and unlock exclusive titles. Every match counts!</p>
+        <span class="bp-season-badge"><i data-lucide="award"></i> <span data-i18n="season">Season</span> 1</span>
+        <h1 data-i18n="founders_season">Founders Season</h1>
+        <p class="bp-subtitle" data-i18n="founders_season_desc">Play games, earn XP, and unlock exclusive titles. Every match counts!</p>
         <div class="bp-progress-card">
           <div class="bp-progress-header">
-            <div class="bp-tier-label">Tier <span id="currentTierDisplay">1</span>/<span id="maxTierDisplay">30</span></div>
+            <div class="bp-tier-label"><span data-i18n="tier">Tier</span> <span id="currentTierDisplay">1</span>/<span id="maxTierDisplay">30</span></div>
             <div class="bp-xp-label"><span id="xpDisplay">0</span> XP</div>
           </div>
           <div class="bp-progress-track">
@@ -421,29 +705,30 @@
 
           <!-- Equipped Title -->
           <div class="bp-equipped">
-            <span class="eq-label">Equipped Title:</span>
-            <span class="eq-none" id="equippedTitleDisplay">None</span>
-            <button class="eq-clear-btn" id="clearTitleBtn" style="display:none;" onclick="clearTitle()">Unequip</button>
+            <span class="eq-label" data-i18n="equipped_title">Equipped Title:</span>
+            <span class="eq-none" id="equippedTitleDisplay" data-i18n="none">None</span>
+            <button class="eq-clear-btn" id="clearTitleBtn" style="display:none;" onclick="clearTitle()" data-i18n="unequip">Unequip</button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Tier Grid -->
-    <div class="section-title">🏅 Tiers <span style="font-size:12px;font-weight:400;color:var(--text-muted);">— Click Claim to collect your title</span></div>
+    <div class="section-title"><i data-lucide="layers"></i> <span data-i18n="tiers">Tiers</span> <span style="font-size:12px;font-weight:400;color:var(--text-muted);" data-i18n="click_claim_title">— Click Claim to collect your title</span></div>
     <div class="tier-grid" id="tierGrid">
-      <div class="empty-state">Loading tiers...</div>
+      <div class="empty-state" data-i18n="loading_tiers">Loading tiers...</div>
     </div>
 
     <!-- Titles Showcase -->
-    <div class="section-title">🎭 Your Titles</div>
+    <div class="section-title"><i data-lucide="sparkles"></i> <span data-i18n="your_titles">Your Titles</span></div>
     <div id="titlesContainer">
-      <div class="empty-state">You haven't unlocked any titles yet. Keep playing to earn them!</div>
+      <div class="empty-state" data-i18n="no_titles_unlocked">You haven't unlocked any titles yet. Keep playing to earn them!</div>
     </div>
   </main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
@@ -451,6 +736,14 @@
 (function() {
   let currentUser = null;
   let battlepassData = null;
+
+  // Synchronous immediate guest check to prevent flashing full battlepass interface
+  if (typeof isGuest === 'function' && isGuest()) {
+    const mainEl = document.querySelector('.main-content');
+    if (mainEl && typeof renderGuestRestriction === 'function') {
+      renderGuestRestriction(mainEl, 'battlepass');
+    }
+  }
 
   async function init() {
     try {
@@ -462,6 +755,7 @@
     // Sidebar
     document.getElementById('sidebarUsername').textContent = currentUser.username;
     document.getElementById('sidebarElo').textContent = currentUser.elo;
+    if (window.renderGuestBadges) renderGuestBadges(currentUser);
     if (currentUser.avatar_url) {
       document.getElementById('sidebarAvatarImg').src = currentUser.avatar_url;
       document.getElementById('sidebarAvatarImg').style.display = '';
@@ -477,7 +771,23 @@
       if (d.isAdmin) document.getElementById('navAdmin').style.display = 'flex';
     }).catch(() => {});
 
+    if (currentUser && (currentUser.isGuest || (typeof isGuest === 'function' && isGuest()))) {
+      const mainEl = document.querySelector('.main-content');
+      if (mainEl && typeof renderGuestRestriction === 'function') {
+        renderGuestRestriction(mainEl, 'battlepass');
+      }
+      return;
+    }
+
     await loadBattlepass();
+
+    window.addEventListener('minichess:lang', () => {
+      if (battlepassData) {
+        renderHero(battlepassData);
+        renderTiers(battlepassData);
+        renderTitles(battlepassData.titles || [], battlepassData.equippedTitle);
+      }
+    });
   }
 
   async function loadBattlepass() {
@@ -489,6 +799,9 @@
       renderHero(data);
       renderTiers(data);
       renderTitles(data.titles || [], data.equippedTitle);
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
     } catch(e) {
       showToast('Failed to load battlepass data', 'error');
     }
@@ -506,7 +819,7 @@
     document.getElementById('xpPctDisplay').textContent = pct + '%';
 
     if (data.tier >= data.maxTier) {
-      document.getElementById('xpNextTier').textContent = '🎉 Max tier reached!';
+      document.getElementById('xpNextTier').textContent = 'Max tier reached!';
     } else {
       document.getElementById('xpNextTier').textContent =
         data.xpInCurrentTier + ' / ' + data.xpNeededForNext + ' XP to Tier ' + (data.tier + 1);
@@ -536,81 +849,150 @@
 
     const claimed = data.claimedRewards || [];
     grid.innerHTML = data.tiers.map(t => {
+      const isEpic = [5, 10, 15, 20].includes(t.tier);
+      const isLegendary = [25, 30].includes(t.tier);
       let cardClass = 'tier-card';
+      if (isLegendary) cardClass += ' tier-legendary';
+      else if (isEpic) cardClass += ' tier-epic';
+
+      let rarityPill = '';
+      if (isLegendary) {
+        rarityPill = '<div class="tier-pill tier-pill-ultimate"><i data-lucide="crown"></i> ULTIMATE REWARD</div>';
+      } else if (isEpic) {
+        rarityPill = '<div class="tier-pill tier-pill-epic"><i data-lucide="sparkles"></i> EPIC TITLE</div>';
+      }
+
       let badge = '';
+      if (isLegendary) {
+        badge = '<i data-lucide="crown"></i>';
+      } else if (isEpic || t.title) {
+        badge = '<i data-lucide="award"></i>';
+      } else if (t.rewardCoins > 0) {
+        badge = '<i data-lucide="coins" style="color:#fbbf24;"></i>';
+      } else {
+        badge = t.tier <= data.tier ? '<i data-lucide="star"></i>' : '<i data-lucide="lock"></i>';
+      }
+
+      let badgeClass = 'tier-badge';
+      if (t.rewardCoins > 0 && !t.title) badgeClass += ' tier-badge-coins';
+
       let claimBtn = '';
       let completedMark = '';
       const isUnlocked = t.unlocked;
       const isClaimed = claimed.includes(t.tier);
       const isCurrent = t.tier === data.tier;
 
+      const claimText = (typeof window.t === 'function') ? window.t('claim') : 'Claim';
+      const tierLabel = (typeof window.t === 'function') ? window.t('tier') : 'Tier';
       if (isClaimed) {
         cardClass += ' tier-completed';
-        completedMark = '<div class="tier-completed-check">✅</div>';
+        completedMark = '<div class="tier-completed-check"><i data-lucide="check"></i></div>';
       } else if (isUnlocked) {
         cardClass += ' tier-current';
-        claimBtn = `<button class="tier-claim-btn" onclick="claimTier(${t.tier})">Claim</button>`;
+        claimBtn = `<button class="tier-claim-btn" onclick="claimTier(${t.tier})">${claimText}</button>`;
       } else {
         cardClass += ' tier-locked';
-        badge = '🔒';
       }
 
-      if (t.title) {
-        badge = '🏅';
-      } else if (t.rewardCoins > 0) {
-        badge = '🪙';
-      } else if (badge === '') {
-        badge = t.tier <= data.tier ? '⭐' : '🔒';
-      }
-
-      const titleHtml = t.title
-        ? `<div class="tier-title-name">${escapeText(t.title)}</div>`
-        : (t.rewardCoins > 0 ? `<div class="tier-title-name" style="color:var(--gold);">${t.rewardCoins} Coins</div>` : '');
+      const rewardHtml = t.title
+        ? `<div class="tier-title-name">${escapeText(t.title)}</div>${t.rewardCoins > 0 ? `<div class="tier-coin-subtext"><i data-lucide="coins" style="width:11px;height:11px;color:#fbbf24;"></i> +${t.rewardCoins} Coins</div>` : ''}`
+        : (t.rewardCoins > 0 ? `<div class="tier-coin-text"><i data-lucide="coins" style="width:13px;height:13px;color:#fbbf24;"></i> ${t.rewardCoins} Coins</div>` : '');
 
       return `<div class="${cardClass}">
-        <div class="tier-number">Tier ${t.tier}</div>
-        <div class="tier-badge">${badge}</div>
+        ${rarityPill}
+        <div class="tier-number">${tierLabel} ${t.tier}</div>
+        <div class="${badgeClass}">${badge}</div>
         <div class="tier-xp-req">${t.xpRequired} XP${t.tier === 1 ? ' (start)' : ''}</div>
-        ${titleHtml}
+        ${rewardHtml}
         ${completedMark}
         ${claimBtn}
       </div>`;
     }).join('');
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
 
   function renderTitles(titles, equippedTitle) {
     const container = document.getElementById('titlesContainer');
     if (!titles || !titles.length) {
-      container.innerHTML = '<div class="empty-state">You haven\'t unlocked any titles yet. Keep playing to earn them!</div>';
+      const emptyDesc = (typeof window.t === 'function') ? window.t('no_titles_unlocked') : "You haven't unlocked any titles yet. Keep playing to earn them!";
+      container.innerHTML = `
+        <div class="titles-empty-card">
+          <div class="titles-empty-icon"><i data-lucide="sparkles"></i></div>
+          <p class="titles-empty-desc" data-i18n="no_titles_unlocked">${emptyDesc}</p>
+        </div>
+      `;
+      if (window.lucide) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
       return;
     }
 
     const equippedName = currentUser.title;
     const grid = document.createElement('div');
-    grid.className = 'titles-grid';
+    grid.className = 'titles-badge-grid';
+
+    const equippedText = (typeof window.t === 'function') ? window.t('equipped') : 'Equipped';
+    const unlockedText = (typeof window.t === 'function') ? window.t('unlocked') : 'Unlocked';
+    const unequipText = (typeof window.t === 'function') ? window.t('unequip') : 'Unequip';
+    const equipText = (typeof window.t === 'function') ? window.t('equip') : 'Equip';
+    const seasonLabel = (typeof window.t === 'function') ? window.t('season') : 'Season';
+    const tierLabel = (typeof window.t === 'function') ? window.t('tier') : 'Tier';
 
     titles.forEach(t => {
       const isEquipped = t.name === equippedName;
+      const isLegendary = (t.tier === 25 || t.tier === 30);
+      const isEpic = (t.tier === 5 || t.tier === 10 || t.tier === 15 || t.tier === 20);
+
+      let cardClass = 'title-badge-card';
+      if (isEquipped) cardClass += ' is-equipped';
+      if (isLegendary) cardClass += ' is-legendary';
+      else if (isEpic) cardClass += ' is-epic';
+
+      const iconName = isLegendary ? 'crown' : (isEpic ? 'award' : 'sparkles');
+
       const item = document.createElement('div');
-      item.className = 'title-item';
+      item.className = cardClass;
+      item.onclick = function(e) {
+        if (e.target.closest('button')) return;
+        if (isEquipped) unequipTitle();
+        else equipTitle(t.id);
+      };
       item.innerHTML = `
-        <div>
-          <div class="ti-name">${escapeText(t.name)}</div>
-          <div class="ti-season">Season ${t.season} — Tier ${t.tier}</div>
+        <div class="tbc-top">
+          <div class="tbc-icon-wrap"><i data-lucide="${iconName}"></i></div>
+          <span class="tbc-season-pill">${seasonLabel} ${t.season} • ${tierLabel} ${t.tier}</span>
         </div>
-        <button class="ti-equip-btn ${isEquipped ? 'equipped' : ''}" onclick="${isEquipped ? 'unequipTitle()' : 'equipTitle(\'' + escapeAttr(t.id) + '\')'}">
-          ${isEquipped ? '✓ Equipped' : 'Equip'}
-        </button>
+        <div class="tbc-name">「${escapeText(t.name)}」</div>
+        <div class="tbc-actions">
+          <span class="tbc-status">
+            ${isEquipped ? '<i data-lucide="check-circle-2"></i> ' + equippedText : '<i data-lucide="circle"></i> ' + unlockedText}
+          </span>
+          ${isEquipped 
+            ? `<button class="tbc-btn unequip-btn" onclick="event.stopPropagation(); unequipTitle();">${unequipText}</button>`
+            : `<button class="tbc-btn equip-btn" onclick="event.stopPropagation(); equipTitle('${escapeAttr(t.id)}');">${equipText}</button>`
+          }
+        </div>
       `;
       grid.appendChild(item);
     });
 
     container.innerHTML = '';
     container.appendChild(grid);
+    if (window.lucide) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
   }
 
   // === Claim ===
   window.claimTier = async function(tier) {
+    if (currentUser && (currentUser.isGuest || (typeof isGuest === 'function' && isGuest()))) {
+      if (typeof promptGuestCreateAccount === 'function') {
+        promptGuestCreateAccount(typeof window.t === 'function' ? window.t('guest_battlepass_prompt') : null);
+      }
+      return;
+    }
     try {
       const res = await fetch('/api/battlepass/claim', {
         method: 'POST',
@@ -619,7 +1001,7 @@
       });
       const data = await res.json();
       if (data.success) {
-        showToast('🎉 Tier ' + tier + ' claimed!', 'success');
+        showToast('Tier ' + tier + ' claimed!', 'success');
         await loadBattlepass();
       } else {
         showToast(data.message || 'Failed to claim', 'error');
