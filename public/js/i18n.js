@@ -60,6 +60,9 @@
       password_placeholder: 'Enter your password',
       login_btn: 'Log In to Play',
       new_to_minichess: 'New to MiniChess?',
+      badge_tactical_blitz: '6×6 Tactical Blitz',
+      hero_tagline: 'Fast, Tactical Crazyhouse',
+      hero_tagline_desc: 'Capture opponent pieces to your pocket, drop them on any square, and checkmate fast.',
       ticker_duels: 'Fast-paced Minichess Duels',
       ticker_leaderboards: 'Climb the Global Leaderboards',
       ticker_bots: 'Challenge Advanced Bots',
@@ -309,6 +312,9 @@
       password_placeholder: 'Şifrenizi girin',
       login_btn: 'Oynamak İçin Giriş Yap',
       new_to_minichess: "MiniChess'te yeni misiniz?",
+      badge_tactical_blitz: '6×6 Taktiksel Blitz',
+      hero_tagline: 'Hızlı, Taktiksel Crazyhouse',
+      hero_tagline_desc: 'Rakip taşları cebine topla, boş kareye indir ve hızlıca mat et.',
       ticker_duels: 'Tempolu Mini Satranç Düelloları',
       ticker_leaderboards: 'Küresel Liderlik Tablosunda Yüksel',
       ticker_bots: 'Gelişmiş Botlara Meydan Oku',
@@ -511,6 +517,14 @@
 
   function getLang() {
     try {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang');
+        if (urlLang === 'tr' || urlLang === 'en') {
+          localStorage.setItem(STORAGE_KEY, urlLang);
+          return urlLang;
+        }
+      }
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === 'tr' || saved === 'en') return saved;
     } catch (e) {}

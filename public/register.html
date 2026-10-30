@@ -12,22 +12,20 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     :root {
-      --page-bg: #090c10;
-      --surface: rgba(18, 24, 34, 0.75);
-      --surface2: rgba(26, 34, 48, 0.75);
-      --border-glass: rgba(255,255,255,0.07);
-      --border-active: rgba(255,255,255,0.18);
-      --text-bright: #f0f3f7;
+      --page-bg: #070a0f;
+      --surface: rgba(14, 20, 30, 0.85);
+      --surface2: rgba(22, 30, 44, 0.75);
+      --border-glass: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(255, 255, 255, 0.18);
+      --text-bright: #f8fafc;
       --text-dim: #94a3b8;
       --text-muted: #64748b;
       --emerald: #10b981;
       --emerald-glow: rgba(16, 185, 129, 0.35);
       --accent-cyan: #06b6d4;
-      --cyan-glow: rgba(6,182,212,0.3);
+      --cyan-glow: rgba(6, 182, 212, 0.25);
       --gold: #f59e0b;
       --red-soft: #f43f5e;
-      --glass-surface: rgba(18, 24, 34, 0.75);
-      --glass-border: rgba(255, 255, 255, 0.07);
       --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
       --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
@@ -42,126 +40,252 @@
       min-height: 100vh;
       overflow-x: hidden;
       overflow-y: auto;
+      position: relative;
     }
     
-    /* Background Orbs */
+    /* Background Ambience & Soft Atmospheric Glow */
     .bg-orbs {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       z-index: 0;
       overflow: hidden;
       pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.035) 0%, rgba(7, 10, 15, 1) 100%);
     }
     .orb {
       position: absolute;
       border-radius: 50%;
-      filter: blur(100px);
-      opacity: 0.35;
+      filter: blur(120px);
+      opacity: 0.3;
       animation: float 20s infinite alternate ease-in-out;
     }
     .orb-1 {
-      width: 400px; height: 400px;
+      width: 520px; height: 520px;
       background: var(--emerald);
-      top: -100px; left: -100px;
+      top: -140px; left: -100px;
     }
     .orb-2 {
-      width: 500px; height: 500px;
+      width: 560px; height: 560px;
       background: var(--accent-cyan);
-      bottom: -200px; right: -100px;
-      animation-delay: -5s;
+      bottom: -180px; right: -120px;
+      animation-delay: -6s;
     }
     .orb-3 {
-      width: 300px; height: 300px;
+      width: 320px; height: 320px;
       background: var(--gold);
-      top: 40%; left: 40%;
-      opacity: 0.15;
-      animation-delay: -10s;
+      top: 40%; left: 35%;
+      opacity: 0.08;
+      animation-delay: -12s;
     }
     
     @keyframes float {
       0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(50px, 50px) scale(1.1); }
+      100% { transform: translate(40px, 40px) scale(1.08); }
     }
-    
-    /* Layout */
+
+    /* Layout Wrapper - Centered Unified Stage */
     .layout-wrapper {
       position: relative;
       z-index: 1;
       display: flex;
-      min-height: 100vh;
-    }
-    
-    /* Left: Showcase */
-    .showcase {
-      flex: 1;
-      display: none; /* Hidden on mobile */
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px;
-      border-right: 1px solid var(--border-glass);
-      background: linear-gradient(135deg, rgba(13,17,23,0.85), rgba(24,27,32,0.7));
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    /* Master Auth Stage Card */
+    .auth-stage {
+      width: 100%;
+      max-width: 1040px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(13, 19, 29, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      box-shadow: 0 28px 70px -15px rgba(0, 0, 0, 0.75),
+                  0 0 50px rgba(16, 185, 129, 0.06),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      animation: stageFadeIn 0.5s var(--ease-spring);
+    }
+
+    @keyframes stageFadeIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (min-width: 960px) {
+      .auth-stage {
+        flex-direction: row;
+        min-height: 600px;
+      }
+    }
+
+    /* Left: Showcase */
+    .showcase {
+      display: none; /* Mobile hidden */
+      flex: 1.15;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 38px 42px;
+      background: linear-gradient(150deg, rgba(16, 185, 129, 0.06) 0%, rgba(14, 21, 33, 0.45) 50%, rgba(9, 13, 20, 0.65) 100%);
+      position: relative;
     }
     @media (min-width: 960px) {
       .showcase { display: flex; }
     }
-    
+
+    .showcase-header {
+      text-align: left;
+    }
+    .showcase-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      color: var(--emerald);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .showcase-badge .badge-icon {
+      width: 13px;
+      height: 13px;
+    }
+    .showcase-title {
+      font-size: 23px;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+      line-height: 1.25;
+      margin-bottom: 6px;
+    }
+    .showcase-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      max-width: 440px;
+    }
+
+    /* 3D Mini Board with Spotlight Halo */
     .mini-board-wrapper {
-      perspective: 1000px;
-      margin-bottom: 60px;
+      position: relative;
+      perspective: 1100px;
+      margin: 12px auto 16px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .mini-board-wrapper::before {
+      content: '';
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(6, 182, 212, 0.06) 50%, transparent 72%);
+      filter: blur(24px);
+      pointer-events: none;
+      z-index: 0;
     }
     .mini-board {
+      position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       grid-template-rows: repeat(6, 1fr);
-      width: 320px;
-      height: 320px;
-      transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg);
+      width: 236px;
+      height: 236px;
+      transform: rotateX(24deg) rotateY(-10deg) rotateZ(6deg);
       transform-style: preserve-3d;
-      box-shadow: -20px 30px 60px rgba(0,0,0,0.8), 0 0 30px var(--emerald-glow);
-      border: 4px solid #2a2e38;
-      border-radius: 8px;
-      background: #2a2e38;
-      transition: transform 0.5s ease;
+      box-shadow: -12px 20px 45px rgba(0, 0, 0, 0.72), 0 0 28px rgba(16, 185, 129, 0.18);
+      border: 3.5px solid #283344;
+      border-radius: 10px;
+      background: #283344;
+      transition: transform 0.4s var(--ease-spring), box-shadow 0.4s ease;
       animation: boardFloat 6s infinite ease-in-out;
     }
     .mini-board:hover {
-      transform: rotateX(15deg) rotateY(-5deg) rotateZ(5deg) translateY(-10px);
+      transform: rotateX(16deg) rotateY(-6deg) rotateZ(3deg) translateY(-6px);
+      box-shadow: -16px 26px 55px rgba(0, 0, 0, 0.78), 0 0 36px rgba(16, 185, 129, 0.3);
     }
     @keyframes boardFloat {
-      0%, 100% { transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg) translateY(0); }
-      50% { transform: rotateX(25deg) rotateY(-15deg) rotateZ(10deg) translateY(-15px); }
+      0%, 100% { transform: rotateX(24deg) rotateY(-10deg) rotateZ(6deg) translateY(0); }
+      50% { transform: rotateX(24deg) rotateY(-10deg) rotateZ(6deg) translateY(-8px); }
     }
-    
+
     .cell {
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
     }
-    .cell.dark { background: #1e293b; }
+    .cell.dark { background: #1c2635; }
     .cell.light { background: #334155; }
     .cell img {
-      width: 70%;
-      height: 70%;
+      width: 74%;
+      height: 74%;
       object-fit: contain;
-      filter: drop-shadow(0 8px 6px rgba(0,0,0,0.6));
-      transform: translateY(-5px);
+      filter: drop-shadow(0 6px 4px rgba(0,0,0,0.65));
+      transform: translateY(-2px);
     }
-    
+
+    /* 3-Column Showcase Features Micro-Grid */
+    .showcase-features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+    .feature-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 9px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.25s var(--ease-spring);
+    }
+    .feature-card:hover {
+      background: rgba(16, 185, 129, 0.07);
+      border-color: rgba(16, 185, 129, 0.28);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 15px;
+      height: 15px;
+      color: var(--emerald);
+      margin-bottom: 5px;
+      stroke-width: 2.2;
+    }
+    .feature-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+      line-height: 1.25;
+      letter-spacing: 0.1px;
+    }
+
+    /* Rotating Feature Ticker with Seamless Loop */
     .feature-ticker {
       width: 100%;
-      max-width: 400px;
-      height: 60px;
+      height: 42px;
       overflow: hidden;
       position: relative;
-      border-radius: 12px;
-      background: rgba(18, 24, 34, 0.75);
-      border: 1px solid var(--border-glass);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      border-radius: 10px;
+      background: rgba(9, 13, 20, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.07);
     }
     .ticker-content {
       display: flex;
@@ -169,16 +293,17 @@
       animation: tickText 12s infinite;
     }
     .ticker-item {
-      height: 60px;
+      height: 42px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 20px;
-      font-size: 15px;
+      padding: 0 16px;
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--text-bright);
       text-align: center;
-      gap: 10px;
+      gap: 8px;
+      white-space: nowrap;
     }
     .ticker-item .ticker-icon {
       color: var(--emerald);
@@ -187,79 +312,76 @@
       justify-content: center;
     }
     .ticker-item .ticker-icon svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       filter: drop-shadow(0 0 6px var(--emerald-glow));
     }
-    
+
     @keyframes tickText {
-      0%, 20% { transform: translateY(0); }
-      25%, 45% { transform: translateY(-60px); }
-      50%, 70% { transform: translateY(-120px); }
-      75%, 95% { transform: translateY(-180px); }
-      100% { transform: translateY(0); }
+      0%, 18% { transform: translateY(0); }
+      25%, 43% { transform: translateY(-42px); }
+      50%, 68% { transform: translateY(-84px); }
+      75%, 93% { transform: translateY(-126px); }
+      100% { transform: translateY(-168px); }
     }
-    
-    /* Right: Form */
+
+    /* Right: Form Section */
     .form-section {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
-      background: transparent;
+      padding: 38px 46px;
+      background: rgba(10, 14, 22, 0.2);
     }
-    
+
     .auth-card {
       width: 100%;
-      max-width: 420px;
-      background: var(--glass-surface);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 40px;
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.4);
-      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 380px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      margin: 0 auto;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
+
     .auth-logo {
       text-align: center;
-      margin-bottom: 32px;
+      margin-bottom: 16px;
     }
     .auth-logo img {
-      max-height: 50px;
+      max-height: 42px;
       object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
     }
-    
+
+    .auth-title,
     .auth-card h1 {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 800;
-      margin-bottom: 8px;
+      color: #f8fafc !important;
       text-align: center;
+      margin-bottom: 5px;
       letter-spacing: -0.5px;
+      line-height: 1.2;
     }
     .auth-card .subtitle {
       text-align: center;
-      font-size: 15px;
+      font-size: 13.5px;
       color: var(--text-dim);
-      margin-bottom: 32px;
+      margin-bottom: 22px;
     }
-    
+
     /* Error Msg */
     .error-msg {
-      background: rgba(248,81,73,0.1);
-      border: 1px solid rgba(248,81,73,0.3);
-      border-radius: 12px;
-      padding: 12px 16px;
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid rgba(248, 81, 73, 0.35);
+      border-radius: 10px;
+      padding: 10px 14px;
       color: var(--red-soft);
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 24px;
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 18px;
       display: none;
       align-items: center;
       gap: 10px;
@@ -270,7 +392,7 @@
       display: flex;
     }
     .error-msg svg {
-      width: 20px; height: 20px;
+      width: 18px; height: 18px;
       fill: none; stroke: currentColor; stroke-width: 2;
       flex-shrink: 0;
     }
@@ -283,18 +405,18 @@
       25% { transform: translateX(-5px); }
       75% { transform: translateX(5px); }
     }
-    
+
     /* Form Elements */
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     .form-group label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-dim);
-      margin-bottom: 8px;
-      transition: color 0.2s;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+      letter-spacing: 0.1px;
     }
     .input-wrapper {
       position: relative;
@@ -304,102 +426,106 @@
     .input-wrapper .icon {
       position: absolute;
       left: 14px;
-      width: 20px; height: 20px;
+      width: 18px; height: 18px;
       color: var(--text-muted);
-      transition: color 0.3s;
+      transition: color 0.2s;
       fill: none; stroke: currentColor; stroke-width: 2;
       stroke-linecap: round; stroke-linejoin: round;
       pointer-events: none;
     }
     .input-wrapper input {
       width: 100%;
-      padding: 14px 14px 14px 44px;
-      background: rgba(0,0,0,0.2);
-      border: 1px solid var(--border-glass);
-      border-radius: 12px;
+      padding: 12px 14px 12px 42px;
+      background: rgba(9, 13, 20, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 10px;
       color: var(--text-bright);
-      font-size: 15px;
+      font-size: 14.5px;
       font-family: inherit;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .input-wrapper input:hover {
+      border-color: rgba(255, 255, 255, 0.16);
     }
     .input-wrapper input:focus {
       outline: none;
       border-color: var(--emerald);
-      background: rgba(0,0,0,0.4);
-      box-shadow: 0 0 0 4px var(--emerald-glow);
+      background: rgba(9, 13, 20, 0.9);
+      box-shadow: 0 0 0 3px var(--emerald-glow);
     }
-    .input-wrapper input:focus + .icon,
-    .input-wrapper input:focus ~ .icon {
+    .input-wrapper input:focus ~ .icon,
+    .input-wrapper input:focus + .icon {
       color: var(--emerald);
     }
     .input-wrapper input::placeholder {
       color: var(--text-muted);
+      font-size: 13.5px;
     }
-    
+
     .btn-toggle-pass {
       position: absolute;
-      right: 14px;
+      right: 10px;
       background: none;
       border: none;
       color: var(--text-muted);
       cursor: pointer;
       display: flex;
-      padding: 4px;
+      padding: 6px;
       border-radius: 6px;
       transition: color 0.2s, background 0.2s;
     }
     .btn-toggle-pass:hover {
       color: var(--text-bright);
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.08);
     }
     .btn-toggle-pass svg {
-      width: 20px; height: 20px;
+      width: 18px; height: 18px;
       fill: none; stroke: currentColor; stroke-width: 2;
       stroke-linecap: round; stroke-linejoin: round;
     }
-    
+
+    /* Submit Button */
     .btn-submit {
       width: 100%;
-      padding: 16px;
-      background: var(--emerald);
-      color: #000;
+      padding: 13px 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      border-radius: 10px;
+      font-size: 14.5px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 12px;
+      margin-top: 8px;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.32);
       overflow: hidden;
     }
     .btn-submit:hover:not(:disabled) {
-      box-shadow: 0 8px 24px var(--emerald-glow);
-      transform: translateY(-2px);
-      background: #4ade80;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+      transform: translateY(-1.5px);
     }
     .btn-submit:active:not(:disabled) {
       transform: translateY(0);
     }
     .btn-submit:disabled {
-      background: var(--surface2);
-      color: var(--text-dim);
+      opacity: 0.6;
       cursor: not-allowed;
-      border: 1px solid var(--border-glass);
-      box-shadow: none;
       transform: none;
+      box-shadow: none;
     }
     .btn-text {
       transition: opacity 0.2s;
     }
     .spinner {
       position: absolute;
-      width: 24px;
-      height: 24px;
-      border: 3px solid rgba(255,255,255,0.3);
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255, 255, 255, 0.3);
       border-top-color: #fff;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
@@ -409,28 +535,62 @@
     }
     .btn-submit.loading .btn-text { opacity: 0; }
     .btn-submit.loading .spinner { opacity: 1; visibility: visible; }
-    
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
+
+    /* Switch Link */
     .switch-link {
       text-align: center;
-      margin-top: 24px;
-      font-size: 14px;
+      margin-top: 18px;
+      font-size: 13px;
       color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
     }
     .switch-link a {
-      color: var(--accent-cyan);
+      color: #06b6d4;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
+      white-space: nowrap;
       transition: all 0.2s;
-      padding: 4px 8px;
-      border-radius: 6px;
+      padding: 2px 5px;
+      border-radius: 4px;
     }
     .switch-link a:hover {
       color: #67e8f9;
-      background: var(--cyan-glow);
+      background: rgba(6, 182, 212, 0.1);
+    }
+
+    /* Mobile Adaptations */
+    @media (max-width: 959px) {
+      .layout-wrapper {
+        padding: 56px 16px 24px 16px;
+      }
+      .auth-stage {
+        max-width: 440px;
+        min-height: auto;
+        border-radius: 20px;
+      }
+      .form-section {
+        padding: 32px 24px;
+        background: transparent;
+      }
+      .lang-toggle-top {
+        top: 14px;
+        right: 16px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .switch-link {
+        flex-wrap: wrap;
+        white-space: normal;
+      }
     }
   </style>
 </head>
@@ -445,134 +605,164 @@
 </div>
 
 <div class="layout-wrapper">
-  <!-- Left Column -->
-  <div class="showcase">
-    <div class="mini-board-wrapper">
-      <div class="mini-board">
-        <!-- Row 6 -->
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"><img src="img/pieces/bb.svg" alt="Black Bishop"></div>
-        <div class="cell light"><img src="img/pieces/bn.svg" alt="Black Knight"></div>
-        <div class="cell dark"><img src="img/pieces/br.svg" alt="Black Rook"></div>
-        <div class="cell light"><img src="img/pieces/bk.svg" alt="Black King"></div>
-        <!-- Row 5 -->
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"><img src="img/pieces/bp.svg" alt="Black Pawn"></div>
-        <!-- Row 4 -->
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <!-- Row 3 -->
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <!-- Row 2 -->
-        <div class="cell dark"><img src="img/pieces/wp.svg" alt="White Pawn"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
-        <div class="cell light"></div>
-        <!-- Row 1 -->
-        <div class="cell light"><img src="img/pieces/wk.svg" alt="White King"></div>
-        <div class="cell dark"><img src="img/pieces/wr.svg" alt="White Rook"></div>
-        <div class="cell light"><img src="img/pieces/wn.svg" alt="White Knight"></div>
-        <div class="cell dark"><img src="img/pieces/wb.svg" alt="White Bishop"></div>
-        <div class="cell light"></div>
-        <div class="cell dark"></div>
+  <!-- Unified Centered Auth Stage -->
+  <div class="auth-stage">
+    <!-- Left: Showcase -->
+    <div class="showcase">
+      <div class="showcase-header">
+        <div class="showcase-badge">
+          <i data-lucide="sparkles" class="badge-icon"></i>
+          <span data-i18n="badge_tactical_blitz">6×6 Tactical Blitz</span>
+        </div>
+        <h2 class="showcase-title" data-i18n="hero_tagline">Fast, Tactical Crazyhouse</h2>
+        <p class="showcase-desc" data-i18n="hero_tagline_desc">Capture opponent pieces to your pocket, drop them on any square, and checkmate fast.</p>
+      </div>
+
+      <div class="mini-board-wrapper">
+        <div class="mini-board">
+          <!-- Row 6 -->
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"><img src="img/pieces/bb.svg" alt="Black Bishop"></div>
+          <div class="cell light"><img src="img/pieces/bn.svg" alt="Black Knight"></div>
+          <div class="cell dark"><img src="img/pieces/br.svg" alt="Black Rook"></div>
+          <div class="cell light"><img src="img/pieces/bk.svg" alt="Black King"></div>
+          <!-- Row 5 -->
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"><img src="img/pieces/bp.svg" alt="Black Pawn"></div>
+          <!-- Row 4 -->
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <!-- Row 3 -->
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <!-- Row 2 -->
+          <div class="cell dark"><img src="img/pieces/wp.svg" alt="White Pawn"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+          <div class="cell light"></div>
+          <!-- Row 1 -->
+          <div class="cell light"><img src="img/pieces/wk.svg" alt="White King"></div>
+          <div class="cell dark"><img src="img/pieces/wr.svg" alt="White Rook"></div>
+          <div class="cell light"><img src="img/pieces/wn.svg" alt="White Knight"></div>
+          <div class="cell dark"><img src="img/pieces/wb.svg" alt="White Bishop"></div>
+          <div class="cell light"></div>
+          <div class="cell dark"></div>
+        </div>
+      </div>
+
+      <!-- 3-Column Micro-Feature Grid -->
+      <div class="showcase-features">
+        <div class="feature-card">
+          <i data-lucide="grid" class="feature-icon"></i>
+          <span class="feature-label" data-i18n="fast_tactical_grid_desc">6×6 Mini Board</span>
+        </div>
+        <div class="feature-card">
+          <i data-lucide="repeat" class="feature-icon"></i>
+          <span class="feature-label" data-i18n="crazyhouse_drops">Crazyhouse Drops</span>
+        </div>
+        <div class="feature-card">
+          <i data-lucide="award" class="feature-icon"></i>
+          <span class="feature-label" data-i18n="ranked_elo">Ranked ELO</span>
+        </div>
+      </div>
+
+      <!-- Rotating Feature Ticker -->
+      <div class="feature-ticker">
+        <div class="ticker-content">
+          <div class="ticker-item"><span class="ticker-icon"><i data-lucide="swords"></i></span> <span data-i18n="ticker_duels">Fast-paced Minichess Duels</span></div>
+          <div class="ticker-item"><span class="ticker-icon"><i data-lucide="trophy"></i></span> <span data-i18n="ticker_leaderboards">Climb the Global Leaderboards</span></div>
+          <div class="ticker-item"><span class="ticker-icon"><i data-lucide="bot"></i></span> <span data-i18n="ticker_bots">Challenge Advanced Bots</span></div>
+          <div class="ticker-item"><span class="ticker-icon"><i data-lucide="shopping-bag"></i></span> <span data-i18n="ticker_customizations">Unlock Premium Customizations</span></div>
+          <div class="ticker-item" aria-hidden="true"><span class="ticker-icon"><i data-lucide="swords"></i></span> <span data-i18n="ticker_duels">Fast-paced Minichess Duels</span></div>
+        </div>
       </div>
     </div>
-    
-    <div class="feature-ticker">
-      <div class="ticker-content">
-        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="swords"></i></span> <span data-i18n="ticker_duels">Fast-paced Minichess Duels</span></div>
-        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="trophy"></i></span> <span data-i18n="ticker_leaderboards">Climb the Global Leaderboards</span></div>
-        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="bot"></i></span> <span data-i18n="ticker_bots">Challenge Advanced Bots</span></div>
-        <div class="ticker-item"><span class="ticker-icon"><i data-lucide="shopping-bag"></i></span> <span data-i18n="ticker_customizations">Unlock Premium Customizations</span></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Right Column -->
-  <div class="form-section">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <img src="img/logo.png" alt="MiniChess" onerror="this.style.display='none'">
-      </div>
-      <h1 data-i18n="register_heading">Create Account</h1>
-      <p class="subtitle" data-i18n="register_subtitle">Join the MiniChess community</p>
-      
-      <div id="error" class="error-msg">
-        <svg viewBox="0 0 24 24">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-          <line x1="12" y1="9" x2="12" y2="13"></line>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-        <span id="errorText"></span>
-      </div>
-      
-      <form id="registerForm">
-        <div class="form-group">
-          <label for="username" data-i18n="username_label">Username</label>
-          <div class="input-wrapper">
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <input type="text" id="username" name="username" placeholder="Choose a username" data-i18n-placeholder="username_placeholder" required minlength="3" maxlength="20" autocomplete="username">
-          </div>
+    <!-- Right: Form Section -->
+    <div class="form-section">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <img src="img/logo.png" alt="MiniChess" onerror="this.style.display='none'">
+        </div>
+        <h1 class="auth-title" data-i18n="register_heading">Create Account</h1>
+        <p class="subtitle" data-i18n="register_subtitle">Join the MiniChess community</p>
+        
+        <div id="error" class="error-msg">
+          <svg viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span id="errorText"></span>
         </div>
         
-        <div class="form-group">
-          <label for="password" data-i18n="password_label">Password</label>
-          <div class="input-wrapper">
-            <svg class="icon" viewBox="0 0 24 24">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <input type="password" id="password" name="password" placeholder="Choose a password" data-i18n-placeholder="password_placeholder" required minlength="4" autocomplete="new-password">
-            <button type="button" class="btn-toggle-pass" id="togglePass" tabindex="-1" aria-label="Toggle Password Visibility">
-              <svg viewBox="0 0 24 24" class="eye-icon">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="username" data-i18n="username_label">Username</label>
+            <div class="input-wrapper">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
               </svg>
-            </button>
+              <input type="text" id="username" name="username" placeholder="Choose a username" data-i18n-placeholder="username_placeholder" required minlength="3" maxlength="20" autocomplete="username">
+            </div>
           </div>
-        </div>
+          
+          <div class="form-group">
+            <label for="password" data-i18n="password_label">Password</label>
+            <div class="input-wrapper">
+              <svg class="icon" viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input type="password" id="password" name="password" placeholder="Choose a password" data-i18n-placeholder="password_placeholder" required minlength="4" autocomplete="new-password">
+              <button type="button" class="btn-toggle-pass" id="togglePass" tabindex="-1" aria-label="Toggle Password Visibility">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label for="confirmPassword" data-i18n="confirm_password_label">Confirm Password</label>
-          <div class="input-wrapper">
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" data-i18n-placeholder="confirm_password_placeholder" required minlength="4" autocomplete="new-password">
-            <button type="button" class="btn-toggle-pass" id="toggleConfirmPass" tabindex="-1" aria-label="Toggle Password Visibility">
-              <svg viewBox="0 0 24 24" class="eye-icon">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
+          <div class="form-group">
+            <label for="confirmPassword" data-i18n="confirm_password_label">Confirm Password</label>
+            <div class="input-wrapper">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
-            </button>
+              <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" data-i18n-placeholder="confirm_password_placeholder" required minlength="4" autocomplete="new-password">
+              <button type="button" class="btn-toggle-pass" id="toggleConfirmPass" tabindex="-1" aria-label="Toggle Password Visibility">
+                <svg viewBox="0 0 24 24" class="eye-icon">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-        
-        <button type="submit" class="btn-submit" id="submitBtn">
-          <span class="btn-text" data-i18n="register_btn">Register Account</span>
-          <div class="spinner"></div>
-        </button>
-      </form>
-      <p class="switch-link"><span data-i18n="already_account">Already have an account?</span> <a href="index.html" data-i18n="log_in">Log In</a></p>
+          
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <span class="btn-text" data-i18n="register_btn">Register Account</span>
+            <div class="spinner"></div>
+          </button>
+        </form>
+        <p class="switch-link"><span data-i18n="already_account">Already have an account?</span> <a href="index.html" data-i18n="log_in">Log In</a></p>
+      </div>
     </div>
   </div>
 </div>
