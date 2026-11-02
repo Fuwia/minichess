@@ -804,6 +804,61 @@
       transition: all 0.2s ease;
     }
 
+    /* Time Control Selector */
+    .time-control-selector {
+      margin: 12px 0 16px;
+    }
+    .bot-tc-selector {
+      max-width: 480px;
+      margin: 16px auto;
+    }
+    .tc-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .tc-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tc-btn {
+      flex: 1;
+      min-width: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .tc-btn i, .tc-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .tc-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-bright);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    .tc-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--emerald);
+      color: var(--emerald);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+    }
+
     .btn-cancel-room:hover {
       border-color: var(--red-soft);
       color: var(--red-soft);
@@ -1480,6 +1535,25 @@
 
   <!-- ========== MAIN CONTENT ========== -->
   <main class="main-content" id="mainContent">
+    <!-- Lobby Top Bar / Menu -->
+    <div class="lobby-top-bar" id="lobbyTopBar">
+      <div class="lobby-top-brand">
+        <span class="lobby-live-status-dot"></span>
+        <span class="lobby-top-brand-text">MiniChess Arena</span>
+      </div>
+      <div class="lobby-top-actions">
+        <div class="sound-control-group">
+          <button id="soundToggleBtn" class="sound-toggle-btn lobby-sound-btn" onclick="SoundManager.toggleMute()" title="Sesi Kapat" aria-label="Toggle Sound">
+            <i data-lucide="volume-2" id="soundToggleIcon"></i>
+          </button>
+          <div class="sound-slider-popover" id="soundVolumePopover">
+            <input type="range" class="sound-volume-slider" id="soundVolumeSlider" min="0" max="100" value="80" oninput="SoundManager.setVolume(this.value)" aria-label="Volume">
+            <span class="sound-volume-val" id="soundVolumeVal">80%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Active game rejoin -->
     <div id="rejoinCard" class="rejoin-card" style="display:none;">
       <div class="rejoin-info">
@@ -1498,12 +1572,23 @@
         <h1 class="hero-title"><span data-i18n="welcome_back">Welcome back</span>, <span id="heroUsername">Player</span>!</h1>
         <p class="hero-subtitle" data-i18n="hero_subtitle">Choose your game mode and start playing</p>
       </div>
-      <div class="hero-stats-badge" id="heroEloBadgeContainer">
-        <div>
-          <div class="badge-label" data-i18n="current_elo">CURRENT ELO</div>
-          <div class="hero-elo-wrap">
-            <span class="badge-value" id="heroElo" style="display:none;">1200</span>
-            <span id="heroRankBadge"></span>
+      <div class="hero-welcome-actions">
+        <div class="sound-control-group">
+          <button id="lobbySoundToggleBtn" class="sound-toggle-btn lobby-sound-btn" onclick="SoundManager.toggleMute()" title="Sesi Kapat" aria-label="Toggle Sound">
+            <i data-lucide="volume-2" id="lobbySoundIcon"></i>
+          </button>
+          <div class="sound-slider-popover" id="lobbyVolumePopover">
+            <input type="range" class="sound-volume-slider" id="lobbyVolumeSlider" min="0" max="100" value="80" oninput="SoundManager.setVolume(this.value)" aria-label="Volume">
+            <span class="sound-volume-val" id="lobbyVolumeVal">80%</span>
+          </div>
+        </div>
+        <div class="hero-stats-badge" id="heroEloBadgeContainer">
+          <div>
+            <div class="badge-label" data-i18n="current_elo">CURRENT ELO</div>
+            <div class="hero-elo-wrap">
+              <span class="badge-value" id="heroElo" style="display:none;">1200</span>
+              <span id="heroRankBadge"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -1651,6 +1736,55 @@
 
       <!-- Bento Grid Bottom Row: Daily Quests / Battlepass & Mini Leaderboard -->
       <div class="lobby-bottom-bento">
+        <!-- 7-Day Login Streak Card -->
+        <div class="bento-card streak-card" id="dailyStreakCard">
+          <div class="bento-card-header">
+            <div class="bento-title-group">
+              <div class="bento-icon-wrapper streak-bento-icon"><i data-lucide="flame"></i></div>
+              <div>
+                <h3 class="bento-title" data-i18n="daily_login_streak">7-Day Login Streak</h3>
+                <p class="bento-subtitle" data-i18n="daily_streak_sub">Log in daily to claim escalating rewards!</p>
+              </div>
+            </div>
+            <div class="streak-badge-counter">
+              <i data-lucide="zap"></i> <span id="streakCurrentCount">0</span> <span data-i18n="streak_day">Day</span>
+            </div>
+          </div>
+          <div class="streak-days-track" id="streakDaysTrack">
+            <!-- 7 days rendered by renderDailyStreak() -->
+          </div>
+          <div class="streak-actions">
+            <div class="streak-hint" id="streakHintText">
+              <i data-lucide="calendar"></i> <span id="streakStatusText">...</span>
+            </div>
+            <button class="btn-claim-streak" id="streakClaimBtn" onclick="claimDailyStreakReward()">
+              <i data-lucide="gift"></i> <span id="streakClaimBtnText" data-i18n="claim_daily_reward">Claim Daily Reward</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Matches Showcase Card -->
+        <div class="bento-card live-matches-card" id="liveMatchesCard">
+          <div class="bento-card-header">
+            <div class="bento-title-group">
+              <div class="bento-icon-wrapper"><i data-lucide="tv"></i></div>
+              <div>
+                <h3 class="bento-title">
+                  <span data-i18n="live_matches">Live Matches</span>
+                  <span class="live-pulse" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; margin-left:6px;"></span>
+                </h3>
+                <p class="bento-subtitle" data-i18n="live_matches_desc">Watch ongoing tactical duels in real-time</p>
+              </div>
+            </div>
+            <button class="game-action-btn" onclick="loadLiveMatches()" style="padding:6px 10px; font-size:12px; height:auto; width:auto;" title="Yenile">
+              <i data-lucide="rotate-cw" style="width:13px; height:13px;"></i>
+            </button>
+          </div>
+          <div class="live-matches-list" id="liveMatchesList">
+            <div class="live-match-empty" data-i18n="no_live_matches">No active matches right now. Jump into a game!</div>
+          </div>
+        </div>
+
         <!-- Daily Quests / Battlepass Card -->
         <div class="bento-card quests-card">
           <div class="bento-card-header">
@@ -1676,51 +1810,51 @@
           </div>
 
           <!-- Quests List -->
-          <div class="quests-list">
+          <div class="quests-list" id="dailyQuestsList">
             <div class="quest-item">
               <div class="quest-info">
-                <span class="quest-name" data-i18n="drop_master">Drop Master</span>
-                <span class="quest-desc" data-i18n="drop_master_desc">Drop 4 captured pieces onto the board</span>
+                <span class="quest-name" data-i18n="quest_1_title">Bugün 1 Maç Tamamla</span>
+                <span class="quest-desc" data-i18n="quest_1_desc">En az 1 maçı tamamla</span>
               </div>
               <div class="quest-progress-col">
                 <div class="quest-meta">
-                  <span class="quest-count">3/4</span>
-                  <span class="quest-xp">+150 XP</span>
-                </div>
-                <div class="progress-bar-track small">
-                  <div class="progress-bar-fill" style="width: 75%;"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="quest-item">
-              <div class="quest-info">
-                <span class="quest-name" data-i18n="tactical_victory">Tactical Victory</span>
-                <span class="quest-desc" data-i18n="tactical_victory_desc">Win 2 rated multiplayer matches</span>
-              </div>
-              <div class="quest-progress-col">
-                <div class="quest-meta">
-                  <span class="quest-count">1/2</span>
-                  <span class="quest-xp">+200 XP</span>
-                </div>
-                <div class="progress-bar-track small">
-                  <div class="progress-bar-fill" style="width: 50%;"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="quest-item completed">
-              <div class="quest-info">
-                <span class="quest-name" data-i18n="ai_warmup">AI Warmup</span>
-                <span class="quest-desc" data-i18n="ai_warmup_desc">Checkmate any computer bot</span>
-              </div>
-              <div class="quest-progress-col">
-                <div class="quest-meta">
-                  <span class="quest-count completed-badge"><i data-lucide="check"></i> <span data-i18n="done">Done</span></span>
+                  <span class="quest-count">0/1</span>
                   <span class="quest-xp">+100 XP</span>
                 </div>
                 <div class="progress-bar-track small">
-                  <div class="progress-bar-fill" style="width: 100%;"></div>
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quest-item">
+              <div class="quest-info">
+                <span class="quest-name" data-i18n="quest_2_title">Cepten 2 Taş Bırak (Crazyhouse Drop)</span>
+                <span class="quest-desc" data-i18n="quest_2_desc">Cepten tahtaya 2 adet taş yerleştir</span>
+              </div>
+              <div class="quest-progress-col">
+                <div class="quest-meta">
+                  <span class="quest-count">0/2</span>
+                  <span class="quest-xp">+150 XP</span>
+                </div>
+                <div class="progress-bar-track small">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quest-item">
+              <div class="quest-info">
+                <span class="quest-name" data-i18n="quest_3_title">Bir Botu Mağlup Et</span>
+                <span class="quest-desc" data-i18n="quest_3_desc">Herhangi bir yapay zeka botuna karşı galip gel</span>
+              </div>
+              <div class="quest-progress-col">
+                <div class="quest-meta">
+                  <span class="quest-count">0/1</span>
+                  <span class="quest-xp">+200 XP</span>
+                </div>
+                <div class="progress-bar-track small">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
                 </div>
               </div>
             </div>
@@ -1734,7 +1868,7 @@
               <div class="bento-icon-wrapper"><i data-lucide="trophy"></i></div>
               <div>
                 <h3 class="bento-title" data-i18n="top_players">Top Players</h3>
-                <p class="bento-subtitle">Global MiniChess Leaderboard</p>
+                <p class="bento-subtitle" data-i18n="top_players_desc">Global MiniChess Leaderboard</p>
               </div>
             </div>
             <a href="leaderboard.html" class="bento-action-link"><span data-i18n="full_board">Full Board</span> <i data-lucide="chevron-right"></i></a>
@@ -1770,6 +1904,20 @@
       </div>
       <section class="bot-zone">
         <div class="bot-grid" id="botGrid"></div>
+        <div class="time-control-selector bot-tc-selector" id="botTimeControlSelector">
+          <div class="tc-label" data-i18n="time_control">Time Control</div>
+          <div class="tc-options">
+            <button type="button" class="tc-btn" data-time="60" onclick="selectBotTimeControl(60, this)">
+              <i data-lucide="zap"></i> <span data-i18n="bullet_1m">1+0 Bullet (60s)</span>
+            </button>
+            <button type="button" class="tc-btn active" data-time="180" onclick="selectBotTimeControl(180, this)">
+              <i data-lucide="timer"></i> <span data-i18n="blitz_3m">3+0 Blitz (180s)</span>
+            </button>
+            <button type="button" class="tc-btn" data-time="300" onclick="selectBotTimeControl(300, this)">
+              <i data-lucide="hourglass"></i> <span data-i18n="rapid_5m">5+0 Rapid (300s)</span>
+            </button>
+          </div>
+        </div>
         <button id="botPlayBtn" class="bot-play-btn" onclick="startBotGame()">
           <i data-lucide="bot"></i> <span data-i18n="play_vs">Play vs</span> <span id="selectedBotName">Amateur</span>
         </button>
@@ -1810,6 +1958,20 @@
                 <p class="fz-col-desc" data-i18n="create_room_desc">Open a private board, send the invite link to a friend, and start playing.</p>
               </div>
             </div>
+            <div class="time-control-selector" id="roomTimeControlSelector">
+              <div class="tc-label" data-i18n="time_control">Time Control</div>
+              <div class="tc-options">
+                <button type="button" class="tc-btn" data-time="60" onclick="selectRoomTimeControl(60, this)">
+                  <i data-lucide="zap"></i> <span data-i18n="bullet_1m">1+0 Bullet (60s)</span>
+                </button>
+                <button type="button" class="tc-btn active" data-time="180" onclick="selectRoomTimeControl(180, this)">
+                  <i data-lucide="timer"></i> <span data-i18n="blitz_3m">3+0 Blitz (180s)</span>
+                </button>
+                <button type="button" class="tc-btn" data-time="300" onclick="selectRoomTimeControl(300, this)">
+                  <i data-lucide="hourglass"></i> <span data-i18n="rapid_5m">5+0 Rapid (300s)</span>
+                </button>
+              </div>
+            </div>
             <div class="room-create-group">
               <button id="createRoomBtn" class="btn-create-room" onclick="createRoom()"><i data-lucide="plus"></i> <span data-i18n="btn_create_private_room">+ Create Private Room</span></button>
             </div>
@@ -1834,6 +1996,8 @@
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/quests.js"></script>
 <script>
 (function() {
   // ========== State ==========
@@ -1978,6 +2142,11 @@
     loadActivities();
     loadMiniLeaderboard();
     loadBattlepassSummary();
+    renderDailyQuests();
+    loadDailyStreak();
+    loadLiveMatches();
+    setInterval(loadLiveMatches, 8000);
+    if (typeof SoundManager !== 'undefined') SoundManager.updateUI();
     if (window.lucide) lucide.createIcons();
     if (socket && socket.connected) {
       socket.emit('request_queue_counts');
@@ -1988,6 +2157,13 @@
     }
   }
 
+  window.addEventListener('minichess:lang', () => {
+    if (typeof renderDailyQuests === 'function') renderDailyQuests();
+    if (typeof renderDailyStreak === 'function') renderDailyStreak();
+    if (typeof renderLiveMatches === 'function') renderLiveMatches();
+    if (typeof SoundManager !== 'undefined') SoundManager.updateUI();
+  });
+
   let socketListenersSetup = false;
   function setupSocketListeners() {
     if (socketListenersSetup) return;
@@ -1996,7 +2172,12 @@
     socket.on('match_found', (data) => {
       stopMatchQueueUI();
       sessionStorage.setItem('gameData', JSON.stringify(data));
-      window.location.href = 'game.html';
+      if (typeof SoundManager !== 'undefined') {
+        SoundManager.play('match');
+      }
+      setTimeout(() => {
+        window.location.href = 'game.html';
+      }, 350);
     });
 
     socket.on('queue_joined', () => {
@@ -2080,6 +2261,12 @@
         while (feedList.children.length > 15) {
           feedList.lastChild.remove();
         }
+      }
+    });
+
+    socket.on('live_games_update', (data) => {
+      if (data && data.games) {
+        renderLiveMatches(data.games);
       }
     });
   }
@@ -2166,7 +2353,8 @@
         const feedList = document.getElementById('activityFeedList');
         if (feedList) {
           if (data.activities.length === 0) {
-            feedList.innerHTML = '<div class="feed-loading">No recent activity</div>';
+            const emptyActText = typeof window.t === 'function' ? window.t('no_recent_activity') : 'No recent activity';
+            feedList.innerHTML = `<div class="feed-loading">${emptyActText}</div>`;
           } else {
             feedList.innerHTML = data.activities.map(act => renderActivityItem(act)).join('');
             if (window.lucide) lucide.createIcons();
@@ -2186,7 +2374,8 @@
       if (!tbody) return;
       const list = (data.leaderboard || []).slice(0, 5);
       if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="lb-empty" style="text-align:center; padding: 24px; color: var(--text-muted);">No players yet</td></tr>';
+        const emptyLbText = typeof window.t === 'function' ? window.t('no_players_yet') : 'No players yet';
+        tbody.innerHTML = `<tr><td colspan="4" class="lb-empty" style="text-align:center; padding: 24px; color: var(--text-muted);">${emptyLbText}</td></tr>`;
         return;
       }
       tbody.innerHTML = list.map((user, idx) => {
@@ -2243,6 +2432,154 @@
     }
   }
 
+  function renderDailyQuests() {
+    const container = document.getElementById('dailyQuestsList');
+    if (!container || typeof DailyQuests === 'undefined') return;
+
+    const quests = DailyQuests.getQuests();
+    let html = '';
+
+    quests.forEach(quest => {
+      const isComplete = quest.current >= quest.target;
+      const isClaimed = quest.claimed;
+      const pct = Math.min(100, Math.round((quest.current / quest.target) * 100));
+
+      const title = (typeof window.t === 'function' && window.t(quest.titleKey))
+        ? window.t(quest.titleKey)
+        : quest.defaultTitle;
+      const desc = (typeof window.t === 'function' && window.t(quest.descKey))
+        ? window.t(quest.descKey)
+        : quest.defaultDesc;
+
+      let actionHtml = '';
+      let itemClass = 'quest-item';
+
+      if (isClaimed) {
+        itemClass += ' completed claimed';
+        actionHtml = `
+          <span class="quest-count completed-badge">
+            <i data-lucide="check"></i> <span>${typeof window.t === 'function' ? window.t('claimed', 'Alındı') : 'Alındı'}</span>
+          </span>
+        `;
+      } else if (isComplete) {
+        itemClass += ' completed ready-claim';
+        actionHtml = `
+          <button class="quest-claim-btn" onclick="claimDailyQuest(${quest.id})" title="${typeof window.t === 'function' ? window.t('claim_reward', 'Ödülü Al') : 'Ödülü Al'}">
+            <i data-lucide="gift"></i> <span>${typeof window.t === 'function' ? window.t('claim', 'Ödülü Al') : 'Ödülü Al'}</span>
+          </button>
+        `;
+      } else {
+        actionHtml = `<span class="quest-count">${quest.current}/${quest.target}</span>`;
+      }
+
+      html += `
+        <div class="${itemClass}">
+          <div class="quest-info">
+            <span class="quest-name">${title}</span>
+            <span class="quest-desc">${desc}</span>
+          </div>
+          <div class="quest-progress-col">
+            <div class="quest-meta">
+              ${actionHtml}
+              <span class="quest-xp">+${quest.xp} XP</span>
+            </div>
+            <div class="progress-bar-track small">
+              <div class="progress-bar-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    if (window.lucide && window.lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  async function claimDailyQuest(questId) {
+    if (typeof DailyQuests === 'undefined') return;
+    const result = DailyQuests.claim(questId);
+    if (!result.success) {
+      if (typeof showToast === 'function') showToast(result.message || 'Error', 'error');
+      return;
+    }
+
+    const quest = result.quest;
+    if (typeof SoundManager !== 'undefined') {
+      SoundManager.play('match');
+    }
+
+    const toastMsg = `+${quest.xp} XP! ${typeof window.t === 'function' ? window.t('reward_claimed_toast', 'Battlepass XP eklendi!') : 'Battlepass XP eklendi!'}`;
+    if (typeof showToast === 'function') {
+      showToast(toastMsg, 'success');
+    }
+
+    // Call backend to award Battlepass XP
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
+      if (gUser) headers['x-guest-username'] = gUser;
+
+      const res = await fetch('/api/quests/claim', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ questId: quest.id, xp: quest.xp })
+      });
+      const data = await res.json();
+      if (data.success && data.battlepass) {
+        const bp = data.battlepass;
+        const tierEl = document.getElementById('bpTierVal');
+        if (tierEl && bp.tier) tierEl.textContent = bp.tier;
+        const xpCountEl = document.getElementById('bpXpCount');
+        const pb = document.getElementById('bpProgressBar');
+        if (bp.xpNeededForNext > 0) {
+          const current = bp.xpInCurrentTier || 0;
+          const needed = bp.xpNeededForNext;
+          const pct = Math.min(100, Math.round((current / needed) * 100));
+          if (xpCountEl) xpCountEl.textContent = `${current.toLocaleString()} / ${needed.toLocaleString()} XP`;
+          if (pb) pb.style.width = pct + '%';
+        } else {
+          if (xpCountEl) xpCountEl.textContent = `${(bp.xp || 0).toLocaleString()} XP (MAX)`;
+          if (pb) pb.style.width = '100%';
+        }
+        if (typeof loadBattlepassSummary === 'function') {
+          loadBattlepassSummary();
+        }
+      } else {
+        bumpLocalBpProgress(quest.xp);
+      }
+    } catch (e) {
+      bumpLocalBpProgress(quest.xp);
+    }
+
+    renderDailyQuests();
+  }
+
+  function bumpLocalBpProgress(amount) {
+    const xpCountEl = document.getElementById('bpXpCount');
+    const pb = document.getElementById('bpProgressBar');
+    if (!xpCountEl || !pb) return;
+    const match = xpCountEl.textContent.match(/(\d[\d,.]*)\s*\/\s*(\d[\d,.]*)/);
+    if (match) {
+      let current = parseInt(match[1].replace(/,/g, ''), 10) + amount;
+      const needed = parseInt(match[2].replace(/,/g, ''), 10);
+      if (needed > 0 && current >= needed) {
+        current = current - needed;
+        const tierEl = document.getElementById('bpTierVal');
+        if (tierEl) {
+          tierEl.textContent = (parseInt(tierEl.textContent, 10) || 1) + 1;
+        }
+      }
+      const pct = Math.min(100, Math.round((current / needed) * 100));
+      xpCountEl.textContent = `${current.toLocaleString()} / ${needed.toLocaleString()} XP`;
+      pb.style.width = pct + '%';
+    }
+  }
+
+  window.claimDailyQuest = claimDailyQuest;
+  window.renderDailyQuests = renderDailyQuests;
+
   async function checkActiveGame() {
     try {
       const res = await fetch('/api/me/active-game');
@@ -2256,6 +2593,286 @@
       }
     } catch (err) { /* ignore */ }
   }
+
+  // ========== Daily Login Streak ==========
+  let currentStreakData = null;
+
+  async function loadDailyStreak() {
+    try {
+      const res = await fetch('/api/me/daily-streak');
+      if (!res.ok) return;
+      const data = await res.json();
+      currentStreakData = data;
+      renderDailyStreak();
+    } catch (e) {
+      console.error('Failed to load daily streak:', e);
+    }
+  }
+
+  function renderDailyStreak() {
+    if (!currentStreakData) return;
+    const streak = currentStreakData.streak || 0;
+    const canClaim = !!currentStreakData.canClaim;
+    const streakEl = document.getElementById('streakCurrentCount');
+    if (streakEl) streakEl.textContent = streak;
+
+    const track = document.getElementById('streakDaysTrack');
+    if (track) {
+      const daysConfig = [
+        { day: 1, xp: 50, coins: 0, icon: 'zap', label: '+50 XP' },
+        { day: 2, xp: 75, coins: 0, icon: 'zap', label: '+75 XP' },
+        { day: 3, xp: 0, coins: 100, icon: 'coins', label: '+100 Coins' },
+        { day: 4, xp: 125, coins: 0, icon: 'zap', label: '+125 XP' },
+        { day: 5, xp: 0, coins: 150, icon: 'coins', label: '+150 Coins' },
+        { day: 6, xp: 200, coins: 0, icon: 'zap', label: '+200 XP' },
+        { day: 7, xp: 250, coins: 300, icon: 'crown', label: '+250 XP, +300C & Rozet' }
+      ];
+
+      const dayWord = typeof window.t === 'function' ? window.t('streak_day', 'Gün') : 'Gün';
+      const coinsWord = typeof window.t === 'function' ? window.t('coins', 'Altın') : 'Coins';
+
+      // Cycle calculation:
+      // If canClaim, next day to claim is (streak % 7) + 1. Days before that in the current cycle are completed.
+      // If !canClaim, current day is streak % 7 === 0 ? 7 : (streak % 7). Days up to that are completed.
+      const targetDay = canClaim ? ((streak % 7) + 1) : (streak % 7 === 0 && streak > 0 ? 7 : (streak % 7));
+
+      let html = '';
+      daysConfig.forEach(d => {
+        let isCompleted = false;
+        let isActive = false;
+
+        if (canClaim) {
+          if (d.day < targetDay) isCompleted = true;
+          else if (d.day === targetDay) isActive = true;
+        } else {
+          if (d.day <= targetDay && streak > 0) isCompleted = true;
+        }
+
+        let cls = 'streak-day-item';
+        if (d.day === 7) cls += ' grand-day';
+        if (isCompleted) cls += ' completed';
+        if (isActive) cls += ' active';
+
+        let rewardText = '';
+        if (d.day === 7) {
+          rewardText = '+250 XP<br>+300 ' + coinsWord + ' 👑';
+        } else if (d.coins > 0) {
+          rewardText = `+${d.coins} ${coinsWord}`;
+        } else {
+          rewardText = `+${d.xp} XP`;
+        }
+
+        html += `
+          <div class="${cls}">
+            <div class="streak-day-lbl">${dayWord} ${d.day}</div>
+            <div class="streak-day-icon"><i data-lucide="${d.icon}"></i></div>
+            <div class="streak-day-reward">${rewardText}</div>
+            ${isCompleted ? '<div class="streak-check-mark"><i data-lucide="check"></i></div>' : ''}
+          </div>
+        `;
+      });
+      track.innerHTML = html;
+    }
+
+    const claimBtn = document.getElementById('streakClaimBtn');
+    const claimBtnText = document.getElementById('streakClaimBtnText');
+    const statusText = document.getElementById('streakStatusText');
+
+    if (canClaim) {
+      if (claimBtn) {
+        claimBtn.disabled = false;
+        claimBtn.classList.add('can-claim');
+      }
+      if (claimBtnText) {
+        claimBtnText.textContent = typeof window.t === 'function' ? window.t('claim_daily_reward', 'Giriş Ödülünü Al') : 'Giriş Ödülünü Al';
+      }
+      if (statusText) {
+        statusText.textContent = typeof window.t === 'function' ? window.t('daily_streak_sub', 'Her gün giriş yap, katlanan ödülleri topla!') : 'Her gün giriş yap, katlanan ödülleri topla!';
+      }
+    } else {
+      if (claimBtn) {
+        claimBtn.disabled = true;
+        claimBtn.classList.remove('can-claim');
+      }
+      if (claimBtnText) {
+        claimBtnText.textContent = typeof window.t === 'function' ? window.t('streak_claimed_today', 'Bugün Alındı (Yarın Tekrar Gel)') : 'Bugün Alındı (Yarın Tekrar Gel)';
+      }
+      if (statusText) {
+        statusText.textContent = typeof window.t === 'function' ? window.t('streak_claimed_today', 'Bugün Alındı (Yarın Tekrar Gel)') : 'Bugün Alındı (Yarın Tekrar Gel)';
+      }
+    }
+
+    if (window.lucide && window.lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  async function claimDailyStreakReward() {
+    const claimBtn = document.getElementById('streakClaimBtn');
+    if (claimBtn) claimBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/me/daily-streak/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const errorMsg = (data.isGuest && typeof window.t === 'function')
+          ? window.t('guest_streak_login_prompt', data.message || 'Please create an account to start your daily login streak and claim rewards!')
+          : (data.message || 'Error claiming reward');
+        showToast(errorMsg, 'error');
+        if (claimBtn) claimBtn.disabled = false;
+        return;
+      }
+
+      if (typeof SoundManager !== 'undefined') {
+        SoundManager.play('match');
+      }
+      fireLobbyConfetti();
+
+      const r = data.reward || {};
+      const coinsWord = typeof window.t === 'function' ? window.t('coins', 'Altın') : 'Coins';
+      const badgeWord = typeof window.t === 'function' ? window.t('badge', 'Rozet') : 'Rozet';
+      const badgeTitle = r.badge && typeof window.t === 'function' && window.t(r.badge) ? window.t(r.badge) : (r.badge || '');
+      let msg = '';
+      if (r.badge) {
+        msg = `+${r.xp} XP, +${r.coins} ${coinsWord} & ${badgeWord} "${badgeTitle}"! 🎉`;
+      } else if (r.coins > 0) {
+        msg = `+${r.coins} ${coinsWord}! 🪙`;
+      } else {
+        msg = `+${r.xp} XP! ⚡`;
+      }
+      showToast(msg, 'success');
+
+      if (typeof loadBattlepassSummary === 'function') {
+        loadBattlepassSummary();
+      }
+      await loadDailyStreak();
+    } catch (e) {
+      showToast('Error claiming reward', 'error');
+      if (claimBtn) claimBtn.disabled = false;
+    }
+  }
+
+  function fireLobbyConfetti() {
+    for (let i = 0; i < 40; i++) {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti-piece';
+      confetti.style.left = Math.random() * 100 + 'vw';
+      confetti.style.backgroundColor = ['#fbbf24', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#ec4899'][Math.floor(Math.random() * 6)];
+      confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
+      document.body.appendChild(confetti);
+      setTimeout(() => {
+        if (confetti.parentNode) confetti.remove();
+      }, 2500);
+    }
+  }
+
+  // ========== Live Matches Showcase ==========
+  let cachedLiveGames = [];
+
+  async function loadLiveMatches() {
+    try {
+      const res = await fetch('/api/games/live');
+      if (!res.ok) return;
+      const data = await res.json();
+      cachedLiveGames = data.games || [];
+      renderLiveMatches(cachedLiveGames);
+    } catch (e) {
+      console.error('Failed to load live matches:', e);
+    }
+  }
+
+  function renderLiveMatches(games) {
+    if (Array.isArray(games)) {
+      cachedLiveGames = games;
+    } else {
+      games = cachedLiveGames;
+    }
+    const container = document.getElementById('liveMatchesList');
+    if (!container) return;
+
+    if (!games || games.length === 0) {
+      const emptyText = typeof window.t === 'function'
+        ? window.t('no_live_matches', 'Şu anda aktif maç bulunmuyor. Bir maç başlat ve ilk sen oyna!')
+        : 'Şu anda aktif maç bulunmuyor. Bir maç başlat ve ilk sen oyna!';
+      container.innerHTML = `
+        <div class="live-match-empty">
+          <i data-lucide="eye-off" style="width:24px; height:24px; margin-bottom:6px; opacity:0.6;"></i>
+          <div>${emptyText}</div>
+        </div>
+      `;
+      if (window.lucide && window.lucide.createIcons) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
+      return;
+    }
+
+    const spectateText = typeof window.t === 'function' ? window.t('spectate', 'İzle') : 'İzle';
+
+    let html = '';
+    games.slice(0, 5).forEach(game => {
+      const whiteAvatarSrc = game.white && (game.white.avatarUrl || game.white.avatar_url);
+      const whiteAvatar = whiteAvatarSrc
+        ? `<img class="live-match-avatar" src="${escapeHTML(whiteAvatarSrc)}" alt="">`
+        : `<div class="live-match-avatar-placeholder">${escapeHTML((game.white && game.white.username ? game.white.username.charAt(0) : 'W')).toUpperCase()}</div>`;
+
+      const blackAvatarSrc = game.black && (game.black.avatarUrl || game.black.avatar_url);
+      const blackAvatar = blackAvatarSrc
+        ? `<img class="live-match-avatar" src="${escapeHTML(blackAvatarSrc)}" alt="">`
+        : `<div class="live-match-avatar-placeholder">${escapeHTML((game.black && game.black.username ? game.black.username.charAt(0) : 'B')).toUpperCase()}</div>`;
+
+      const isDice = (game.mode === 'dice' || game.type === 'dice');
+      const modeBadge = isDice ? '🎲 Dice' : (game.isBot ? '🤖 Bot' : (game.isRanked ? '⚔️ Ranked' : '⚡ Casual'));
+
+      const whiteName = (game.white && game.white.username) || 'White';
+      const whiteElo = (game.white && game.white.elo) || 1200;
+      const blackName = (game.black && game.black.username) || 'Black';
+      const blackElo = (game.black && game.black.elo) || 1200;
+
+      html += `
+        <div class="live-match-item">
+          <div class="live-match-players">
+            <div class="live-match-player">
+              ${whiteAvatar}
+              <div>
+                <div class="live-match-name">${escapeHTML(whiteName)}</div>
+                <div class="live-match-elo">${whiteElo} ELO</div>
+              </div>
+            </div>
+            <div class="live-match-vs">VS</div>
+            <div class="live-match-player">
+              ${blackAvatar}
+              <div>
+                <div class="live-match-name">${escapeHTML(blackName)}</div>
+                <div class="live-match-elo">${blackElo} ELO</div>
+              </div>
+            </div>
+          </div>
+          <div class="live-match-meta">
+            <span class="live-match-badge">${modeBadge}</span>
+            <span class="live-match-specs"><i data-lucide="eye"></i> ${game.spectatorsCount || 0}</span>
+            <a href="game.html?gameId=${encodeURIComponent(game.id)}&mode=spectate" class="btn-spectate">
+              <i data-lucide="tv"></i>
+              <span>${spectateText}</span>
+            </a>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    if (window.lucide && window.lucide.createIcons) {
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  }
+
+  window.claimDailyStreakReward = claimDailyStreakReward;
+  window.loadLiveMatches = loadLiveMatches;
+  window.loadDailyStreak = loadDailyStreak;
+  window.renderDailyStreak = renderDailyStreak;
+  window.renderLiveMatches = renderLiveMatches;
 
   // ========== Matchmaking ==========
   let queueTimerInterval = null;
@@ -2363,6 +2980,27 @@
     }
   }
 
+  let selectedRoomTime = 180;
+  let selectedBotTime = 180;
+
+  function selectRoomTimeControl(seconds, btn) {
+    selectedRoomTime = seconds;
+    const parent = document.getElementById('roomTimeControlSelector');
+    if (parent) {
+      parent.querySelectorAll('.tc-btn').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) btn.classList.add('active');
+  }
+
+  function selectBotTimeControl(seconds, btn) {
+    selectedBotTime = seconds;
+    const parent = document.getElementById('botTimeControlSelector');
+    if (parent) {
+      parent.querySelectorAll('.tc-btn').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) btn.classList.add('active');
+  }
+
   // ========== Bot Game ==========
   function startBotGame() {
     if (!socket || !socket.connected) {
@@ -2372,33 +3010,37 @@
       return;
     }
     const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
-    socket.emit('start_bot_game', { difficulty: selectedBot, guestUsername: gUser });
+    socket.emit('start_bot_game', { difficulty: selectedBot, timeControl: selectedBotTime, guestUsername: gUser });
     showToast(typeof window.t === 'function' ? window.t('game_starting', 'Game starting...') : 'Game starting...', 'info');
   }
 
   // ========== Private Rooms ==========
   async function createRoom() {
     if (!socket || !socket.connected) {
-      showToast('Connecting to server...', 'info');
+      showToast(typeof window.t === 'function' ? window.t('connecting_server', 'Connecting to server...') : 'Connecting to server...', 'info');
       initSocket(currentUser);
       setTimeout(() => createRoom(), 500);
       return;
     }
     try {
-      const headers = {};
+      const headers = { 'Content-Type': 'application/json' };
       const gUser = (currentUser && currentUser.username) || (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username);
       if (gUser) headers['x-guest-username'] = gUser;
-      const res = await fetch('/api/rooms/create', { method: 'POST', headers });
+      const res = await fetch('/api/rooms/create', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ timeControl: selectedRoomTime })
+      });
       const data = await res.json();
-      if (!data.success) { showToast('Failed to create room', 'error'); return; }
+      if (!data.success) { showToast(typeof window.t === 'function' ? window.t('failed_create_room', 'Failed to create room') : 'Failed to create room', 'error'); return; }
       currentRoomId = data.roomId;
       const link = window.location.origin + '/join.html?room=' + data.roomId;
       document.getElementById('roomLink').value = link;
       document.getElementById('createRoomBtn').style.display = 'none';
       document.getElementById('roomSection').style.display = 'block';
-      document.getElementById('roomStatus').textContent = 'Waiting for friend to join...';
+      document.getElementById('roomStatus').textContent = typeof window.t === 'function' ? window.t('waiting_friend', 'Waiting for friend to join...') : 'Waiting for friend to join...';
     } catch (err) {
-      showToast('Failed to create room', 'error');
+      showToast(typeof window.t === 'function' ? window.t('failed_create_room', 'Failed to create room') : 'Failed to create room', 'error');
     }
   }
 
@@ -2465,7 +3107,10 @@
   window.joinRoomByCode = joinRoomByCode;
   window.selectBot = selectBot;
   window.filterBots = filterBots;
+  window.selectRoomTimeControl = selectRoomTimeControl;
+  window.selectBotTimeControl = selectBotTimeControl;
   window.switchPlayTab = switchPlayTab;
+  window.showToast = showToast;
 
   init();
 })();

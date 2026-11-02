@@ -62,7 +62,7 @@ function grantXP(userId, amount) {
     }
     if (coinsEarned > 0) {
       // Need to add coins to user. Require auth module locally if needed or just execute direct query
-      const updateCoins = db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?');
+      const updateCoins = db.prepare('UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?');
       updateCoins.run([coinsEarned, userId]);
       updateCoins.free();
     }

@@ -5,24 +5,36 @@ const path = require('path');
 const DB_PATH = path.join(__dirname, '..', 'minichess.db');
 
 let db = null;
+let dbPromise = null;
 
 async function getDb() {
   if (db) return db;
-  
-  const SQL = await initSqlJs();
-  
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
-  
-  db.run('PRAGMA journal_mode=WAL');
-  db.run('PRAGMA foreign_keys=ON');
-  
-  initTables();
-  return db;
+  if (dbPromise) return dbPromise;
+
+  dbPromise = (async () => {
+    try {
+      const SQL = await initSqlJs();
+      
+      if (fs.existsSync(DB_PATH)) {
+        const buffer = fs.readFileSync(DB_PATH);
+        db = new SQL.Database(buffer);
+      } else {
+        db = new SQL.Database();
+      }
+      
+      db.run('PRAGMA journal_mode=WAL');
+      db.run('PRAGMA foreign_keys=ON');
+      
+      initTables();
+      return db;
+    } catch (err) {
+      dbPromise = null;
+      db = null;
+      throw err;
+    }
+  })();
+
+  return dbPromise;
 }
 
 function initTables() {
@@ -61,13 +73,33 @@ function initTables() {
   try { db.run('ALTER TABLE users ADD COLUMN unlocked_achievements TEXT DEFAULT \'[]\''); } catch (e) { }
   try { db.run('ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0'); } catch (e) { }
   
-  // Grant admin to user "Fuwia" if they exist
-  const grantStmt = db.prepare('UPDATE users SET is_admin = 1 WHERE username = ? AND is_admin = 0');
-  grantStmt.run(['Fuwia']);
+  // Daily Login Streak
+  try { db.run('ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0'); } catch (e) { }
+  try { db.run('ALTER TABLE users ADD COLUMN last_daily_streak_date TEXT'); } catch (e) { }
+
+  // Daily Quests Claim Persistence
+  try {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS user_daily_quests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        claim_date TEXT NOT NULL,
+        quest_id INTEGER NOT NULL,
+        claimed_at TEXT DEFAULT (datetime('now')),
+        UNIQUE(user_id, claim_date, quest_id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+  } catch (e) { }
+  
+  // Grant admin to user "Fuwia" and "admin" if they exist
+  const grantStmt = db.prepare('UPDATE users SET is_admin = 1 WHERE username IN (?, ?) AND is_admin = 0');
+  grantStmt.run(['Fuwia', 'admin']);
   const changes = db.getRowsModified();
   grantStmt.free();
   if (changes > 0) {
-    console.log('[DB] Granted admin privileges to Fuwia');
+    console.log('[DB] Granted admin privileges to Fuwia/admin');
+    saveDb();
   }
   
   db.run(`
@@ -268,6 +300,7 @@ function closeDb() {
     saveDb();
     db.close();
     db = null;
+    dbPromise = null;
   }
 }
 

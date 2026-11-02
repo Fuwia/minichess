@@ -371,3 +371,56 @@ function isMoveLegalForClient(state, move) {
   const tempState = { board: boardCopy };
   return !isSquareAttacked(tempState, kingRow, kingCol, opponentColor);
 }
+
+/**
+ * Convert game state to FEN string
+ */
+function toFen(state) {
+  if (!state || !state.board) return '';
+  const fenRanks = [];
+  for (let row = 5; row >= 0; row--) {
+    let rankStr = '';
+    let empty = 0;
+    for (let col = 0; col < 6; col++) {
+      const piece = state.board[row][col];
+      if (piece === null) {
+        empty++;
+      } else {
+        if (empty > 0) {
+          rankStr += empty;
+          empty = 0;
+        }
+        const ch = piece.type;
+        rankStr += piece.color === WHITE ? ch.toUpperCase() : ch;
+      }
+    }
+    if (empty > 0) rankStr += empty;
+    fenRanks.push(rankStr);
+  }
+  let fen = fenRanks.join('/');
+
+  const wp = (state.pockets && state.pockets[WHITE]) ? state.pockets[WHITE].join(',') : '';
+  const bp = (state.pockets && state.pockets[BLACK]) ? state.pockets[BLACK].join(',') : '';
+  const colorChar = state.activeColor === WHITE ? 'w' : 'b';
+  fen += ` ${colorChar} ${state.castling || '-'} ${state.enPassant || '-'}`;
+  fen += ` [${wp}]/[${bp}]`;
+
+  return fen;
+}
+
+if (typeof window !== 'undefined') {
+  window.toFen = toFen;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseFen,
+    toFen,
+    coordsToSquare,
+    squareToCoords,
+    isValidSquare,
+    getLegalMoves,
+    isMoveLegalForClient,
+    isSquareAttacked,
+    findKing
+  };
+}

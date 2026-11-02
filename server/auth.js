@@ -67,14 +67,14 @@ function loginUser(username, plainPassword) {
 }
 
 function getUserById(id) {
-  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, is_admin, is_banned, banned_reason, banned_at FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, daily_streak, last_daily_streak_date, is_admin, is_banned, banned_reason, banned_at FROM users WHERE id = ?');
   const row = stmt.getAsObject([id]);
   stmt.free();
   return row.id ? row : null;
 }
 
 function getUserByUsername(username) {
-  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, is_admin, is_banned, banned_reason, banned_at FROM users WHERE username = ?');
+  const stmt = db.prepare('SELECT id, username, password_hash, elo, wins, losses, draws, current_streak, created_at, avatar_url, title, coins, unlocked_items, board_theme, win_effect, username_color, unlocked_achievements, daily_streak, last_daily_streak_date, is_admin, is_banned, banned_reason, banned_at FROM users WHERE username = ?');
   const row = stmt.getAsObject([username]);
   stmt.free();
   return row.id ? row : null;
@@ -133,7 +133,7 @@ function updateAvatar(userId, avatarUrl) {
 // ==================== Shop / Customization ====================
 
 function addCoins(userId, amount) {
-  const stmt = db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?');
+  const stmt = db.prepare('UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?');
   stmt.run([amount, userId]);
   stmt.free();
 }
@@ -496,16 +496,133 @@ function deleteUser(userId) {
 }
 
 function resetAllStats() {
-  db.run('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0');
+  db.run('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0, current_streak = 0');
   return true;
 }
 
 function resetUserStats(userId) {
-  const stmt = db.prepare('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0 WHERE id = ?');
+  const stmt = db.prepare('UPDATE users SET elo = 1200, wins = 0, losses = 0, draws = 0, current_streak = 0 WHERE id = ?');
   stmt.run([userId]);
   const changes = db.getRowsModified();
   stmt.free();
   return changes > 0;
+}
+
+const DAILY_STREAK_REWARDS = [
+  { day: 1, type: 'xp', amount: 50, xp: 50, coins: 0, badge: null, label: '+50 XP' },
+  { day: 2, type: 'xp', amount: 75, xp: 75, coins: 0, badge: null, label: '+75 XP' },
+  { day: 3, type: 'coins', amount: 100, xp: 0, coins: 100, badge: null, label: '+100 Altın' },
+  { day: 4, type: 'xp', amount: 125, xp: 125, coins: 0, badge: null, label: '+125 XP' },
+  { day: 5, type: 'coins', amount: 150, xp: 0, coins: 150, badge: null, label: '+150 Altın' },
+  { day: 6, type: 'xp', amount: 200, xp: 200, coins: 0, badge: null, label: '+200 XP' },
+  { day: 7, type: 'grand', amount: 300, xp: 250, coins: 300, badge: 'streak_master', label: '+300 Altın + 250 XP + Rozet' }
+];
+
+function getDayDiff(dateStr1, dateStr2 = new Date().toISOString().slice(0, 10)) {
+  if (!dateStr1 || !dateStr2) return null;
+  const s1 = String(dateStr1).slice(0, 10);
+  const s2 = String(dateStr2).slice(0, 10);
+  const d1 = new Date(s1 + 'T00:00:00Z');
+  const d2 = new Date(s2 + 'T00:00:00Z');
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return null;
+  const diffMs = d2.getTime() - d1.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function getDailyStreak(userId) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const lastDate = user.last_daily_streak_date;
+  const currentStreak = user.daily_streak || 0;
+
+  let canClaim = false;
+  let nextDay = 1;
+  let effectiveStreak = currentStreak;
+
+  if (!lastDate) {
+    canClaim = true;
+    nextDay = 1;
+    effectiveStreak = 0;
+  } else {
+    const diff = getDayDiff(lastDate, todayStr);
+    if (diff === null || diff <= 0) {
+      canClaim = false;
+      nextDay = (currentStreak % 7) + 1;
+      effectiveStreak = currentStreak;
+    } else if (diff === 1) {
+      canClaim = true;
+      nextDay = (currentStreak % 7) + 1;
+      effectiveStreak = currentStreak;
+    } else {
+      canClaim = true;
+      nextDay = 1;
+      effectiveStreak = 0;
+    }
+  }
+
+  return {
+    streak: effectiveStreak,
+    canClaim,
+    nextDay,
+    lastClaimDate: lastDate,
+    today: todayStr,
+    rewards: DAILY_STREAK_REWARDS
+  };
+}
+
+function claimDailyStreak(userId, battlepassModule) {
+  const user = getUserById(userId);
+  if (!user) return { success: false, message: 'User not found' };
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const lastDate = user.last_daily_streak_date;
+  const currentStreak = user.daily_streak || 0;
+
+  if (lastDate) {
+    const diff = getDayDiff(lastDate, todayStr);
+    if (diff !== null && diff <= 0) {
+      return { success: false, message: 'Günlük giriş ödülü bugün zaten alındı.' };
+    }
+  }
+
+  let newStreak = 1;
+  if (lastDate) {
+    const diff = getDayDiff(lastDate, todayStr);
+    if (diff === 1) {
+      newStreak = (currentStreak % 7) + 1;
+    } else {
+      newStreak = 1;
+    }
+  }
+
+  const reward = DAILY_STREAK_REWARDS.find(r => r.day === newStreak) || DAILY_STREAK_REWARDS[0];
+
+  let bpResult = null;
+  if (reward.xp > 0 && battlepassModule) {
+    bpResult = battlepassModule.grantXP(userId, reward.xp);
+  }
+  if (reward.coins > 0) {
+    addCoins(userId, reward.coins);
+  }
+  let badgeUnlocked = false;
+  if (reward.badge) {
+    badgeUnlocked = unlockAchievement(userId, reward.badge);
+  }
+
+  const stmt = db.prepare('UPDATE users SET daily_streak = ?, last_daily_streak_date = ? WHERE id = ?');
+  stmt.run([newStreak, todayStr, userId]);
+  stmt.free();
+
+  return {
+    success: true,
+    streak: newStreak,
+    reward,
+    badgeUnlocked,
+    bpResult,
+    today: todayStr
+  };
 }
 
 module.exports = {
@@ -547,5 +664,9 @@ module.exports = {
   unlockAchievement,
   equipTheme,
   equipWinEffect,
-  equipUsernameColor
+  equipUsernameColor,
+  DAILY_STREAK_REWARDS,
+  getDailyStreak,
+  claimDailyStreak,
+  getDayDiff
 };

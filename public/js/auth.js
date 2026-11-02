@@ -536,6 +536,17 @@ if (typeof window !== 'undefined') {
   window.renderGuestRestriction = renderGuestRestriction;
   window.getRankTier = getRankTier;
   window.renderRankBadge = renderRankBadge;
+
+  if (typeof window.showToast !== 'function') {
+    window.showToast = function (message, type = 'info') {
+      if (typeof document === 'undefined') return;
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + (type || 'info');
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+    };
+  }
 }
 
 if (typeof module !== 'undefined' && module.exports) {

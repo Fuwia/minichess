@@ -258,7 +258,142 @@
       equipped_title: 'Equipped Title:',
       none: 'None',
       loading_shop_items: 'Loading shop items...',
-      no_items_category: 'No items available in this category.'
+      no_items_category: 'No items available in this category.',
+      // Sound & Mute Toggle
+      sound: 'Sound',
+      sound_toggle: 'Sound Effects',
+      sound_muted: 'Sound Muted',
+      sound_unmuted: 'Sound Enabled',
+      mute_sound: 'Mute Sound',
+      unmute_sound: 'Unmute Sound',
+      unmute: 'Unmute',
+      // Resign & Draw Modals
+      resign_modal_title: 'Resign Match',
+      resign_confirm_msg: 'Are you sure you want to resign this match? This cannot be undone.',
+      yes_resign: 'Yes, Resign',
+      draw_modal_title: 'Offer Draw',
+      draw_confirm_msg: 'Are you sure you want to offer a draw to your opponent?',
+      yes_offer_draw: 'Yes, Offer Draw',
+      draw_received_title: 'Draw Offer',
+      draw_received_msg: 'Your opponent is offering a draw. Do you accept?',
+      accept_draw: 'Accept',
+      decline_draw: 'Decline',
+      draw_cancelled: 'Draw offer cancelled',
+      draw_declined: 'Draw offer declined',
+      draw_offered_waiting: 'Draw offered — waiting...',
+      draw_cancelled_by_opponent: 'Draw offer cancelled by opponent',
+      // Daily Quests
+      quest_1_title: 'Complete 1 Match Today',
+      quest_1_desc: 'Play and finish at least 1 match',
+      quest_2_title: 'Drop 2 Pieces (Crazyhouse Drop)',
+      quest_2_desc: 'Drop 2 captured pieces onto the board',
+      quest_3_title: 'Defeat a Computer Bot',
+      quest_3_desc: 'Win a game against any AI bot',
+      claim_reward: 'Claim Reward',
+      claim: 'Claim',
+      claimed: 'Claimed',
+      quest_completed: 'Quest Completed!',
+      reward_claimed_toast: 'Battlepass XP added!',
+      // Live Matches & Spectator
+      live_matches: 'Live Matches',
+      live_matches_desc: 'Watch ongoing tactical duels in real-time',
+      spectate: 'Spectate',
+      spectating_live: 'Spectating Live',
+      spectators: 'spectators',
+      spectator_count: 'Spectators',
+      no_live_matches: 'No active matches right now. Jump into a game!',
+      spectator_mode: 'Spectator Mode',
+      spectator_banner_hint: 'Live spectator view — controls disabled',
+      // Daily Streak
+      daily_login_streak: '7-Day Login Streak',
+      daily_streak_sub: 'Log in daily to claim escalating rewards!',
+      claim_daily_reward: 'Claim Daily Reward',
+      streak_claimed_today: 'Claimed Today (Come back tomorrow)',
+      streak_day: 'Day',
+      streak_bonus_claimed: 'Daily login reward claimed!',
+      grand_prize: 'Grand Prize',
+      streak_broken_notice: 'Your streak was reset because a day was missed.',
+      coins: 'Coins',
+      // Volume
+      volume: 'Volume',
+      volume_percent: 'Volume: {0}%',
+      // Game additions & Spectator
+      wins_suffix: 'Wins!',
+      white_to_move: "White's Turn",
+      black_to_move: "Black's Turn",
+      white_pocket: "White's Pocket",
+      black_pocket: "Black's Pocket",
+      guest_streak_login_prompt: 'Please create an account to start your daily login streak and claim rewards!',
+      streak_master: 'Streak Master',
+      streak_master_desc: 'Complete a 7-day login streak',
+      badge: 'Badge',
+      // Achievements
+      first_win: 'First Blood',
+      first_win_desc: 'Win your first game',
+      fast_mate: 'Lightning Speed',
+      fast_mate_desc: 'Win in 10 moves or less',
+      bot_slayer: 'Bot Slayer',
+      bot_slayer_desc: 'Defeat a computer opponent',
+      win_streak_10: 'Untouchable',
+      win_streak_10_desc: 'Win 10 games in a row',
+      pacifist: 'Pacifist',
+      pacifist_desc: 'Draw a game',
+      dedicated_player: 'Dedicated Player',
+      dedicated_player_desc: 'Play 50 games',
+      elo_1500: 'Rising Star',
+      elo_1500_desc: 'Reach 1500 ELO',
+      elo_2000: 'Grandmaster',
+      elo_2000_desc: 'Reach 2000 ELO',
+      social_butterfly: 'Social Butterfly',
+      social_butterfly_desc: 'Add a friend',
+      big_spender: 'Big Spender',
+      big_spender_desc: 'Buy an item from the shop',
+      fashionista: 'Fashionista',
+      fashionista_desc: 'Change your avatar',
+      connecting_server: 'Connecting to server...',
+      battlepass_xp: 'Battlepass XP',
+      btn_create_private_room: '+ Create Private Room',
+      variant: 'Variant',
+      top_players_desc: 'Global MiniChess Leaderboard',
+      no_recent_activity: 'No recent activity',
+      no_players_yet: 'No players yet. Be the first!',
+      failed_load_leaderboard: 'Failed to load leaderboard',
+      failed_load_shop: 'Failed to load shop items',
+      join_private_game: 'Join Private Game',
+      checking_room: 'Checking room...',
+      no_tier_data: 'No tier data available.',
+      empty_match_history_desc: 'Jump into matchmaking or challenge bots to build your record!',
+      empty_friends_desc: 'Play matches or search for friends above to connect!',
+      send_request_status: 'Sending...',
+      enter_username_status: 'Enter a username',
+      confirm_remove_friend: 'Are you sure you want to remove this friend?',
+      time_control: 'Time Control',
+      bullet_1m: '1+0 Bullet (60s)',
+      blitz_3m: '3+0 Blitz (180s)',
+      rapid_5m: '5+0 Rapid (300s)',
+      takeback: 'Takeback',
+      hint: 'Hint',
+      takeback_done: 'Move taken back',
+      no_takeback_available: 'No moves to take back',
+      calculating_hint: 'Calculating best move...',
+      hint_suggested: 'Hint: ',
+      copy_fen: 'Copy FEN',
+      fen_copied: 'FEN copied to clipboard!',
+      review_game: 'Review Moves',
+      show_result: 'Show Result',
+      game_finished_review: 'Game Finished — Move Stepper',
+      wait_your_turn: 'Wait for your turn',
+      final_position: 'Final Position',
+      move_step: 'Move',
+      only_bot_takeback: 'Takeback is only available in bot matches',
+      only_bot_hint: 'Hint is only available in bot matches',
+      failed_copy_fen: 'Failed to copy FEN',
+      no_board_state: 'No board state available',
+      joining_game: 'Joining game...',
+      room_has_two_players: 'This room already has two players.',
+      no_room_id_provided: 'No room ID provided. Ask your friend for the correct link.',
+      room_check_failed: 'Failed to check room. Please try again.',
+      failed_create_room: 'Failed to create room'
     },
     tr: {
       // Navigation
@@ -511,9 +646,146 @@
       equipped_title: 'Kuşanılan Unvan:',
       none: 'Yok',
       loading_shop_items: 'Mağaza ürünleri yükleniyor...',
-      no_items_category: 'Bu kategoride ürün bulunamadı.'
+      no_items_category: 'Bu kategoride ürün bulunamadı.',
+      // Sound & Mute Toggle
+      sound: 'Ses',
+      sound_toggle: 'Ses Efektleri',
+      sound_muted: 'Ses Kapatıldı',
+      sound_unmuted: 'Ses Açıldı',
+      mute_sound: 'Sesi Kapat',
+      unmute_sound: 'Sesi Aç',
+      unmute: 'Sesi Aç',
+      // Resign & Draw Modals
+      resign_modal_title: 'Maçtan Çekil',
+      resign_confirm_msg: 'Maçı pes etmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+      yes_resign: 'Evet, Pes Et',
+      draw_modal_title: 'Beraberlik Teklif Et',
+      draw_confirm_msg: 'Rakibinize beraberlik teklif etmek istediğinize emin misiniz?',
+      yes_offer_draw: 'Evet, Beraberlik Teklif Et',
+      draw_received_title: 'Beraberlik Teklifi',
+      draw_received_msg: 'Rakibiniz beraberlik teklif etti. Kabul ediyor musunuz?',
+      accept_draw: 'Kabul Et',
+      decline_draw: 'Reddet',
+      draw_cancelled: 'Beraberlik teklifi iptal edildi',
+      draw_declined: 'Beraberlik teklifi reddedildi',
+      draw_offered_waiting: 'Beraberlik teklif edildi — bekleniyor...',
+      draw_cancelled_by_opponent: 'Beraberlik teklifi rakip tarafından iptal edildi',
+      // Daily Quests
+      quest_1_title: 'Bugün 1 Maç Tamamla',
+      quest_1_desc: 'En az 1 maçı tamamla',
+      quest_2_title: 'Cepten 2 Taş Bırak (Crazyhouse Drop)',
+      quest_2_desc: 'Cepten tahtaya 2 adet taş yerleştir',
+      quest_3_title: 'Bir Botu Mağlup Et',
+      quest_3_desc: 'Herhangi bir yapay zeka botuna karşı galip gel',
+      claim_reward: 'Ödülü Al',
+      claim: 'Ödülü Al',
+      claimed: 'Alındı',
+      quest_completed: 'Görev Tamamlandı!',
+      reward_claimed_toast: 'Battlepass XP eklendi!',
+      // Live Matches & Spectator
+      live_matches: 'Canlı Maçlar',
+      live_matches_desc: 'Devam eden taktiksel maçları canlı izle',
+      spectate: 'İzle',
+      spectating_live: 'Canlı İzleniyor',
+      spectators: 'izleyici',
+      spectator_count: 'İzleyiciler',
+      no_live_matches: 'Şu anda aktif maç bulunmuyor. Bir maç başlat ve ilk sen oyna!',
+      spectator_mode: 'İzleyici Modu',
+      spectator_banner_hint: 'Canlı izleyici modu — kontroller devre dışı',
+      // Daily Streak
+      daily_login_streak: '7 Günlük Giriş Serisi',
+      daily_streak_sub: 'Her gün giriş yap, katlanan ödülleri topla!',
+      claim_daily_reward: 'Giriş Ödülünü Al',
+      streak_claimed_today: 'Bugün Alındı (Yarın Tekrar Gel)',
+      streak_day: 'Gün',
+      streak_bonus_claimed: 'Giriş ödülü alındı!',
+      grand_prize: 'Büyük Ödül',
+      streak_broken_notice: 'Bir gün kaçırıldığı için seriniz sıfırlandı.',
+      coins: 'Altın',
+      // Volume
+      volume: 'Ses Seviyesi',
+      volume_percent: 'Ses Seviyesi: %{0}',
+      // Game additions & Spectator
+      wins_suffix: 'Kazandı!',
+      white_to_move: 'Beyazın Sırası',
+      black_to_move: 'Siyahın Sırası',
+      white_pocket: 'Beyazın Cebi',
+      black_pocket: 'Siyahın Cebi',
+      guest_streak_login_prompt: 'Günlük seriyi başlatmak ve ödülleri toplamak için lütfen bir hesap oluşturun!',
+      streak_master: 'Seri Ustası',
+      streak_master_desc: '7 günlük giriş serisini tamamla',
+      badge: 'Rozet',
+      // Achievements
+      first_win: 'İlk Kan',
+      first_win_desc: 'İlk galibiyetini al',
+      fast_mate: 'Yıldırım Hızı',
+      fast_mate_desc: '10 hamle veya daha kısa sürede kazan',
+      bot_slayer: 'Bot Avcısı',
+      bot_slayer_desc: 'Bir yapay zeka rakibi mağlup et',
+      win_streak_10: 'Dokunulmaz',
+      win_streak_10_desc: 'Üst üste 10 maç kazan',
+      pacifist: 'Pasifist',
+      pacifist_desc: 'Bir maçı beraberlikle bitir',
+      dedicated_player: 'Sadık Oyuncu',
+      dedicated_player_desc: '50 maç oyna',
+      elo_1500: 'Yükselen Yıldız',
+      elo_1500_desc: "1500 ELO'ya ulaş",
+      elo_2000: 'Büyükusta',
+      elo_2000_desc: "2000 ELO'ya ulaş",
+      social_butterfly: 'Sosyal Kelebek',
+      social_butterfly_desc: 'Bir arkadaş ekle',
+      big_spender: 'Büyük Harcayıcı',
+      big_spender_desc: 'Mağazadan bir eşya satın al',
+      fashionista: 'Modacı',
+      fashionista_desc: 'Profil avatarını değiştir',
+      connecting_server: 'Sunucuya bağlanılıyor...',
+      battlepass_xp: 'Savaş Bileti XP',
+      btn_create_private_room: '+ Özel Oda Oluştur',
+      variant: 'Varyant',
+      top_players_desc: 'Küresel MiniChess Liderlik Tablosu',
+      no_recent_activity: 'Henüz bir aktivite bulunmuyor',
+      no_players_yet: 'Henüz oyuncu bulunmuyor. İlk sen ol!',
+      failed_load_leaderboard: 'Liderlik tablosu yüklenemedi',
+      failed_load_shop: 'Mağaza ürünleri yüklenemedi',
+      join_private_game: 'Özel Oyuna Katıl',
+      checking_room: 'Oda kontrol ediliyor...',
+      no_tier_data: 'Aşama verisi bulunamadı.',
+      empty_match_history_desc: 'Geçmiş maçlarını görmek için eşleşmeye katıl veya botlara meydan oku!',
+      empty_friends_desc: 'Arkadaş edinmek için maç yap veya yukarıdan kullanıcı ara!',
+      send_request_status: 'Gönderiliyor...',
+      enter_username_status: 'Bir kullanıcı adı girin',
+      confirm_remove_friend: 'Arkadaşı listenizden çıkarmak istediğinize emin misiniz?',
+      time_control: 'Süre Kontrolü',
+      bullet_1m: '1+0 Bullet (60s)',
+      blitz_3m: '3+0 Blitz (180s)',
+      rapid_5m: '5+0 Rapid (300s)',
+      takeback: 'Geri Al',
+      hint: 'İpucu',
+      takeback_done: 'Hamle geri alındı',
+      no_takeback_available: 'Geri alınacak hamle yok',
+      calculating_hint: 'En iyi hamle hesaplanıyor...',
+      hint_suggested: 'Öneri: ',
+      copy_fen: 'FEN Kopyala',
+      fen_copied: 'FEN panoya kopyalandı!',
+      review_game: 'Hamleleri İncele',
+      show_result: 'Sonucu Göster',
+      game_finished_review: 'Maç Bitti — Hamle Gezgini',
+      wait_your_turn: 'Sıranızı bekleyin',
+      final_position: 'Son Konum',
+      move_step: 'Hamle',
+      only_bot_takeback: 'Geri alma sadece bot maçlarında kullanılabilir',
+      only_bot_hint: 'İpucu sadece bot maçlarında kullanılabilir',
+      failed_copy_fen: 'FEN kopyalanamadı',
+      no_board_state: 'Geçerli tahta durumu bulunamadı',
+      joining_game: 'Oyuna katılıyor...',
+      room_has_two_players: 'Bu odada zaten iki oyuncu var.',
+      no_room_id_provided: 'Oda kodu bulunamadı. Arkadaşınızdan doğru bağlantıyı isteyin.',
+      room_check_failed: 'Oda kontrol edilemedi. Lütfen tekrar deneyin.',
+      failed_create_room: 'Oda oluşturulamadı'
     }
   };
+
+  let inMemoryLang = 'en';
 
   function getLang() {
     try {
@@ -521,50 +793,67 @@
         const urlParams = new URLSearchParams(window.location.search);
         const urlLang = urlParams.get('lang');
         if (urlLang === 'tr' || urlLang === 'en') {
-          localStorage.setItem(STORAGE_KEY, urlLang);
+          inMemoryLang = urlLang;
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, urlLang);
+          }
           return urlLang;
         }
       }
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'tr' || saved === 'en') return saved;
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved === 'tr' || saved === 'en') {
+          inMemoryLang = saved;
+          return saved;
+        }
+      }
     } catch (e) {}
-    return 'en';
+    return inMemoryLang || 'en';
   }
 
   function setLanguage(lang) {
     if (lang !== 'tr' && lang !== 'en') lang = 'en';
+    inMemoryLang = lang;
     try {
-      localStorage.setItem(STORAGE_KEY, lang);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, lang);
+      }
     } catch (e) {}
 
-    if (document.documentElement) {
-      document.documentElement.lang = lang;
+    if (typeof document !== 'undefined') {
+      if (document.documentElement) {
+        document.documentElement.lang = lang;
+      }
+
+      applyTranslations();
+      updateToggleButtons();
+
+      // Re-render guest elements if any
+      const guestBadge = document.querySelectorAll('.guest-badge');
+      guestBadge.forEach(el => {
+        el.textContent = lang === 'tr' ? 'MİSAFİR' : 'GUEST';
+      });
+
+      const guestAccBtns = document.querySelectorAll('.guest-create-acc-btn');
+      guestAccBtns.forEach(el => {
+        const span = el.querySelector('span');
+        if (span) {
+          span.textContent = lang === 'tr' ? 'Hesap Oluştur' : 'Create Account';
+        } else {
+          el.textContent = lang === 'tr' ? 'Hesap Oluştur' : 'Create Account';
+        }
+      });
     }
 
-    applyTranslations();
-    updateToggleButtons();
-
-    // Re-render guest elements if any
-    const guestBadge = document.querySelectorAll('.guest-badge');
-    guestBadge.forEach(el => {
-      el.textContent = lang === 'tr' ? 'MİSAFİR' : 'GUEST';
-    });
-
-    const guestAccBtns = document.querySelectorAll('.guest-create-acc-btn');
-    guestAccBtns.forEach(el => {
-      const span = el.querySelector('span');
-      if (span) {
-        span.textContent = lang === 'tr' ? 'Hesap Oluştur' : 'Create Account';
-      } else {
-        el.textContent = lang === 'tr' ? 'Hesap Oluştur' : 'Create Account';
+    if (typeof window !== 'undefined') {
+      // Notify listeners
+      if (typeof CustomEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('minichess:lang', { detail: { lang } }));
       }
-    });
 
-    // Notify listeners
-    window.dispatchEvent(new CustomEvent('minichess:lang', { detail: { lang } }));
-
-    if (window.renderGuestBadges && typeof window.renderGuestBadges === 'function') {
-      window.renderGuestBadges();
+      if (window.renderGuestBadges && typeof window.renderGuestBadges === 'function') {
+        window.renderGuestBadges();
+      }
     }
   }
 
@@ -615,7 +904,10 @@
     'unequip': 'unequip',
     'buy': 'buy',
     'coins': 'coins',
-    'free': 'free'
+    'free': 'free',
+    'sound': 'sound',
+    'yes, resign': 'yes_resign',
+    'claim': 'claim_reward'
   };
 
   const REVERSE_MAP = { ...CANONICAL_MAP };
@@ -679,9 +971,9 @@
     });
 
     // Placeholders
-    const placeholders = scope.querySelectorAll('[data-i18n-placeholder]');
+    const placeholders = scope.querySelectorAll('[data-i18n-placeholder], [data-i18n-ph]');
     placeholders.forEach(el => {
-      const key = el.getAttribute('data-i18n-placeholder');
+      const key = el.getAttribute('data-i18n-placeholder') || el.getAttribute('data-i18n-ph');
       if (key) el.setAttribute('placeholder', t(key));
     });
 
@@ -750,18 +1042,33 @@
   }
 
   // Export globally
-  window.getLang = getLang;
-  window.setLanguage = setLanguage;
-  window.t = t;
-  window.applyTranslations = applyTranslations;
-  window.initLanguageUI = initLanguageUI;
-  window.renderLanguageToggle = renderLanguageToggle;
-  window.getToggleMarkup = getToggleMarkup;
-  window.TRANSLATIONS = TRANSLATIONS;
+  if (typeof window !== 'undefined') {
+    window.getLang = getLang;
+    window.setLanguage = setLanguage;
+    window.t = t;
+    window.applyTranslations = applyTranslations;
+    window.initLanguageUI = initLanguageUI;
+    window.renderLanguageToggle = renderLanguageToggle;
+    window.getToggleMarkup = getToggleMarkup;
+    window.TRANSLATIONS = TRANSLATIONS;
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLanguageUI);
-  } else {
-    initLanguageUI();
+    if (typeof document !== 'undefined') {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLanguageUI);
+      } else {
+        initLanguageUI();
+      }
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      getLang,
+      setLanguage,
+      t,
+      applyTranslations,
+      TRANSLATIONS,
+      CANONICAL_MAP
+    };
   }
 })();

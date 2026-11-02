@@ -238,8 +238,9 @@
       const data = await res.json();
       renderLeaderboard(data.leaderboard);
     } catch (err) {
+      const errText = typeof window.t === 'function' ? window.t('failed_load_leaderboard') : 'Failed to load leaderboard';
       document.getElementById('leaderboardBody').innerHTML =
-        '<tr><td colspan="6" style="text-align:center;color:var(--red-soft);padding:24px;">Failed to load leaderboard</td></tr>';
+        `<tr><td colspan="6" style="text-align:center;color:var(--red-soft);padding:24px;">${errText}</td></tr>`;
     }
     if (window.lucide) {
       try { lucide.createIcons(); } catch (e) {}
@@ -249,7 +250,8 @@
   function renderLeaderboard(leaders) {
     const tbody = document.getElementById('leaderboardBody');
     if (!leaders || leaders.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">No players yet. Be the first!</td></tr>';
+      const emptyText = typeof window.t === 'function' ? window.t('no_players_yet') : 'No players yet. Be the first!';
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">${emptyText}</td></tr>`;
       return;
     }
     tbody.innerHTML = leaders.map((p, i) => {

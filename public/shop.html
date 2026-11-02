@@ -441,7 +441,8 @@
         renderItems();
       }
     } catch(e) {
-      showToast('Failed to load shop items', 'error');
+      const errText = typeof window.t === 'function' ? window.t('failed_load_shop') : 'Failed to load shop items';
+      showToast(errText, 'error');
     }
   }
 
@@ -450,7 +451,8 @@
     const items = shopItems[currentCategory] || [];
     
     if (items.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No items available in this category.</div>';
+      const emptyText = typeof window.t === 'function' ? window.t('no_items_category') : 'No items available in this category.';
+      grid.innerHTML = `<div class="empty-state">${emptyText}</div>`;
       return;
     }
 

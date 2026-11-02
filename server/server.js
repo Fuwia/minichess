@@ -8,6 +8,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
 const { getDb, saveDb } = require('./db');
+let db = null;
 const auth = require('./auth');
 const engine = require('./game-engine');
 const Matchmaker = require('./matchmaker');
@@ -430,6 +431,64 @@ app.get('/api/me/active-game', (req, res) => {
   }
 });
 
+// ==================== Daily Login Streak API ====================
+
+app.get('/api/me/daily-streak', (req, res) => {
+  if (!req.session.userId) {
+    return res.json({
+      success: true,
+      streak: 0,
+      canClaim: true,
+      nextDay: 1,
+      isGuest: true,
+      rewards: auth.DAILY_STREAK_REWARDS
+    });
+  }
+  const streakInfo = auth.getDailyStreak(req.session.userId);
+  if (!streakInfo) {
+    return res.json({
+      success: true,
+      streak: 0,
+      canClaim: true,
+      nextDay: 1,
+      isGuest: !!req.session.isGuest,
+      rewards: auth.DAILY_STREAK_REWARDS
+    });
+  }
+  res.json({
+    success: true,
+    ...streakInfo,
+    isGuest: !!req.session.isGuest
+  });
+});
+
+app.post('/api/me/daily-streak/claim', requireAuth, (req, res) => {
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    return res.json({
+      success: false,
+      isGuest: true,
+      message: 'Lütfen günlük seriyi kaydetmek ve ödülleri almak için bir hesap oluşturun!'
+    });
+  }
+
+  const result = auth.claimDailyStreak(req.session.userId, battlepass);
+  if (!result.success) {
+    return res.status(400).json(result);
+  }
+  saveDb();
+  if (result.bpResult && result.bpResult.leveledUp) {
+    notifyLevelUp(req.session.userId, result.bpResult);
+  }
+  const status = battlepass.getBattlepassStatus(req.session.userId);
+  const updatedUser = auth.getUserById(req.session.userId);
+  res.json({
+    success: true,
+    ...result,
+    coins: updatedUser ? updatedUser.coins : 0,
+    battlepass: status
+  });
+});
+
 // Check if current user is admin
 app.get('/api/me/admin', (req, res) => {
   if (!req.session.userId) {
@@ -544,6 +603,52 @@ app.get('/api/users/by-username/:username', (req, res) => {
   });
 });
 
+// ==================== Live Games API ====================
+
+// Get all active live games in progress
+app.get('/api/games/live', (req, res) => {
+  const games = [];
+  if (activeGames) {
+    for (const [gameId, g] of activeGames.entries()) {
+      if (g.isOver) continue;
+      const whiteUser = g.whiteId !== 0 ? auth.getUserById(g.whiteId) : null;
+      const blackUser = g.blackId !== 0 ? auth.getUserById(g.blackId) : null;
+      const spectators = gameSpectators ? gameSpectators.get(gameId) : null;
+
+      games.push({
+        id: gameId,
+        gameId: gameId,
+        white: {
+          id: g.whiteId,
+          username: g.whiteUsername,
+          elo: g.whiteElo,
+          avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+          avatar_url: whiteUser ? whiteUser.avatar_url : null
+        },
+        black: {
+          id: g.blackId,
+          username: g.blackUsername,
+          elo: g.blackElo,
+          avatarUrl: blackUser ? blackUser.avatar_url : null,
+          avatar_url: blackUser ? blackUser.avatar_url : null
+        },
+        mode: g.mode || 'standard',
+        type: g.mode || 'standard',
+        isRanked: !!g.isRanked,
+        turn: g.state ? g.state.activeColor : 'white',
+        activeColor: g.state ? g.state.activeColor : 'white',
+        movesCount: (g.state && g.state.moveHistory) ? g.state.moveHistory.length : 0,
+        whiteTime: g.whiteTime,
+        blackTime: g.blackTime,
+        spectatorsCount: spectators ? spectators.size : 0,
+        isBot: !!g.isBot,
+        createdAt: g.createdAt || new Date().toISOString()
+      });
+    }
+  }
+  res.json({ success: true, count: games.length, games });
+});
+
 // ==================== Game History API ====================
 
 // Get a single game by its UUID — returns current status (active/finished)
@@ -553,13 +658,29 @@ app.get('/api/games/:gameUuid', async (req, res) => {
   // 1) Check if the game is still in active memory
   const activeGame = activeGames.get(gameUuid);
   if (activeGame) {
+    const whiteUser = activeGame.whiteId !== 0 ? auth.getUserById(activeGame.whiteId) : null;
+    const blackUser = activeGame.blackId !== 0 ? auth.getUserById(activeGame.blackId) : null;
+    const spectators = gameSpectators ? gameSpectators.get(gameUuid) : null;
     return res.json({
       success: true,
       status: activeGame.isOver ? 'finished' : 'active',
       game: {
         gameUuid: gameUuid,
-        white: { id: activeGame.whiteId, username: activeGame.whiteUsername, elo: activeGame.whiteElo },
-        black: { id: activeGame.blackId, username: activeGame.blackUsername, elo: activeGame.blackElo },
+        id: gameUuid,
+        white: {
+          id: activeGame.whiteId,
+          username: activeGame.whiteUsername,
+          elo: activeGame.whiteElo,
+          avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+          avatar_url: whiteUser ? whiteUser.avatar_url : null
+        },
+        black: {
+          id: activeGame.blackId,
+          username: activeGame.blackUsername,
+          elo: activeGame.blackElo,
+          avatarUrl: blackUser ? blackUser.avatar_url : null,
+          avatar_url: blackUser ? blackUser.avatar_url : null
+        },
         result: activeGame.isOver ? (activeGame.result || 'unknown') : null,
         fen: engine.toFen(activeGame.state),
         moves: activeGame.state.moveHistory || [],
@@ -567,7 +688,8 @@ app.get('/api/games/:gameUuid', async (req, res) => {
         mode: activeGame.mode || 'standard',
         whiteTime: activeGame.whiteTime,
         blackTime: activeGame.blackTime,
-        activeColor: activeGame.state.activeColor
+        activeColor: activeGame.state.activeColor,
+        spectatorsCount: spectators ? spectators.size : 0
       }
     });
   }
@@ -577,8 +699,8 @@ app.get('/api/games/:gameUuid', async (req, res) => {
     const database = await getDb();
     const stmt = database.prepare(
       `SELECT g.*, 
-        COALESCE(w.username, 'Unknown Player') as white_username, COALESCE(w.elo, 1200) as white_elo,
-        COALESCE(b.username, 'Unknown Player') as black_username, COALESCE(b.elo, 1200) as black_elo
+        COALESCE(w.username, 'Unknown Player') as white_username, COALESCE(w.elo, 1200) as white_elo, w.avatar_url as white_avatar_url,
+        COALESCE(b.username, 'Unknown Player') as black_username, COALESCE(b.elo, 1200) as black_elo, b.avatar_url as black_avatar_url
        FROM games g
        LEFT JOIN users w ON g.white_id = w.id
        LEFT JOIN users b ON g.black_id = b.id
@@ -604,8 +726,20 @@ app.get('/api/games/:gameUuid', async (req, res) => {
       status: 'finished',
       game: {
         gameUuid: row.game_uuid,
-        white: { id: row.white_id, username: row.white_username, elo: row.white_elo },
-        black: { id: row.black_id, username: row.black_username, elo: row.black_elo },
+        white: {
+          id: row.white_id,
+          username: row.white_username,
+          elo: row.white_elo,
+          avatarUrl: row.white_avatar_url,
+          avatar_url: row.white_avatar_url
+        },
+        black: {
+          id: row.black_id,
+          username: row.black_username,
+          elo: row.black_elo,
+          avatarUrl: row.black_avatar_url,
+          avatar_url: row.black_avatar_url
+        },
         result: row.result,
         fen: row.fen_final,
         moves: row.moves_json ? JSON.parse(row.moves_json) : [],
@@ -758,19 +892,39 @@ app.get('/api/friends', requireAuth, (req, res) => {
   res.json({ success: true, friends, pending });
 });
 
+// Helper to parse time control options: 60s (Bullet), 180s (Blitz default), 300s (Rapid)
+function parseTimeControl(tc) {
+  if (!tc) return 180000;
+  if (tc === 60 || tc === '60' || tc === '1+0' || tc === 'bullet' || tc === 60000 || tc === 1 || tc === '1' || tc === '1m') return 60000;
+  if (tc === 300 || tc === '300' || tc === '5+0' || tc === 'rapid' || tc === 300000 || tc === 5 || tc === '5' || tc === '5m') return 300000;
+  if (tc === 180 || tc === '180' || tc === '3+0' || tc === 'blitz' || tc === 180000 || tc === 3 || tc === '3' || tc === '3m') return 180000;
+  const num = parseInt(tc, 10);
+  if (!isNaN(num)) {
+    if (num === 1) return 60000;
+    if (num === 3) return 180000;
+    if (num === 5) return 300000;
+    if (num <= 120) return 60000;
+    if (num >= 240) return 300000;
+    return 180000;
+  }
+  return 180000;
+}
+
 // ==================== Private Rooms API ====================
 
 app.post('/api/rooms/create', requireAuth, (req, res) => {
   const { roomId } = auth.createPrivateRoom(req.session.userId);
+  const timeControl = parseTimeControl(req.body ? (req.body.timeControl || req.body.time_control) : null);
 
   // Store in-memory for socket matching
   privateRooms.set(roomId, {
     creator: { userId: req.session.userId, username: req.session.username },
     joiner: null,
-    gameId: null
+    gameId: null,
+    timeControl: timeControl
   });
 
-  res.json({ success: true, roomId });
+  res.json({ success: true, roomId, timeControl });
 });
 
 app.get('/api/rooms/:roomId', (req, res) => {
@@ -778,7 +932,9 @@ app.get('/api/rooms/:roomId', (req, res) => {
   if (!room || !room.is_active) {
     return res.json({ success: false, message: 'Room not found or expired' });
   }
-  res.json({ success: true, room: { id: room.id, creator_id: room.creator_id, has_joiner: !!room.joiner_id } });
+  const memRoom = privateRooms.get(req.params.roomId);
+  const timeControl = (memRoom && memRoom.timeControl) ? memRoom.timeControl : 180000;
+  res.json({ success: true, room: { id: room.id, creator_id: room.creator_id, has_joiner: !!room.joiner_id, timeControl } });
 });
 
 // ==================== Admin API ====================
@@ -1242,8 +1398,11 @@ app.post('/api/admin/users/:userId/reset-battlepass', requireAdmin, (req, res) =
 // Active games: gameId -> game state
 const activeGames = new Map();
 
+// Spectators: gameId -> Set of socketIds
+const gameSpectators = new Map();
+
 // Socket to game mapping
-const socketGames = new Map(); // socketId -> { gameId, color }
+const socketGames = new Map(); // socketId -> { gameId, color, isSpectator }
 
 // User to socket mapping
 const userSockets = new Map(); // userId -> Set of socketIds
@@ -1260,10 +1419,75 @@ function broadcastQueueCounts() {
   });
 }
 
+function broadcastToGame(game, eventName, payload) {
+  if (!game) return;
+  // Send to players
+  for (const playerId of Object.values(game.players || {})) {
+    if (playerId && playerId !== 0) {
+      const sockets = userSockets.get(playerId);
+      if (sockets) {
+        for (const sockId of sockets) {
+          io.to(sockId).emit(eventName, payload);
+        }
+      }
+    }
+  }
+  // Send to spectators
+  const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+  if (spectators) {
+    for (const sockId of spectators) {
+      io.to(sockId).emit(eventName, payload);
+    }
+  }
+}
+
+function broadcastLiveGames() {
+  if (typeof io === 'undefined' || !io) return;
+  const games = [];
+  if (activeGames) {
+    for (const [gameId, g] of activeGames.entries()) {
+      if (g.isOver) continue;
+      const whiteUser = g.whiteId !== 0 ? auth.getUserById(g.whiteId) : null;
+      const blackUser = g.blackId !== 0 ? auth.getUserById(g.blackId) : null;
+      const spectators = gameSpectators ? gameSpectators.get(gameId) : null;
+      games.push({
+        id: gameId,
+        gameId: gameId,
+        white: {
+          id: g.whiteId,
+          username: g.whiteUsername,
+          elo: g.whiteElo,
+          avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+          avatar_url: whiteUser ? whiteUser.avatar_url : null
+        },
+        black: {
+          id: g.blackId,
+          username: g.blackUsername,
+          elo: g.blackElo,
+          avatarUrl: blackUser ? blackUser.avatar_url : null,
+          avatar_url: blackUser ? blackUser.avatar_url : null
+        },
+        mode: g.mode || 'standard',
+        type: g.mode || 'standard',
+        isRanked: !!g.isRanked,
+        turn: g.state ? g.state.activeColor : 'white',
+        activeColor: g.state ? g.state.activeColor : 'white',
+        movesCount: (g.state && g.state.moveHistory) ? g.state.moveHistory.length : 0,
+        whiteTime: g.whiteTime,
+        blackTime: g.blackTime,
+        spectatorsCount: spectators ? spectators.size : 0,
+        isBot: !!g.isBot,
+        createdAt: g.createdAt || new Date().toISOString()
+      });
+    }
+  }
+  io.emit('live_games_update', { success: true, count: games.length, games });
+}
+
 // Private rooms (in-memory)
 const privateRooms = new Map(); // roomId -> { creator: {userId, username}, joiner: null|{userId,username}, gameId: null|string }
 
-const INITIAL_TIME = 120000; // 2 minutes per side in ms
+const INITIAL_TIME = 180000; // 3 minutes per side in ms (3+0 Blitz default)
 const INCREMENT_TIME = 5000; // 5 seconds increment per move
 
 // Dice piece mapping: 1=Pawn, 2=Knight, 3=Bishop, 4=Rook, 5=King
@@ -1277,9 +1501,10 @@ function diceToPieceType(roll) {
   return DICE_PIECES[roll - 1];
 }
 
-function createGame(player1, player2, mode = 'standard') {
+function createGame(player1, player2, mode = 'standard', timeControl = INITIAL_TIME) {
   const gameId = uuidv4();
   const state = engine.parseFen(INITIAL_FEN);
+  const parsedTime = parseTimeControl(timeControl);
   
   const game = {
     id: gameId,
@@ -1298,15 +1523,27 @@ function createGame(player1, player2, mode = 'standard') {
       white: true,
       black: true
     },
-    whiteTime: INITIAL_TIME,
-    blackTime: INITIAL_TIME,
+    whiteTime: parsedTime,
+    blackTime: parsedTime,
+    timeControl: parsedTime,
     lastTickTime: Date.now(),
     clockStarted: false,
     mode: mode,
     diceRoll: mode === 'dice' ? rollDice() : null,
+    snapshots: []
   };
+
+  game.snapshots.push({
+    fen: engine.toFen(game.state),
+    state: engine.cloneState(game.state),
+    whiteTime: game.whiteTime,
+    blackTime: game.blackTime,
+    activeColor: game.state.activeColor,
+    moveHistory: []
+  });
   
   activeGames.set(gameId, game);
+  broadcastLiveGames();
   return game;
 }
 
@@ -1335,6 +1572,14 @@ function emitDiceRoll(game, targetPlayerId, io) {
           io.to(sockId).emit('dice_roll', payload);
         }
       }
+    }
+  }
+
+  // Also broadcast to spectators
+  const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+  if (spectators) {
+    for (const sockId of spectators) {
+      io.to(sockId).emit('dice_roll', payload);
     }
   }
 }
@@ -1418,7 +1663,12 @@ io.on('connection', (socket) => {
     }
 
     if (userId) {
-      if (!auth.getUserById(userId)) {
+      const u = auth.getUserById(userId);
+      if (!u || u.is_banned === 1) {
+        if (u && u.is_banned === 1) {
+          socket.emit('banned', { reason: u.banned_reason || 'Hesabınız yönetici tarafından engellenmiştir.' });
+          socket.disconnect(true);
+        }
         userId = null;
         username = null;
       } else {
@@ -1433,10 +1683,14 @@ io.on('connection', (socket) => {
     const sess = socket.request ? socket.request.session : null;
     if (sess && sess.userId) {
       const u = auth.getUserById(sess.userId);
-      if (u) {
+      if (u && u.is_banned !== 1) {
         userId = u.id;
         username = u.username;
       } else {
+        if (u && u.is_banned === 1) {
+          socket.emit('banned', { reason: u.banned_reason || 'Hesabınız yönetici tarafından engellenmiştir.' });
+          socket.disconnect(true);
+        }
         sess.userId = null;
       }
     }
@@ -1590,6 +1844,7 @@ io.on('connection', (socket) => {
     if (match) {
       // Start a new game
       const game = createGame(match.player1, match.player2);
+      game.isRanked = true;
 
       // Notify both players
       const whiteUser = auth.getUserById(game.whiteId);
@@ -1709,6 +1964,12 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot make moves' });
+      return;
+    }
+
     let color = getPlayerColor(game, userId);
     if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername || game.blackUsername === data.guestUsername)) {
       color = game.whiteUsername === data.guestUsername ? 'white' : 'black';
@@ -1802,6 +2063,16 @@ io.on('connection', (socket) => {
     game.state = engine.applyMove(state, matchedMove);
     const newFen = engine.toFen(game.state);
 
+    if (!game.snapshots) game.snapshots = [];
+    game.snapshots.push({
+      fen: newFen,
+      state: engine.cloneState(game.state),
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime,
+      activeColor: game.state.activeColor,
+      moveHistory: [...game.state.moveHistory]
+    });
+
     // Broadcast the move result to both players
     const opponentId = getOpponentId(game, userId);
     
@@ -1812,7 +2083,8 @@ io.on('connection', (socket) => {
         pieceType: matchedMove.pieceType || matchedMove.piece?.type,
         captured: matchedMove.captured ? matchedMove.captured.type : null,
         isDrop: matchedMove.isDrop,
-        promotion: matchedMove.promotion
+        promotion: matchedMove.promotion,
+        color: state.activeColor
       },
       fen: newFen,
       activeColor: game.state.activeColor,
@@ -1829,6 +2101,14 @@ io.on('connection', (socket) => {
     const opponentSockets = userSockets.get(opponentId);
     if (opponentSockets) {
       for (const sockId of opponentSockets) {
+        io.to(sockId).emit('move_result', movePayload);
+      }
+    }
+
+    // Send to spectators
+    const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+    if (spectators) {
+      for (const sockId of spectators) {
         io.to(sockId).emit('move_result', movePayload);
       }
     }
@@ -1855,9 +2135,15 @@ io.on('connection', (socket) => {
   socket.on('resign', (data) => {
     ensureUserAuth(data);
     if (!userId) return;
-    const { gameId } = data;
+    const { gameId } = data || {};
     const game = activeGames.get(gameId);
     if (!game) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot resign' });
+      return;
+    }
     
     let color = getPlayerColor(game, userId);
     if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername || game.blackUsername === data.guestUsername)) {
@@ -1878,6 +2164,12 @@ io.on('connection', (socket) => {
     const { gameId } = data;
     const game = activeGames.get(gameId);
     if (!game) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot offer draw' });
+      return;
+    }
 
     const color = getPlayerColor(game, userId);
     if (!color) return;
@@ -1904,10 +2196,16 @@ io.on('connection', (socket) => {
   socket.on('accept_draw', (data) => {
     ensureUserAuth(data);
     if (!userId) return;
-    const { gameId } = data;
+    const { gameId } = data || {};
     const game = activeGames.get(gameId);
     if (!game) return;
     if (game.isOver) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot accept draw' });
+      return;
+    }
 
     const color = getPlayerColor(game, userId);
     if (!color) return;
@@ -1924,10 +2222,16 @@ io.on('connection', (socket) => {
   socket.on('decline_draw', (data) => {
     ensureUserAuth(data);
     if (!userId) return;
-    const { gameId } = data;
+    const { gameId } = data || {};
     const game = activeGames.get(gameId);
     if (!game) return;
     if (game.isOver) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot decline draw' });
+      return;
+    }
 
     const color = getPlayerColor(game, userId);
     if (!color) return;
@@ -1952,10 +2256,16 @@ io.on('connection', (socket) => {
   socket.on('cancel_draw', (data) => {
     ensureUserAuth(data);
     if (!userId) return;
-    const { gameId } = data;
+    const { gameId } = data || {};
     const game = activeGames.get(gameId);
     if (!game) return;
     if (game.isOver) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot cancel draw' });
+      return;
+    }
 
     if (game.drawOfferer !== userId) return;
 
@@ -1975,6 +2285,38 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`[Socket] Disconnected: ${socket.id}`);
 
+    // Clean up spectator if this socket was spectating
+    const specGameInfo = socketGames.get(socket.id);
+    let cleanedGameId = null;
+    if (specGameInfo && specGameInfo.isSpectator) {
+      cleanedGameId = specGameInfo.gameId;
+      if (gameSpectators && gameSpectators.has(specGameInfo.gameId)) {
+        gameSpectators.get(specGameInfo.gameId).delete(socket.id);
+        const specCount = gameSpectators.get(specGameInfo.gameId).size;
+        const g = activeGames.get(specGameInfo.gameId);
+        if (g) {
+          broadcastToGame(g, 'spectator_count_update', { gameId: specGameInfo.gameId, count: specCount });
+        }
+        if (specCount === 0) gameSpectators.delete(specGameInfo.gameId);
+      }
+      socketGames.delete(socket.id);
+      broadcastLiveGames();
+    }
+    if (gameSpectators) {
+      for (const [gid, specSet] of gameSpectators.entries()) {
+        if (gid !== cleanedGameId && specSet.has(socket.id)) {
+          specSet.delete(socket.id);
+          const specCount = specSet.size;
+          const g = activeGames.get(gid);
+          if (g) {
+            broadcastToGame(g, 'spectator_count_update', { gameId: gid, count: specCount });
+          }
+          if (specCount === 0) gameSpectators.delete(gid);
+          broadcastLiveGames();
+        }
+      }
+    }
+
     // Remove from matchmaking
     if (userId) {
       matchmaker.leaveQueue(userId);
@@ -1993,7 +2335,7 @@ io.on('connection', (socket) => {
       // Handle game disconnect only if user has no other active sockets
       // (Prevents false disconnect trigger when navigating from lobby → game)
       const gameInfo = socketGames.get(socket.id);
-      if (gameInfo) {
+      if (gameInfo && !gameInfo.isSpectator) {
         const userSockSet = userSockets.get(userId);
         const hasOtherSockets = userSockSet && userSockSet.size > 0;
         
@@ -2030,14 +2372,203 @@ io.on('connection', (socket) => {
     }
   });
 
-  // --- Reconnect to game ---
-  socket.on('reconnect_game', (data) => {
+  // --- Spectate Game ---
+  socket.on('spectate_game', (data) => {
     ensureUserAuth(data);
-    if (!userId) return;
-    const { gameId } = data;
+    const { gameId } = data || {};
     const game = activeGames.get(gameId);
     if (!game) {
       socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+
+    if (!gameSpectators.has(gameId)) {
+      gameSpectators.set(gameId, new Set());
+    }
+    gameSpectators.get(gameId).add(socket.id);
+    socketGames.set(socket.id, { gameId, isSpectator: true });
+
+    const whiteUser = game.whiteId !== 0 ? auth.getUserById(game.whiteId) : null;
+    const blackUser = game.blackId !== 0 ? auth.getUserById(game.blackId) : null;
+
+    const spectatorPayload = {
+      isSpectator: true,
+      gameId: game.id,
+      fen: engine.toFen(game.state),
+      players: {
+        white: {
+          username: game.whiteUsername,
+          elo: game.whiteElo,
+          avatarUrl: whiteUser ? whiteUser.avatar_url : null
+        },
+        black: {
+          username: game.blackUsername,
+          elo: game.blackElo,
+          avatarUrl: blackUser ? blackUser.avatar_url : null
+        }
+      },
+      pockets: game.state.pockets,
+      activeColor: game.state.activeColor,
+      mode: game.mode || 'standard',
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime,
+      moveHistory: game.state.moveHistory || [],
+      spectatorsCount: gameSpectators.get(gameId).size
+    };
+
+    socket.emit('spectator_game_state', spectatorPayload);
+
+    // Send current dice roll in dice mode
+    if (game.mode === 'dice' && game.diceRoll) {
+      const roll = game.diceRoll;
+      const pieceType = diceToPieceType(roll);
+      const pieceNames = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', k: 'King', q: 'Queen' };
+      socket.emit('dice_roll', {
+        roll,
+        pieceType,
+        pieceName: pieceNames[pieceType] || pieceType
+      });
+    }
+
+    broadcastToGame(game, 'spectator_count_update', { gameId, count: gameSpectators.get(gameId).size });
+    broadcastLiveGames();
+
+    if (game.isOver) {
+      socket.emit('game_over', {
+        gameId: game.id,
+        result: game.result,
+        players: {
+          white: {
+            username: game.whiteUsername,
+            avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+            oldElo: game.whiteElo,
+            newElo: game.whiteElo,
+            eloDiff: 0
+          },
+          black: {
+            username: game.blackUsername,
+            avatarUrl: blackUser ? blackUser.avatar_url : null,
+            oldElo: game.blackElo,
+            newElo: game.blackElo,
+            eloDiff: 0
+          }
+        },
+        fen: engine.toFen(game.state),
+        pockets: game.state.pockets,
+        moveHistory: game.state.moveHistory || []
+      });
+    }
+  });
+
+  socket.on('leave_spectate', (data) => {
+    const { gameId } = data || {};
+    const info = socketGames.get(socket.id);
+    const effectiveGameId = gameId || (info && info.gameId);
+    if (effectiveGameId && gameSpectators.has(effectiveGameId)) {
+      gameSpectators.get(effectiveGameId).delete(socket.id);
+      const specCount = gameSpectators.get(effectiveGameId).size;
+      const game = activeGames.get(effectiveGameId);
+      if (game) {
+        broadcastToGame(game, 'spectator_count_update', { gameId: effectiveGameId, count: specCount });
+      }
+      if (specCount === 0) {
+        gameSpectators.delete(effectiveGameId);
+      }
+    }
+    if (info && info.isSpectator) {
+      socketGames.delete(socket.id);
+    }
+    broadcastLiveGames();
+  });
+
+  // --- Reconnect to game ---
+  socket.on('reconnect_game', (data) => {
+    ensureUserAuth(data);
+    const isSpec = Boolean(data && (data.mode === 'spectate' || data.isSpectator));
+    if (!userId && !isSpec && !(data && data.guestUsername)) return;
+    const { gameId } = data || {};
+    const game = activeGames.get(gameId);
+    if (!game) {
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+
+    if (data && (data.mode === 'spectate' || data.isSpectator)) {
+      if (!gameSpectators.has(gameId)) {
+        gameSpectators.set(gameId, new Set());
+      }
+      gameSpectators.get(gameId).add(socket.id);
+      socketGames.set(socket.id, { gameId, isSpectator: true });
+
+      const whiteUser = game.whiteId !== 0 ? auth.getUserById(game.whiteId) : null;
+      const blackUser = game.blackId !== 0 ? auth.getUserById(game.blackId) : null;
+
+      const spectatorPayload = {
+        isSpectator: true,
+        gameId: game.id,
+        fen: engine.toFen(game.state),
+        players: {
+          white: {
+            username: game.whiteUsername,
+            elo: game.whiteElo,
+            avatarUrl: whiteUser ? whiteUser.avatar_url : null
+          },
+          black: {
+            username: game.blackUsername,
+            elo: game.blackElo,
+            avatarUrl: blackUser ? blackUser.avatar_url : null
+          }
+        },
+        pockets: game.state.pockets,
+        activeColor: game.state.activeColor,
+        mode: game.mode || 'standard',
+        whiteTime: game.whiteTime,
+        blackTime: game.blackTime,
+        moveHistory: game.state.moveHistory || [],
+        spectatorsCount: gameSpectators.get(gameId).size
+      };
+
+      socket.emit('spectator_game_state', spectatorPayload);
+
+      if (game.mode === 'dice' && game.diceRoll) {
+        const roll = game.diceRoll;
+        const pieceType = diceToPieceType(roll);
+        const pieceNames = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', k: 'King', q: 'Queen' };
+        socket.emit('dice_roll', {
+          roll,
+          pieceType,
+          pieceName: pieceNames[pieceType] || pieceType
+        });
+      }
+
+      broadcastToGame(game, 'spectator_count_update', { gameId, count: gameSpectators.get(gameId).size });
+      broadcastLiveGames();
+
+      if (game.isOver) {
+        socket.emit('game_over', {
+          gameId: game.id,
+          result: game.result,
+          players: {
+            white: {
+              username: game.whiteUsername,
+              avatarUrl: whiteUser ? whiteUser.avatar_url : null,
+              oldElo: game.whiteElo,
+              newElo: game.whiteElo,
+              eloDiff: 0
+            },
+            black: {
+              username: game.blackUsername,
+              avatarUrl: blackUser ? blackUser.avatar_url : null,
+              oldElo: game.blackElo,
+              newElo: game.blackElo,
+              eloDiff: 0
+            }
+          },
+          fen: engine.toFen(game.state),
+          pockets: game.state.pockets,
+          moveHistory: game.state.moveHistory || []
+        });
+      }
       return;
     }
 
@@ -2092,9 +2623,12 @@ io.on('connection', (socket) => {
       },
       pockets: game.state.pockets,
       activeColor: game.state.activeColor,
-      mode: game.mode || 'standard',
+      mode: game.isBot ? 'bot' : (game.mode || 'standard'),
+      isBot: Boolean(game.isBot),
+      timeControl: game.timeControl || game.whiteTime,
       whiteTime: game.whiteTime,
-      blackTime: game.blackTime
+      blackTime: game.blackTime,
+      moveHistory: game.state.moveHistory || []
     };
 
     socket.emit('game_state', gameStatePayload);
@@ -2108,6 +2642,16 @@ io.on('connection', (socket) => {
         roll,
         pieceType,
         pieceName: pieceNames[pieceType] || pieceType
+      });
+    }
+
+    if (game.isOver) {
+      socket.emit('game_over', {
+        gameId: game.id,
+        result: game.result,
+        fen: engine.toFen(game.state),
+        pockets: game.state.pockets,
+        moveHistory: game.state.moveHistory || []
       });
     }
   });
@@ -2152,7 +2696,9 @@ io.on('connection', (socket) => {
     const creatorUser = auth.getUserById(room.creator.userId);
     const game = createGame(
       { userId: room.creator.userId, username: room.creator.username, elo: creatorUser ? creatorUser.elo : 1200 },
-      { userId, username: user.username, elo: user.elo }
+      { userId, username: user.username, elo: user.elo },
+      'standard',
+      room.timeControl || 180000
     );
 
     room.gameId = game.id;
@@ -2165,7 +2711,10 @@ io.on('connection', (socket) => {
           gameId: game.id,
           color: 'white',
           opponent: { username: game.blackUsername, elo: game.blackElo },
-          fen: engine.toFen(game.state)
+          fen: engine.toFen(game.state),
+          timeControl: game.timeControl,
+          whiteTime: game.whiteTime,
+          blackTime: game.blackTime
         });
         socketGames.set(sockId, { gameId: game.id, color: 'white' });
       }
@@ -2176,7 +2725,10 @@ io.on('connection', (socket) => {
       gameId: game.id,
       color: 'black',
       opponent: { username: game.whiteUsername, elo: game.whiteElo },
-      fen: engine.toFen(game.state)
+      fen: engine.toFen(game.state),
+      timeControl: game.timeControl,
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime
     });
     socketGames.set(socket.id, { gameId: game.id, color: 'black' });
 
@@ -2207,6 +2759,12 @@ io.on('connection', (socket) => {
     const { gameId } = data;
     const game = activeGames.get(gameId);
     if (!game) return;
+
+    const socketInfo = socketGames.get(socket.id);
+    if (socketInfo && socketInfo.isSpectator) {
+      socket.emit('error', { message: 'Spectators cannot skip turns' });
+      return;
+    }
     if (game.mode !== 'dice') return;
     if (game.isOver) return;
 
@@ -2249,6 +2807,13 @@ io.on('connection', (socket) => {
       }
     }
 
+    const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+    if (spectators) {
+      for (const sockId of spectators) {
+        io.to(sockId).emit('dice_skip_result', payload);
+      }
+    }
+
     // Send new dice roll to both players
     emitDiceRoll(game, null, io);
   });
@@ -2273,11 +2838,14 @@ io.on('connection', (socket) => {
     const difficulty = data.difficulty || 'easy';
     const botName = bot.getBotName(difficulty);
     const botElo = bot.getBotElo(difficulty);
+    const botTime = parseTimeControl(data.timeControl);
 
     // Create game: human is white, bot is black
     const game = createGame(
       { userId, username: user.username, elo: user.elo },
-      { userId: 0, username: botName, elo: botElo }
+      { userId: 0, username: botName, elo: botElo },
+      'bot',
+      botTime
     );
     game.isBot = true;
     game.botDifficulty = difficulty;
@@ -2289,10 +2857,136 @@ io.on('connection', (socket) => {
       color: 'white',
       opponent: { username: botName, elo: botElo },
       fen: engine.toFen(game.state),
-      mode: 'standard'
+      mode: 'bot',
+      isBot: true,
+      timeControl: game.timeControl,
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime
     });
 
     console.log(`[BotGame] Started: ${user.username} vs ${botName} (${game.id})`);
+  });
+
+  // --- Bot Takeback ---
+  socket.on('bot_takeback', (data) => {
+    ensureUserAuth(data);
+    if (!userId && !(data && data.guestUsername)) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+    const { gameId } = data || {};
+    const game = activeGames.get(gameId);
+    if (!game) {
+      socket.emit('bot_takeback_error', { message: 'Game not found' });
+      return;
+    }
+    if (!game.isBot) {
+      socket.emit('bot_takeback_error', { message: 'Takeback is only allowed in bot games' });
+      return;
+    }
+    if (game.isOver) {
+      socket.emit('bot_takeback_error', { message: 'Game is already over' });
+      return;
+    }
+
+    let color = getPlayerColor(game, userId);
+    if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername)) {
+      color = 'white';
+    }
+    if (color !== 'white') {
+      socket.emit('bot_takeback_error', { message: 'Only player can request takeback' });
+      return;
+    }
+
+    if (!game.snapshots || game.snapshots.length <= 1) {
+      socket.emit('bot_takeback_error', { message: 'No moves to take back' });
+      return;
+    }
+
+    // Cancel any pending bot move calculation/delay timer
+    if (game.botTimer) {
+      clearTimeout(game.botTimer);
+      delete game.botTimer;
+    }
+
+    // Determine how many snapshots to pop:
+    // If it is currently black's turn (user moved, bot calculating/delaying), pop 1 snapshot.
+    // If it is white's turn (both user and bot moved), pop 2 snapshots to revert back before user's move.
+    let popCount = (game.state.activeColor === 'black') ? 1 : 2;
+    while (popCount > 0 && game.snapshots.length > 1) {
+      game.snapshots.pop();
+      popCount--;
+    }
+
+    const prevSnapshot = game.snapshots[game.snapshots.length - 1];
+    game.state = engine.cloneState(prevSnapshot.state);
+    game.whiteTime = prevSnapshot.whiteTime;
+    game.blackTime = prevSnapshot.blackTime;
+    game.lastTickTime = Date.now();
+
+    const payload = {
+      gameId: game.id,
+      fen: engine.toFen(game.state),
+      activeColor: game.state.activeColor,
+      pockets: game.state.pockets,
+      isCheck: engine.isInCheck(game.state),
+      whiteTime: game.whiteTime,
+      blackTime: game.blackTime,
+      moveHistory: game.state.moveHistory || []
+    };
+
+    socket.emit('bot_takeback_success', payload);
+
+    const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+    if (spectators) {
+      for (const sockId of spectators) {
+        io.to(sockId).emit('spectator_takeback', payload);
+      }
+    }
+  });
+
+  // --- Bot Hint ---
+  socket.on('bot_hint', async (data) => {
+    ensureUserAuth(data);
+    if (!userId && !(data && data.guestUsername)) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+    const { gameId } = data || {};
+    const game = activeGames.get(gameId);
+    if (!game) {
+      socket.emit('error', { message: 'Game not found' });
+      return;
+    }
+    if (!game.isBot) {
+      socket.emit('error', { message: 'Hint is only available in bot games' });
+      return;
+    }
+    if (game.isOver) {
+      socket.emit('error', { message: 'Game is already over' });
+      return;
+    }
+
+    let color = getPlayerColor(game, userId);
+    if (!color && data && data.guestUsername && (game.whiteUsername === data.guestUsername)) {
+      color = 'white';
+    }
+    if (color !== 'white' || game.state.activeColor !== 'white') {
+      socket.emit('error', { message: 'Hint is only available on your turn' });
+      return;
+    }
+
+    try {
+      const bestMove = await bot.selectBotMoveAsync(game.state, 2, 'white', 'master');
+      socket.emit('bot_hint_result', {
+        gameId: game.id,
+        move: bestMove,
+        fen: engine.toFen(game.state)
+      });
+    } catch (err) {
+      console.error('[BotHint] Error calculating hint:', err);
+      socket.emit('error', { message: 'Failed to calculate hint' });
+    }
   });
 });
 
@@ -2317,44 +3011,57 @@ async function processBotMove(game, io) {
       return;
     }
 
-    // Since the move calculation is async and took some time, check if the game was ended
-    // (e.g. human resigned/disconnected) while the bot was thinking.
-    if (game.isOver) return;
+    // Check if the game was ended or taken back while the bot was thinking.
+    if (game.isOver || !game.isBot || game.state.activeColor !== 'black') return;
 
-    // Tick clock for bot (bot doesn't actually wait, but we deduct 0 elapsed)
-    const now = Date.now();
-    const elapsed = now - game.lastTickTime;
-    game.lastTickTime = now;
-    game.blackTime = Math.max(0, game.blackTime - elapsed);
-    game.blackTime += INCREMENT_TIME;
+    if (game.botTimer) {
+      clearTimeout(game.botTimer);
+      delete game.botTimer;
+    }
 
-    // Apply the bot's move
-    const oldFen = engine.toFen(game.state);
-    game.state = engine.applyMove(game.state, bestMove);
-    const newFen = engine.toFen(game.state);
+    // Natural delay before applying and broadcasting the move
+    game.botTimer = setTimeout(() => {
+      delete game.botTimer;
+      if (game.isOver || !game.isBot || game.state.activeColor !== 'black') return;
 
-    const movePayload = {
-      move: {
-        from: bestMove.from,
-        to: bestMove.to,
-        pieceType: bestMove.pieceType || bestMove.piece?.type,
-        captured: bestMove.captured ? bestMove.captured.type : null,
-        isDrop: bestMove.isDrop,
-        promotion: bestMove.promotion
-      },
-      fen: newFen,
-      activeColor: game.state.activeColor,
-      pockets: game.state.pockets,
-      isCheck: engine.isInCheck(game.state),
-      whiteTime: game.whiteTime,
-      blackTime: game.blackTime
-    };
+      // Tick clock for bot
+      const now = Date.now();
+      const elapsed = now - game.lastTickTime;
+      game.lastTickTime = now;
+      game.blackTime = Math.max(0, game.blackTime - elapsed);
+      game.blackTime += INCREMENT_TIME;
 
-    // The delay simulation is mostly covered by the worker time,
-    // but we can add a small padding if it computed instantly.
-    // (A 500ms delay to feel more natural if worker finishes in 10ms)
-    setTimeout(() => {
-      if (game.isOver) return;
+      // Apply the bot's move
+      game.state = engine.applyMove(game.state, bestMove);
+      const newFen = engine.toFen(game.state);
+
+      if (!game.snapshots) game.snapshots = [];
+      game.snapshots.push({
+        fen: newFen,
+        state: engine.cloneState(game.state),
+        whiteTime: game.whiteTime,
+        blackTime: game.blackTime,
+        activeColor: game.state.activeColor,
+        moveHistory: [...game.state.moveHistory]
+      });
+
+      const movePayload = {
+        move: {
+          from: bestMove.from,
+          to: bestMove.to,
+          pieceType: bestMove.pieceType || bestMove.piece?.type,
+          captured: bestMove.captured ? bestMove.captured.type : null,
+          isDrop: bestMove.isDrop,
+          promotion: bestMove.promotion,
+          color: 'black'
+        },
+        fen: newFen,
+        activeColor: game.state.activeColor,
+        pockets: game.state.pockets,
+        isCheck: engine.isInCheck(game.state),
+        whiteTime: game.whiteTime,
+        blackTime: game.blackTime
+      };
 
       // Send to human player
       const humanId = game.whiteId;
@@ -2365,12 +3072,20 @@ async function processBotMove(game, io) {
         }
       }
 
+      // Send to spectators
+      const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+      if (spectators) {
+        for (const sockId of spectators) {
+          io.to(sockId).emit('move_result', movePayload);
+        }
+      }
+
       // Check for game over
       const result = engine.getGameResult(game.state);
       if (result) {
         handleGameOver(game, result);
       }
-    }, 500);
+    }, 350);
 
   } catch (err) {
     console.error('[Bot Error]', err);
@@ -2409,6 +3124,10 @@ function handleGameOver(game, result) {
   if (game.isOver) return; // Already processed — prevent double-save and duplicate ELO updates
   game.isOver = true;
   game.result = result;
+  if (game.botTimer) {
+    clearTimeout(game.botTimer);
+    delete game.botTimer;
+  }
   console.log(`[Game] Over: ${game.id} | Result: ${result}`);
 
   // Calculate ELO (update human player even for bot games, skip bot with userId=0)
@@ -2462,6 +3181,9 @@ function handleGameOver(game, result) {
   const gameOverPayload = {
     result,
     gameId: game.id,
+    fen: engine.toFen(game.state),
+    moveHistory: game.state.moveHistory || [],
+    moves: game.state.moveHistory || [],
     players: {
       white: {
         username: game.whiteUsername,
@@ -2489,6 +3211,16 @@ function handleGameOver(game, result) {
       }
     }
   }
+
+  // Notify spectators
+  const spectators = gameSpectators ? gameSpectators.get(game.id) : null;
+  if (spectators) {
+    for (const sockId of spectators) {
+      io.to(sockId).emit('game_over', gameOverPayload);
+    }
+  }
+
+  broadcastLiveGames();
 
   const movesCount = (game.state.moveHistory || []).length;
 
@@ -2635,6 +3367,7 @@ function handleGameOver(game, result) {
   // Remove game from active games after a delay
   setTimeout(() => {
     activeGames.delete(game.id);
+    if (gameSpectators) gameSpectators.delete(game.id);
   }, 60000); // Keep for 1 minute in case of reconnection
 }
 
@@ -2760,6 +3493,57 @@ app.post('/api/battlepass/claim', requireAuth, (req, res) => {
   res.json(result);
 });
 
+// Claim Daily Quest reward and grant Battlepass XP
+const userClaimedDailyQuests = new Set();
+app.post('/api/quests/claim', requireAuth, async (req, res) => {
+  const { questId, xp } = req.body;
+  const numericQuestId = Number(questId);
+  const questXpMap = { 1: 100, 2: 150, 3: 200 };
+  const grantAmount = questXpMap[numericQuestId] || Math.min(Math.max(Number(xp) || 0, 0), 250);
+
+  if (req.session.isGuest || (req.session.username && req.session.username.startsWith('Guest_'))) {
+    return res.json({ success: true, isGuest: true, xpGranted: grantAmount, message: 'Quest reward claimed' });
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const claimKey = `${req.session.userId}:${todayStr}:${numericQuestId}`;
+  if (userClaimedDailyQuests.has(claimKey)) {
+    return res.status(400).json({ success: false, message: 'Quest reward already claimed today' });
+  }
+
+  // Also verify against database to persist across server restarts
+  try {
+    const database = db || (await getDb());
+    if (database) {
+      const chkStmt = database.prepare('SELECT id FROM user_daily_quests WHERE user_id = ? AND claim_date = ? AND quest_id = ?');
+      chkStmt.bind([req.session.userId, todayStr, numericQuestId]);
+      const alreadyClaimed = chkStmt.step();
+      chkStmt.free();
+      if (alreadyClaimed) {
+        userClaimedDailyQuests.add(claimKey);
+        return res.status(400).json({ success: false, message: 'Quest reward already claimed today' });
+      }
+    }
+  } catch (e) {}
+
+  const bpResult = battlepass.grantXP(req.session.userId, grantAmount);
+  userClaimedDailyQuests.add(claimKey);
+  try {
+    const database = db || (await getDb());
+    if (database) {
+      const insStmt = database.prepare('INSERT OR IGNORE INTO user_daily_quests (user_id, claim_date, quest_id) VALUES (?, ?, ?)');
+      insStmt.run([req.session.userId, todayStr, numericQuestId]);
+      insStmt.free();
+    }
+  } catch (e) {}
+  saveDb();
+  if (bpResult.leveledUp) {
+    notifyLevelUp(req.session.userId, bpResult);
+  }
+  const status = battlepass.getBattlepassStatus(req.session.userId);
+  res.json({ success: true, xpGranted: grantAmount, bpResult, battlepass: status });
+});
+
 // Set equipped title
 app.post('/api/battlepass/set-title', requireAuth, (req, res) => {
   const { titleId } = req.body;
@@ -2871,9 +3655,9 @@ app.post('/api/shop/equip', requireAuth, (req, res) => {
 // ==================== Start Server ====================
 
 async function start() {
-  const database = await getDb();
-  auth.setDb(database);
-  battlepass.setDb(database);
+  db = await getDb();
+  auth.setDb(db);
+  battlepass.setDb(db);
 
   // Startup cleanup of empty guests older than 30 minutes
   try {

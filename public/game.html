@@ -67,6 +67,30 @@
           <span id="replayResult"></span>
         </div>
 
+        <!-- Spectator badge (only visible in spectator mode) -->
+        <div id="spectatorBanner" class="spectator-banner" style="display:none;">
+          <div class="spectator-banner-left">
+            <span class="live-pulse-dot"></span>
+            <span class="spectator-banner-title" data-i18n="spectating_live">CANLI İZLENİYOR</span>
+          </div>
+          <div class="spectator-count-pill" id="spectatorCountBadge">
+            <i data-lucide="eye"></i> <span id="spectatorCountNum">1</span> <span data-i18n="spectators">izleyici</span>
+          </div>
+        </div>
+
+        <!-- Post-Game Review Mode Banner -->
+        <div id="reviewBanner" class="review-banner" style="display:none;">
+          <div class="review-banner-left">
+            <i data-lucide="compass"></i>
+            <span data-i18n="game_finished_review">Game Finished — Move Stepper</span>
+          </div>
+          <div class="review-banner-actions">
+            <button class="review-banner-btn" onclick="copyCurrentFen()"><i data-lucide="copy"></i> <span data-i18n="copy_fen">Copy FEN</span></button>
+            <button class="review-banner-btn" onclick="openGameOverOverlay()"><i data-lucide="trophy"></i> <span data-i18n="show_result">Show Result</span></button>
+            <button class="review-banner-btn" onclick="window.location.href='lobby.html'"><i data-lucide="home"></i> <span data-i18n="back_to_lobby">Back to Lobby</span></button>
+          </div>
+        </div>
+
         <div class="game-layout">
           <section class="game-board-card">
             <div class="board-wrapper">
@@ -135,7 +159,7 @@
 
           <aside class="game-side-panel">
             <section class="game-panel-card pocket-help-card">
-              <div class="panel-eyebrow">Variant</div>
+              <div class="panel-eyebrow" data-i18n="variant">Variant</div>
               <h2 data-i18n="crazyhouse_pockets">Crazyhouse Pockets</h2>
               <p data-i18n="crazyhouse_desc">Captured pieces become pocket pieces. Select or drag from your pocket to drop them onto empty squares.</p>
             </section>
@@ -151,6 +175,11 @@
                 <button class="replay-nav-btn" id="replayNextBtn" onclick="stepReplay(1)" aria-label="Next move"><i data-lucide="chevron-right"></i></button>
                 <button class="replay-nav-btn" id="replayEndBtn" onclick="goReplayEnd()" aria-label="Go to end"><i data-lucide="chevrons-right"></i></button>
               </div>
+              <div class="replay-actions-row">
+                <button class="replay-action-btn" id="copyFenBtn" onclick="copyCurrentFen()" title="Copy FEN">
+                  <i data-lucide="copy"></i> <span data-i18n="copy_fen">Copy FEN</span>
+                </button>
+              </div>
             </section>
 
             <!-- Move History strip -->
@@ -163,6 +192,14 @@
 
             <!-- Live-mode action buttons (hidden in replay) -->
             <div id="liveControls" class="game-controls-bar">
+              <button id="takebackBtn" class="game-action-btn" onclick="takebackMove()" title="Takeback" style="display:none;">
+                <i data-lucide="rotate-ccw"></i>
+                <span data-i18n="takeback">Takeback</span>
+              </button>
+              <button id="hintBtn" class="game-action-btn" onclick="requestHint()" title="Hint" style="display:none;">
+                <i data-lucide="lightbulb"></i>
+                <span data-i18n="hint">Hint</span>
+              </button>
               <button id="drawBtn" class="game-action-btn" onclick="toggleDraw()" title="Offer / Accept Draw">
                 <i data-lucide="handshake"></i>
                 <span data-i18n="draw">Draw</span>
@@ -171,6 +208,16 @@
                 <i data-lucide="flag"></i>
                 <span data-i18n="resign">Resign</span>
               </button>
+              <div class="sound-control-group">
+                <button id="gameSoundToggleBtn" class="game-action-btn sound-toggle-btn" onclick="SoundManager.toggleMute()" title="Sesi Kapat">
+                  <i data-lucide="volume-2" id="gameSoundIcon"></i>
+                  <span id="gameSoundLabel" data-i18n="sound">Sound</span>
+                </button>
+                <div class="sound-slider-popover" id="gameVolumePopover">
+                  <input type="range" class="sound-volume-slider" id="gameVolumeSlider" min="0" max="100" value="80" oninput="SoundManager.setVolume(this.value)" aria-label="Volume">
+                  <span class="sound-volume-val" id="gameVolumeVal">80%</span>
+                </div>
+              </div>
               <button class="game-action-btn" onclick="window.location.href='lobby.html'" title="Leave Game">
                 <i data-lucide="log-out"></i>
                 <span data-i18n="leave">Leave</span>
@@ -190,12 +237,34 @@
     <div class="game-over-card" id="gameOverCard"></div>
   </div>
 
+  <!-- Confirm Modal (Resign / Draw) -->
+  <div class="confirm-modal-overlay" id="confirmModalOverlay" style="display: none;" role="dialog" aria-modal="true">
+    <div class="confirm-modal-card" id="confirmModalCard">
+      <div class="confirm-modal-icon-wrap danger-theme" id="confirmModalIconWrap">
+        <i data-lucide="flag" id="confirmModalIcon"></i>
+      </div>
+      <h3 class="confirm-modal-title" id="confirmModalTitle" data-i18n="resign_modal_title">Maçtan Çekil</h3>
+      <p class="confirm-modal-desc" id="confirmModalDesc" data-i18n="resign_confirm_msg">Maçı pes etmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+      <div class="confirm-modal-actions">
+        <button type="button" class="confirm-modal-btn btn-cancel" id="confirmModalCancelBtn">
+          <i data-lucide="x"></i>
+          <span data-i18n="cancel">İptal</span>
+        </button>
+        <button type="button" class="confirm-modal-btn btn-danger" id="confirmModalConfirmBtn">
+          <i data-lucide="check"></i>
+          <span id="confirmModalConfirmText" data-i18n="yes_resign">Evet, Pes Et</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/socket.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/sound.js"></script>
+  <script src="js/quests.js"></script>
   <script src="js/board.js"></script>
   <script>
     let gameId = null;
@@ -212,30 +281,49 @@
     let dragFromRow = null;
     let dragFromCol = null;
     let dragPocketType = null;
-    let lastServerWhiteTime = 120000;
-    let lastServerBlackTime = 120000;
+    let lastServerWhiteTime = 180000;
+    let lastServerBlackTime = 180000;
+    let rawMoves = [];
+    let activeHint = null;
     let lastTimestamp = Date.now();
     let clockInterval = null;
     let drawOffered = false;
     let gameMode = 'standard';
     let currentDice = null; // { roll, pieceType, pieceName }
     let isReplay = false;
+    let isSpectator = false;
     const INITIAL_FEN = '2bnrk/5p/6/6/P5/KRNB2 w - - []/[]';
     let replayPositions = [];
     let replayIndex = 0;
+    let lastAlertedSecond = null;
+    let activeConfirmCallback = null;
+    let activeCancelCallback = null;
+    let closeConfirmTimeout = null;
 
     // ==================== Determine Mode ====================
 
     function getMatchIdFromUrl() {
       const params = new URLSearchParams(window.location.search);
-      return params.get('matchId') || params.get('game') || params.get('replay') || null;
+      return params.get('matchId') || params.get('gameId') || params.get('game') || params.get('replay') || null;
+    }
+
+    function isSpectateModeFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const mode = (params.get('mode') || '').toLowerCase();
+      const spec = (params.get('spectate') || '').toLowerCase();
+      return mode === 'spectate' || mode === 'spectator' || spec === '1' || spec === 'true';
     }
 
     async function init() {
-      const user = await getCurrentUser();
+      let user = await getCurrentUser();
       if (!user) {
-        window.location.href = 'index.html';
-        return;
+        const urlMatchId = getMatchIdFromUrl();
+        if (urlMatchId) {
+          user = { username: 'Spectator', elo: 1200, isGuest: true, id: 0 };
+        } else {
+          window.location.href = 'index.html';
+          return;
+        }
       }
       renderGameSidebar(user);
       if (window.renderGuestBadges) {
@@ -254,8 +342,20 @@
           const data = await res.json();
 
           if (data.success && data.status === 'active') {
+            const isSpectate = isSpectateModeFromUrl();
+            const isPlayer = user && data.game && (
+              (data.game.white && data.game.white.username === user.username) ||
+              (data.game.black && data.game.black.username === user.username)
+            );
+
+            if (isSpectate || !isPlayer) {
+              await initSpectator(matchId, user, data.game);
+              return;
+            }
+
             // Game is still in progress — join as live mode
             isReplay = false;
+            isSpectator = false;
             gameId = matchId;
             myColor = null;
             boardState = null;
@@ -357,21 +457,46 @@
       gameOver = true;
 
       // Determine color
-      if (user.id === game.white.id) {
-        myColor = 'white';
-      } else {
+      const playerWhiteId = game.white && game.white.id;
+      const playerWhiteName = game.white && game.white.username;
+      const playerBlackId = game.black && game.black.id;
+      const playerBlackName = game.black && game.black.username;
+
+      const isUserWhite = Boolean(user && ((user.id && user.id === playerWhiteId) || (user.username && user.username === playerWhiteName)));
+      const isUserBlack = Boolean(user && ((user.id && user.id === playerBlackId) || (user.username && user.username === playerBlackName)));
+
+      if (isUserBlack) {
         myColor = 'black';
+      } else {
+        myColor = 'white';
       }
 
       const opponentColor = myColor === 'white' ? 'black' : 'white';
       const opponent = game[opponentColor] || {};
 
-      document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+      if (isUserWhite || isUserBlack) {
+        document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+        document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
+      } else {
+        document.getElementById('playerName').textContent = (game.white && game.white.username) || 'White';
+        document.getElementById('opponentName').textContent = (game.black && game.black.username) || 'Black';
+      }
       document.getElementById('playerElo').textContent = (game[myColor] && game[myColor].elo) || '1200';
-      document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
       document.getElementById('opponentElo').textContent = opponent.elo || '1200';
       document.getElementById('playerColorDot').className = 'player-color ' + myColor;
       document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+
+      const whiteAvatar = game.white ? (game.white.avatarUrl || game.white.avatar_url) : null;
+      const blackAvatar = game.black ? (game.black.avatarUrl || game.black.avatar_url) : null;
+      const whiteName = (game.white && game.white.username) || 'White';
+      const blackName = (game.black && game.black.username) || 'Black';
+      if (myColor === 'white') {
+        setBoardAvatar('player', whiteAvatar, whiteName);
+        setBoardAvatar('opponent', blackAvatar, blackName);
+      } else {
+        setBoardAvatar('player', blackAvatar, blackName);
+        setBoardAvatar('opponent', whiteAvatar, whiteName);
+      }
 
       if (game.moves && Array.isArray(game.moves)) {
         moveHistory = [];
@@ -429,23 +554,47 @@
 
         // Determine which color the current user played
         const playerWhiteId = game.white && game.white.id;
-        if (user.id === playerWhiteId) {
-          myColor = 'white';
-        } else {
+        const playerWhiteName = game.white && game.white.username;
+        const playerBlackId = game.black && game.black.id;
+        const playerBlackName = game.black && game.black.username;
+
+        const isUserWhite = Boolean(user && ((user.id && user.id === playerWhiteId) || (user.username && user.username === playerWhiteName)));
+        const isUserBlack = Boolean(user && ((user.id && user.id === playerBlackId) || (user.username && user.username === playerBlackName)));
+
+        if (isUserBlack) {
           myColor = 'black';
+        } else {
+          myColor = 'white';
         }
 
         const opponentColor = myColor === 'white' ? 'black' : 'white';
         const opponent = game[opponentColor] || {};
 
-        document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+        if (isUserWhite || isUserBlack) {
+          document.getElementById('playerName').textContent = (user.username || 'You') + ' (You)';
+          document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
+        } else {
+          document.getElementById('playerName').textContent = (game.white && game.white.username) || 'White';
+          document.getElementById('opponentName').textContent = (game.black && game.black.username) || 'Black';
+        }
         document.getElementById('playerElo').textContent = (game[myColor] && game[myColor].elo) || '1200';
-        document.getElementById('opponentName').textContent = (opponent.username || 'Opponent');
         document.getElementById('opponentElo').textContent = opponent.elo || '1200';
 
         // Color dots
         document.getElementById('playerColorDot').className = 'player-color ' + myColor;
         document.getElementById('opponentColorDot').className = 'player-color ' + opponentColor;
+
+        const whiteAvatar = game.white ? (game.white.avatarUrl || game.white.avatar_url) : null;
+        const blackAvatar = game.black ? (game.black.avatarUrl || game.black.avatar_url) : null;
+        const whiteName = (game.white && game.white.username) || 'White';
+        const blackName = (game.black && game.black.username) || 'Black';
+        if (myColor === 'white') {
+          setBoardAvatar('player', whiteAvatar, whiteName);
+          setBoardAvatar('opponent', blackAvatar, blackName);
+        } else {
+          setBoardAvatar('player', blackAvatar, blackName);
+          setBoardAvatar('opponent', whiteAvatar, whiteName);
+        }
 
         // Parse moves for history display
         if (game.moves && Array.isArray(game.moves)) {
@@ -581,6 +730,8 @@
         } else if (move.captured) {
           const capturedType = move.captured.type || move.captured;
           if (capturedType) next.pockets[mover].push(capturedType);
+        } else if (next.board[to.row][to.col]) {
+          next.pockets[mover].push(next.board[to.row][to.col].type);
         }
 
         next.board[to.row][to.col] = piece ? {
@@ -618,8 +769,26 @@
       showReplayPosition(replayIndex);
     }
 
+    function highlightReplayMove(index) {
+      const historyEl = document.getElementById('moveHistory');
+      if (!historyEl) return;
+      historyEl.querySelectorAll('.active-move').forEach(el => el.classList.remove('active-move'));
+      if (index <= 0) return;
+
+      const pairIdx = Math.floor((index - 1) / 2);
+      const isWhite = (index - 1) % 2 === 0;
+      const pairs = historyEl.querySelectorAll('.move-pair');
+      if (pairs[pairIdx]) {
+        const target = isWhite ? pairs[pairIdx].querySelector('.move-white') : pairs[pairIdx].querySelector('.move-black');
+        if (target) {
+          target.classList.add('active-move');
+          target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
+    }
+
     function showReplayPosition(index) {
-      if (!isReplay || replayPositions.length === 0) return;
+      if ((!isReplay && !gameOver) || replayPositions.length === 0) return;
       replayIndex = Math.max(0, Math.min(index, replayPositions.length - 1));
       boardState = cloneReplayState(replayPositions[replayIndex]);
       pockets = boardState.pockets;
@@ -627,13 +796,21 @@
       selectedSquare = null;
       selectedPocketPiece = null;
       possibleMoves = [];
+      activeHint = null;
 
       renderBoard();
       updatePockets();
       setupMoveLabels();
-      document.getElementById('turnIndicator').textContent = replayIndex === replayPositions.length - 1 ? 'Final Position' : 'Move ' + replayIndex;
-      document.getElementById('turnIndicator').classList.remove('active');
+      const indicator = document.getElementById('turnIndicator');
+      if (indicator) {
+        const totalMoves = Math.max(0, replayPositions.length - 1);
+        const finalPosText = typeof window.t === 'function' ? window.t('final_position', 'Final Position') : 'Final Position';
+        const moveText = typeof window.t === 'function' ? window.t('move_step', 'Move') : 'Move';
+        indicator.textContent = replayIndex === totalMoves ? finalPosText : `${moveText} ${replayIndex}`;
+        indicator.classList.remove('active');
+      }
       updateReplayControls();
+      highlightReplayMove(replayIndex);
     }
 
     function updateReplayControls() {
@@ -664,8 +841,70 @@
       showReplayPosition(replayPositions.length - 1);
     }
 
+    function reviewFinishedGame() {
+      const overlay = document.getElementById('gameOverOverlay');
+      if (overlay) overlay.style.display = 'none';
+      const reviewBanner = document.getElementById('reviewBanner');
+      if (reviewBanner) reviewBanner.style.display = 'flex';
+      const controls = document.getElementById('replayControls');
+      if (controls) controls.style.display = 'block';
+      const actionBtns = document.querySelectorAll('#takebackBtn, #hintBtn, #drawBtn, .danger-action');
+      actionBtns.forEach(btn => btn.style.display = 'none');
+      if (replayPositions && replayPositions.length > 0) {
+        showReplayPosition(replayIndex);
+      }
+    }
+
+    function openGameOverOverlay() {
+      const overlay = document.getElementById('gameOverOverlay');
+      if (overlay) overlay.style.display = 'flex';
+    }
+
+    function copyCurrentFen() {
+      let stateToExport = null;
+      if (replayPositions && replayPositions.length > 0 && typeof replayIndex === 'number' && replayPositions[replayIndex]) {
+        stateToExport = replayPositions[replayIndex];
+      } else {
+        stateToExport = boardState;
+      }
+      if (!stateToExport) {
+        showToast(typeof window.t === 'function' ? window.t('no_board_state', 'No board state available') : 'No board state available', 'error');
+        return;
+      }
+      const fen = (typeof toFen === 'function') ? toFen(stateToExport) : '';
+      if (!fen) {
+        showToast(typeof window.t === 'function' ? window.t('failed_copy_fen', 'Failed to export FEN') : 'Failed to export FEN', 'error');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fen).then(() => {
+          showToast(typeof window.t === 'function' ? window.t('fen_copied', 'FEN copied to clipboard!') : 'FEN copied to clipboard!', 'success');
+        }).catch(() => {
+          fallbackCopyText(fen);
+        });
+      } else {
+        fallbackCopyText(fen);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast(typeof window.t === 'function' ? window.t('fen_copied', 'FEN copied to clipboard!') : 'FEN copied to clipboard!', 'success');
+      } catch (e) {
+        showToast(typeof window.t === 'function' ? window.t('failed_copy_fen', 'Failed to copy FEN') : 'Failed to copy FEN', 'error');
+      }
+      document.body.removeChild(ta);
+    }
+
     document.addEventListener('keydown', (event) => {
-      if (!isReplay) return;
+      if (!isReplay && !gameOver) return;
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
         stepReplay(-1);
@@ -721,10 +960,237 @@
       return notation;
     }
 
+    // ==================== Spectator Mode ====================
+
+    async function initSpectator(matchId, user, gameInfo) {
+      isSpectator = true;
+      isReplay = false;
+      gameOver = false;
+      gameId = matchId;
+      myColor = 'white';
+
+      // Update URL to matchId & mode=spectate
+      if (!window.location.search.includes('mode=spectate')) {
+        history.replaceState(null, '', 'game.html?matchId=' + encodeURIComponent(matchId) + '&mode=spectate');
+      }
+
+      // Show spectator banner
+      const specBanner = document.getElementById('spectatorBanner');
+      if (specBanner) specBanner.style.display = 'flex';
+      const countEl = document.getElementById('spectatorCountNum');
+      if (countEl && gameInfo && gameInfo.spectatorsCount !== undefined) {
+        countEl.textContent = gameInfo.spectatorsCount;
+      }
+
+      // Hide draw and resign buttons
+      const drawBtn = document.getElementById('drawBtn');
+      if (drawBtn) drawBtn.style.display = 'none';
+      const resignBtn = document.querySelector('#liveControls .danger-action');
+      if (resignBtn) resignBtn.style.display = 'none';
+      const skipBtn = document.getElementById('skipBtn');
+      if (skipBtn) skipBtn.style.display = 'none';
+
+      // Show live controls so Leave and Sound remain accessible
+      const liveControls = document.getElementById('liveControls');
+      if (liveControls) liveControls.style.display = '';
+
+      // Set player names & stats (White at bottom, Black at top)
+      const wName = (gameInfo && gameInfo.white && gameInfo.white.username) || 'White';
+      const wElo = (gameInfo && gameInfo.white && gameInfo.white.elo) || 1200;
+      const bName = (gameInfo && gameInfo.black && gameInfo.black.username) || 'Black';
+      const bElo = (gameInfo && gameInfo.black && gameInfo.black.elo) || 1200;
+
+      document.getElementById('playerName').textContent = wName + ' (White)';
+      document.getElementById('playerElo').textContent = wElo;
+      document.getElementById('opponentName').textContent = bName + ' (Black)';
+      document.getElementById('opponentElo').textContent = bElo;
+
+      document.getElementById('playerColorDot').className = 'player-color white';
+      document.getElementById('opponentColorDot').className = 'player-color black';
+
+      setBoardAvatar('player', gameInfo && gameInfo.white ? gameInfo.white.avatarUrl : null, wName);
+      setBoardAvatar('opponent', gameInfo && gameInfo.black ? gameInfo.black.avatarUrl : null, bName);
+
+      const fen = (gameInfo && gameInfo.fen) || INITIAL_FEN;
+      boardState = parseFen(fen);
+      activeColor = boardState ? boardState.activeColor : 'white';
+      pockets = boardState ? boardState.pockets : { white: [], black: [] };
+      gameMode = (gameInfo && gameInfo.mode) || 'standard';
+
+      if (gameMode === 'dice') {
+        const diceEl = document.getElementById('diceDisplay');
+        if (diceEl) diceEl.style.display = 'flex';
+      }
+
+      const oppPocketLabel = document.querySelector('.opponent-pocket .pocket-strip-label');
+      if (oppPocketLabel) {
+        oppPocketLabel.textContent = typeof window.t === 'function' ? window.t('black_pocket', "Black's Pocket") : "Black's Pocket";
+      }
+      const yourPocketLabel = document.querySelector('.your-pocket .pocket-strip-label');
+      if (yourPocketLabel) {
+        yourPocketLabel.textContent = typeof window.t === 'function' ? window.t('white_pocket', "White's Pocket") : "White's Pocket";
+      }
+
+      const initialMoves = (gameInfo && (gameInfo.moves || gameInfo.moveHistory)) || [];
+      if (Array.isArray(initialMoves) && initialMoves.length > 0) {
+        moveHistory = [];
+        for (let i = 0; i < initialMoves.length; i += 2) {
+          moveHistory.push({
+            white: initialMoves[i] ? (typeof formatMoveInline === 'function' ? formatMoveInline(initialMoves[i]) : formatMove(initialMoves[i])) : null,
+            black: initialMoves[i + 1] ? (typeof formatMoveInline === 'function' ? formatMoveInline(initialMoves[i + 1]) : formatMove(initialMoves[i + 1])) : null
+          });
+        }
+      }
+
+      initSocket(user);
+      setupSpectatorSocket(user, matchId);
+
+      renderBoard();
+      updatePockets();
+      updateTurnIndicator();
+      setupMoveLabels();
+      updateMoveHistory();
+
+      syncServerTime((gameInfo && gameInfo.whiteTime) || 120000, (gameInfo && gameInfo.blackTime) || 120000);
+      if (clockInterval) clearInterval(clockInterval);
+      clockInterval = setInterval(tickClock, 200);
+      tickClock();
+
+      if (typeof SoundManager !== 'undefined') {
+        SoundManager.updateUI();
+      }
+    }
+
+    function setupSpectatorSocket(user, mId) {
+      const effectiveGameId = mId || gameId;
+
+      function sendSpectate() {
+        if (socket && socket.connected && effectiveGameId) {
+          socket.emit('spectate_game', { gameId: effectiveGameId });
+        }
+      }
+
+      socket.on('connect', sendSpectate);
+      sendSpectate();
+
+      socket.on('spectator_game_state', (data) => {
+        isSpectator = true;
+        gameId = data.gameId || effectiveGameId;
+        const bData = parseFen(data.fen);
+        if (bData) {
+          boardState = bData;
+          activeColor = bData.activeColor;
+          pockets = bData.pockets;
+        }
+        gameMode = data.mode || 'standard';
+
+        if (data.spectatorsCount !== undefined) {
+          const countNum = document.getElementById('spectatorCountNum');
+          if (countNum) countNum.textContent = data.spectatorsCount;
+        }
+
+        if (Array.isArray(data.moveHistory) && data.moveHistory.length > 0) {
+          moveHistory = [];
+          for (let i = 0; i < data.moveHistory.length; i += 2) {
+            moveHistory.push({
+              white: data.moveHistory[i] ? (typeof formatMoveInline === 'function' ? formatMoveInline(data.moveHistory[i]) : formatMove(data.moveHistory[i])) : null,
+              black: data.moveHistory[i + 1] ? (typeof formatMoveInline === 'function' ? formatMoveInline(data.moveHistory[i + 1]) : formatMove(data.moveHistory[i + 1])) : null
+            });
+          }
+        }
+
+        renderBoard();
+        updatePockets();
+        updateTurnIndicator();
+        setupMoveLabels();
+        updateMoveHistory();
+        syncServerTime(data.whiteTime, data.blackTime);
+      });
+
+      socket.on('spectator_count_update', (data) => {
+        if (data.gameId === effectiveGameId && data.count !== undefined) {
+          const countNum = document.getElementById('spectatorCountNum');
+          if (countNum) countNum.textContent = data.count;
+        }
+      });
+
+      socket.on('move_result', (data) => {
+        animateMove(data.move, () => {
+          boardState = parseFen(data.fen);
+          boardState.isCheck = data.isCheck;
+          activeColor = data.activeColor;
+          pockets = data.pockets;
+
+          const formatted = typeof formatMove === 'function' ? formatMove(data.move) : '';
+          if (data.activeColor === 'black') {
+            moveHistory.push({
+              white: formatted,
+              black: null
+            });
+          } else {
+            if (moveHistory.length > 0 && !moveHistory[moveHistory.length - 1].black) {
+              moveHistory[moveHistory.length - 1].black = formatted;
+            } else {
+              moveHistory.push({
+                white: null,
+                black: formatted
+              });
+            }
+          }
+
+          renderBoard();
+          updatePockets();
+          updateTurnIndicator();
+          updateMoveHistory();
+          syncServerTime(data.whiteTime, data.blackTime);
+        });
+
+        if (data.move.isDrop) {
+          SoundManager.play('drop');
+        } else if (data.move.captured) {
+          SoundManager.play('capture');
+        } else {
+          SoundManager.play('move');
+        }
+        if (data.isCheck) {
+          SoundManager.play('check');
+        }
+      });
+
+      socket.on('dice_roll', (data) => {
+        currentDice = data;
+        const diceEl = document.getElementById('diceDisplay');
+        if (diceEl) diceEl.style.display = 'flex';
+        const numEl = document.getElementById('diceRollNum');
+        if (numEl) numEl.textContent = data.roll;
+        const pieceEl = document.getElementById('dicePieceName');
+        if (pieceEl) pieceEl.textContent = data.pieceName || data.pieceType;
+      });
+
+      socket.on('dice_skip_result', (data) => {
+        if (data.skipped) {
+          showToast(`${data.skippedBy} had no valid moves — skipped`, 'info');
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (socket && socket.connected && effectiveGameId) {
+          socket.emit('leave_spectate', { gameId: effectiveGameId });
+        }
+      });
+
+      socket.on('game_over', (data) => {
+        gameOver = true;
+        if (clockInterval) clearInterval(clockInterval);
+        showGameOver(data);
+      });
+    }
+
     // ==================== Live Mode ====================
 
     async function initLive(user) {
       isReplay = false;
+      isSpectator = false;
 
       // Get game data from session storage
       const gameDataStr = sessionStorage.getItem('gameData');
@@ -732,6 +1198,16 @@
         // Check if we have a matchId from URL — if so, try it as reconnect to active game
         const matchId = getMatchIdFromUrl();
         if (matchId) {
+          if (isSpectateModeFromUrl()) {
+            try {
+              const res = await fetch('/api/games/' + encodeURIComponent(matchId));
+              const data = await res.json();
+              if (data.success && data.game) {
+                await initSpectator(matchId, user, data.game);
+                return;
+              }
+            } catch (e) {}
+          }
           initSocket(user);
           // Will attempt reconnect — if game not active, we get an error
           setupLiveSocket(user, matchId);
@@ -777,13 +1253,43 @@
       updateTurnIndicator();
       setupMoveLabels();
 
-      // Dice mode
+      // Initial time control sync
+      const initTime = gameData.timeControl || gameData.whiteTime || 180000;
+      lastServerWhiteTime = gameData.whiteTime || initTime;
+      lastServerBlackTime = gameData.blackTime || initTime;
+      lastTimestamp = Date.now();
+      if (clockInterval) clearInterval(clockInterval);
+      clockInterval = setInterval(tickClock, 200);
+      tickClock();
+
+      // Mode detection
       gameMode = gameData.mode || 'standard';
+      const isBotOpponent = Boolean(gameData.isBot || gameData.mode === 'bot' || (gameData.opponent && (gameData.opponent.isBot || (gameData.opponent.username && (gameData.opponent.username.includes('Computer') || gameData.opponent.username.includes('Bot'))))));
+      if (gameMode === 'bot' || isBotOpponent) {
+        gameMode = 'bot';
+        const tb = document.getElementById('takebackBtn');
+        const hb = document.getElementById('hintBtn');
+        const db = document.getElementById('drawBtn');
+        if (tb) tb.style.display = 'inline-flex';
+        if (hb) hb.style.display = 'inline-flex';
+        if (db) db.style.display = 'none';
+      }
+
+      // Dice mode
       if (gameMode === 'dice') {
         document.getElementById('diceDisplay').style.display = 'flex';
         document.getElementById('skipBtn').style.display = 'inline-block';
       }
+
+      if (typeof SoundManager !== 'undefined') {
+        SoundManager.updateUI();
+        SoundManager.play('match');
+      }
     }
+
+    window.addEventListener('minichess:lang', () => {
+      if (typeof SoundManager !== 'undefined') SoundManager.updateUI();
+    });
 
     function setupLiveSocket(user, gId) {
       const effectiveGameId = gId || gameId;
@@ -834,6 +1340,17 @@
         // Opponent name color (optional enhancement, we might need it from server in the future)
 
         gameMode = data.mode || 'standard';
+        const isBotOpponent = Boolean(data.isBot || data.mode === 'bot' || (data.opponent && (data.opponent.isBot || (data.opponent.username && (data.opponent.username.includes('Computer') || data.opponent.username.includes('Bot'))))));
+        if (gameMode === 'bot' || isBotOpponent) {
+          gameMode = 'bot';
+          const tb = document.getElementById('takebackBtn');
+          const hb = document.getElementById('hintBtn');
+          const db = document.getElementById('drawBtn');
+          if (tb) tb.style.display = 'inline-flex';
+          if (hb) hb.style.display = 'inline-flex';
+          if (db) db.style.display = 'none';
+        }
+
         if (gameMode === 'dice') {
           document.getElementById('diceDisplay').style.display = 'flex';
           document.getElementById('skipBtn').style.display = 'inline-block';
@@ -850,8 +1367,9 @@
         updateMoveHistory();
 
         // Reset clock sync
-        lastServerWhiteTime = data.whiteTime || 120000;
-        lastServerBlackTime = data.blackTime || 120000;
+        const baseTime = data.timeControl || data.whiteTime || 180000;
+        lastServerWhiteTime = data.whiteTime || baseTime;
+        lastServerBlackTime = data.blackTime || baseTime;
         lastTimestamp = Date.now();
         if (clockInterval) clearInterval(clockInterval);
         clockInterval = setInterval(tickClock, 200);
@@ -861,19 +1379,34 @@
         selectedPocketPiece = null;
         possibleMoves = [];
         moveHistory = [];
+        rawMoves = Array.isArray(data.moveHistory) ? [...data.moveHistory] : [];
       });
 
       // Move result
       socket.on('move_result', (data) => {
+        rawMoves.push(data.move);
+        activeHint = null;
         animateMove(data.move, () => {
           boardState = parseFen(data.fen);
           boardState.isCheck = data.isCheck;
           activeColor = data.activeColor;
           pockets = data.pockets;
-          moveHistory.push({
-            white: data.activeColor === 'black' ? formatMove(data.move) : null,
-            black: data.activeColor === 'white' ? formatMove(data.move) : null,
-          });
+          const formatted = typeof formatMove === 'function' ? formatMove(data.move) : '';
+          if (data.activeColor === 'black') {
+            moveHistory.push({
+              white: formatted,
+              black: null
+            });
+          } else {
+            if (moveHistory.length > 0 && !moveHistory[moveHistory.length - 1].black) {
+              moveHistory[moveHistory.length - 1].black = formatted;
+            } else {
+              moveHistory.push({
+                white: null,
+                black: formatted
+              });
+            }
+          }
 
           selectedSquare = null;
           selectedPocketPiece = null;
@@ -887,9 +1420,15 @@
           syncServerTime(data.whiteTime, data.blackTime);
         });
 
-        // Sound effects
+        // Sound effects & Quest drop tracking
         if (data.move.isDrop) {
           SoundManager.play('drop');
+          const moverColor = (data.move && data.move.color) || (data.activeColor === 'black' ? 'white' : 'black');
+          if (moverColor === myColor) {
+            if (typeof DailyQuests !== 'undefined' && !isReplay) {
+              DailyQuests.recordDrop();
+            }
+          }
         } else if (data.move.captured) {
           SoundManager.play('capture');
         } else {
@@ -901,9 +1440,81 @@
         }
       });
 
+      // Bot features
+      socket.on('bot_takeback_success', (data) => {
+        boardState = parseFen(data.fen);
+        boardState.isCheck = data.isCheck;
+        activeColor = data.activeColor;
+        pockets = data.pockets;
+        rawMoves = Array.isArray(data.moveHistory) ? [...data.moveHistory] : [];
+        moveHistory = [];
+        for (let i = 0; i < rawMoves.length; i += 2) {
+          moveHistory.push({
+            white: rawMoves[i] ? (typeof formatMoveInline === 'function' ? formatMoveInline(rawMoves[i]) : formatMove(rawMoves[i])) : null,
+            black: rawMoves[i + 1] ? (typeof formatMoveInline === 'function' ? formatMoveInline(rawMoves[i + 1]) : formatMove(rawMoves[i + 1])) : null
+          });
+        }
+        selectedSquare = null;
+        selectedPocketPiece = null;
+        possibleMoves = [];
+        activeHint = null;
+        renderBoard();
+        updatePockets();
+        updateTurnIndicator();
+        updateMoveHistory();
+        syncServerTime(data.whiteTime, data.blackTime);
+        showToast((typeof window.t === 'function' ? window.t('takeback_done') : 'Hamle geri alındı'), 'success');
+      });
+
+      socket.on('bot_takeback_error', (data) => {
+        showToast(data.message || (typeof window.t === 'function' ? window.t('no_takeback_available') : 'No moves to take back'), 'error');
+      });
+
+      socket.on('bot_hint_result', (data) => {
+        if (!data || !data.move || gameOver || isReplay || isSpectator) return;
+        if (activeColor !== myColor) return;
+        if (data.fen && typeof toFen === 'function') {
+          const currentFen = toFen(boardState);
+          if (currentFen && currentFen !== data.fen) return;
+        }
+        activeHint = data.move;
+        renderBoard();
+        updatePockets();
+        let hintDesc = '';
+        if (activeHint.isDrop) {
+          hintDesc = `@${activeHint.to} (${getPieceTypeName(activeHint.pieceType)})`;
+        } else {
+          hintDesc = `${activeHint.from} → ${activeHint.to}`;
+          if (activeHint.promotion) hintDesc += `=${activeHint.promotion.toUpperCase()}`;
+        }
+        const hintPrefix = (typeof window.t === 'function' ? window.t('hint_suggested') : 'Hint: ');
+        showToast(hintPrefix + hintDesc, 'info');
+      });
+
+      socket.on('spectator_takeback', (data) => {
+        boardState = parseFen(data.fen);
+        boardState.isCheck = data.isCheck;
+        activeColor = data.activeColor;
+        pockets = data.pockets;
+        rawMoves = Array.isArray(data.moveHistory) ? [...data.moveHistory] : [];
+        moveHistory = [];
+        for (let i = 0; i < rawMoves.length; i += 2) {
+          moveHistory.push({
+            white: rawMoves[i] ? (typeof formatMoveInline === 'function' ? formatMoveInline(rawMoves[i]) : formatMove(rawMoves[i])) : null,
+            black: rawMoves[i + 1] ? (typeof formatMoveInline === 'function' ? formatMoveInline(rawMoves[i + 1]) : formatMove(rawMoves[i + 1])) : null
+          });
+        }
+        renderBoard();
+        updatePockets();
+        updateTurnIndicator();
+        updateMoveHistory();
+        syncServerTime(data.whiteTime, data.blackTime);
+      });
+
       // Game over
       socket.on('game_over', (data) => {
         gameOver = true;
+        closeConfirmModal();
         SoundManager.play('gameover');
         showGameOver(data);
       });
@@ -924,26 +1535,37 @@
 
       // Draw offer events
       socket.on('draw_offered', (data) => {
-        showToast('Opponent offers a draw', 'info', [
-          { label: 'Accept', action: () => { socket.emit('accept_draw', { gameId: gameId }); } },
-          { label: 'Decline', action: () => { socket.emit('decline_draw', { gameId: gameId }); } }
-        ]);
+        showConfirmModal({
+          type: 'draw',
+          title: (typeof window.t === 'function' ? window.t('draw_received_title') : 'Beraberlik Teklifi'),
+          message: (typeof window.t === 'function' ? window.t('draw_received_msg') : 'Rakibiniz beraberlik teklif etti. Kabul ediyor musunuz?'),
+          confirmText: (typeof window.t === 'function' ? window.t('accept_draw') : 'Kabul Et'),
+          cancelText: (typeof window.t === 'function' ? window.t('decline_draw') : 'Reddet'),
+          onConfirm: () => {
+            socket.emit('accept_draw', { gameId: gameId });
+          },
+          onCancel: () => {
+            socket.emit('decline_draw', { gameId: gameId });
+          }
+        });
       });
 
       socket.on('draw_declined', () => {
         drawOffered = false;
+        closeConfirmModal();
         const btn = document.getElementById('drawBtn');
         if (btn) {
-          btn.innerHTML = '<i data-lucide="handshake"></i> <span>Draw</span>';
+          btn.innerHTML = '<i data-lucide="handshake"></i> <span>' + (typeof window.t === 'function' ? window.t('draw') : 'Draw') + '</span>';
           if (window.lucide) {
             try { lucide.createIcons(); } catch (e) {}
           }
         }
-        showToast('Draw offer declined', 'info');
+        showToast((typeof window.t === 'function' ? window.t('draw_declined', 'Draw offer declined') : 'Draw offer declined'), 'info');
       });
 
       socket.on('draw_cancelled', () => {
-        showToast('Draw offer cancelled by opponent', 'info');
+        closeConfirmModal();
+        showToast((typeof window.t === 'function' ? window.t('draw_cancelled_by_opponent', 'Draw offer cancelled by opponent') : 'Draw offer cancelled by opponent'), 'info');
       });
 
       socket.on('draw_requested', () => {
@@ -982,7 +1604,7 @@
     // ==================== Shared Rendering ====================
 
     function skipDiceTurn() {
-      if (gameOver || gameMode !== 'dice' || isReplay) return;
+      if (gameOver || gameMode !== 'dice' || isReplay || isSpectator) return;
       socket.emit('dice_skip', { gameId: gameId });
     }
 
@@ -1016,14 +1638,14 @@
 
           const sqName = coordsToSquare(row, col);
 
-          // Drag support: only own pieces on your turn, and not in replay
-          const canDrag = !gameOver && !isReplay && piece && piece.color === myColor && myColor === activeColor;
+          // Drag support: only own pieces on your turn, and not in replay or spectator
+          const canDrag = !gameOver && !isReplay && !isSpectator && piece && piece.color === myColor && myColor === activeColor;
           if (canDrag) {
             square.draggable = true;
             square.addEventListener('dragstart', (e) => onDragStart(e, row, col));
           }
-          // Drop target support (only if not replay)
-          if (!isReplay) {
+          // Drop target support (only if not replay or spectator)
+          if (!isReplay && !isSpectator) {
             square.addEventListener('dragover', onDragOver);
             square.addEventListener('dragenter', (e) => onDragEnter(e, row, col));
             square.addEventListener('dragleave', (e) => onDragLeave(e, row, col));
@@ -1050,6 +1672,16 @@
             square.classList.add('last-move');
           }
 
+          // Hint highlight
+          if (activeHint) {
+            if (!activeHint.isDrop && activeHint.from === sqName) {
+              square.classList.add('hint-source');
+            }
+            if (activeHint.to === sqName) {
+              square.classList.add('hint-target');
+            }
+          }
+
           // King in check
           if (boardState && boardState.isCheck) {
             const king = findKing(boardState, activeColor);
@@ -1058,7 +1690,7 @@
             }
           }
 
-          if (!isReplay) {
+          if (!isReplay && !isSpectator) {
             square.addEventListener('click', () => onSquareClick(row, col));
           }
           boardEl.appendChild(square);
@@ -1070,7 +1702,8 @@
     }
 
     function onSquareClick(row, col) {
-      if (gameOver || isReplay) return;
+      if (gameOver || isReplay || isSpectator) return;
+      activeHint = null;
       
       const sqName = coordsToSquare(row, col);
       const piece = boardState.board[row][col];
@@ -1129,7 +1762,7 @@
     }
 
     function showPromotionDialog(move) {
-      if (isReplay) return;
+      if (isReplay || isSpectator) return;
       promotionPending = move;
       const dialog = document.getElementById('promotionDialog');
       dialog.style.display = 'flex';
@@ -1159,7 +1792,7 @@
     }
 
     function sendMove(from, to, promotion) {
-      if (isReplay) return;
+      if (isReplay || isSpectator) return;
       socket.emit('make_move', {
         gameId: gameId,
         move: {
@@ -1172,7 +1805,7 @@
     }
 
     function sendDropMove(toSquare) {
-      if (isReplay) return;
+      if (isReplay || isSpectator) return;
       socket.emit('make_move', {
         gameId: gameId,
         move: {
@@ -1241,8 +1874,9 @@
             `;
           } else {
             const isSelected = selectedPocketPiece === type;
+            const isHintPocket = Boolean(activeHint && activeHint.isDrop && activeHint.pieceType === type);
             return `
-              <div class="pocket-slot has-pieces pocket-piece ${isSelected ? 'selected-drop' : ''}" data-type="${type}" data-count="${count}" title="${pieceName} (${count})">
+              <div class="pocket-slot has-pieces pocket-piece ${isSelected ? 'selected-drop' : ''} ${isHintPocket ? 'hint-pocket' : ''}" data-type="${type}" data-count="${count}" title="${pieceName} (${count})">
                 <div class="pocket-piece-visual">
                   <img src="img/pieces/${playerColor[0]}${type}.svg" class="piece-img" draggable="false" alt="${type}">
                 </div>
@@ -1284,7 +1918,7 @@
         try { lucide.createIcons(); } catch (e) {}
       }
 
-      if (isReplay) return;
+      if (isReplay || isSpectator) return;
 
       // Add click and drag handlers for player's pocket pieces
       if (playerPocket) {
@@ -1297,6 +1931,7 @@
           }
 
           el.addEventListener('click', (e) => {
+            activeHint = null;
             if (gameOver) return;
             if (myColor !== activeColor) {
               showToast('Not your turn', 'error');
@@ -1367,6 +2002,30 @@
           oppIndicator.style.display = 'none';
           oppIndicator.classList.remove('active');
         }
+      } else if (isSpectator) {
+        const whiteTurn = typeof window.t === 'function' ? window.t('white_to_move', "White's Turn") : "White's Turn";
+        const blackTurn = typeof window.t === 'function' ? window.t('black_to_move', "Black's Turn") : "Black's Turn";
+        if (activeColor === 'white') {
+          if (indicator) {
+            indicator.textContent = whiteTurn;
+            indicator.classList.add('active');
+            indicator.style.display = 'inline-flex';
+          }
+          if (oppIndicator) {
+            oppIndicator.style.display = 'none';
+            oppIndicator.classList.remove('active');
+          }
+        } else {
+          if (indicator) {
+            indicator.style.display = 'none';
+            indicator.classList.remove('active');
+          }
+          if (oppIndicator) {
+            oppIndicator.textContent = blackTurn;
+            oppIndicator.classList.add('active');
+            oppIndicator.style.display = 'inline-flex';
+          }
+        }
       } else if (activeColor === myColor) {
         if (indicator) {
           indicator.textContent = (typeof window.t === 'function') ? window.t('your_turn') : 'Your Turn';
@@ -1428,9 +2087,22 @@
     }
 
     function showGameOver(data) {
+      closeConfirmModal();
+
       const result = data.result;
       const overlay = document.getElementById('gameOverOverlay');
       const card = document.getElementById('gameOverCard');
+
+      // Record daily quest progress
+      if (typeof DailyQuests !== 'undefined' && !isReplay && !isSpectator) {
+        const isWin = (result === (myColor + '_wins'));
+        const oppEl = document.getElementById('opponentName');
+        const oppUsername = (data.players && data.players[myColor === 'white' ? 'black' : 'white'])
+          ? data.players[myColor === 'white' ? 'black' : 'white'].username
+          : (oppEl ? oppEl.textContent : '');
+        const isBot = oppUsername.includes('Computer');
+        DailyQuests.recordMatch({ isWin, isBot });
+      }
 
       // Clear active clock indicators
       const playerClock = document.getElementById('playerClock');
@@ -1442,7 +2114,20 @@
       let titleText = '';
       let titleClass = '';
 
-      if (result === 'white_wins') {
+      if (isSpectator) {
+        if (result === 'white_wins') {
+          const wName = (data.players && data.players.white) ? data.players.white.username : 'White';
+          titleText = `${wName} ${(typeof window.t === 'function') ? window.t('wins_suffix', 'Wins!') : 'Wins!'}`;
+          titleClass = 'win-text';
+        } else if (result === 'black_wins') {
+          const bName = (data.players && data.players.black) ? data.players.black.username : 'Black';
+          titleText = `${bName} ${(typeof window.t === 'function') ? window.t('wins_suffix', 'Wins!') : 'Wins!'}`;
+          titleClass = 'win-text';
+        } else {
+          titleText = (typeof window.t === 'function') ? window.t('game_draw') : 'DRAW';
+          titleClass = 'draw-text';
+        }
+      } else if (result === 'white_wins') {
         if (myColor === 'white') {
           titleText = (typeof window.t === 'function') ? window.t('victory') : 'VICTORY!';
           titleClass = 'win-text';
@@ -1469,9 +2154,9 @@
       
       let playersHtml = '';
       if (wPlayer && bPlayer) {
-        const getAvatarHtml = (p) => p.avatarUrl 
-          ? `<img src="${p.avatarUrl}" class="go-avatar">` 
-          : `<div class="go-avatar-placeholder">${p.username.charAt(0).toUpperCase()}</div>`;
+        const getAvatarHtml = (p) => (p && (p.avatarUrl || p.avatar_url))
+          ? `<img src="${p.avatarUrl || p.avatar_url}" class="go-avatar">` 
+          : `<div class="go-avatar-placeholder">${((p && p.username) ? p.username : '?').charAt(0).toUpperCase()}</div>`;
           
         const getEloDiffHtml = (diff) => {
           if (diff > 0) return `<span class="go-elo-diff positive">+${diff}</span>`;
@@ -1503,9 +2188,25 @@
       }
 
       const backText = (typeof window.t === 'function') ? window.t('back_to_lobby') : 'Back to Lobby';
+      const reviewText = (typeof window.t === 'function') ? window.t('review_game', 'Review Moves') : 'Review Moves';
+      const copyFenText = (typeof window.t === 'function') ? window.t('copy_fen', 'Copy FEN') : 'Copy FEN';
+
+      const movesToReplay = (Array.isArray(data.moveHistory) && data.moveHistory.length > 0)
+        ? data.moveHistory
+        : ((Array.isArray(data.moves) && data.moves.length > 0) ? data.moves : rawMoves);
+      setupReplayNavigation({ moves: movesToReplay, fen: data.fen });
+
       card.innerHTML = `
         <h2 class="${titleClass}">${titleText}</h2>
         ${playersHtml}
+        <div class="go-actions-row">
+          <button class="go-review-btn" onclick="reviewFinishedGame()">
+            <i data-lucide="compass"></i> <span data-i18n="review_game">${reviewText}</span>
+          </button>
+          <button class="go-copy-fen-btn" onclick="copyCurrentFen()">
+            <i data-lucide="copy"></i> <span data-i18n="copy_fen">${copyFenText}</span>
+          </button>
+        </div>
         <button class="go-back-btn" onclick="window.location.href='lobby.html'"><i data-lucide="home"></i> <span data-i18n="back_to_lobby">${backText}</span></button>
       `;
 
@@ -1516,7 +2217,7 @@
       }
 
       // Win effects
-      if (!isReplay && titleClass === 'win-text') {
+      if (!isReplay && !isSpectator && titleClass === 'win-text') {
         getCurrentUser().then(u => {
           if (u && u.win_effect === 'confetti') {
             fireConfetti();
@@ -1547,38 +2248,191 @@
       }());
     }
 
-    function resignGame() {
-      if (gameOver || isReplay) return;
-      if (confirm('Are you sure you want to resign?')) {
-        socket.emit('resign', { gameId: gameId });
-        gameOver = true;
+    function showConfirmModal(opts) {
+      const overlay = document.getElementById('confirmModalOverlay');
+      const card = document.getElementById('confirmModalCard');
+      const iconWrap = document.getElementById('confirmModalIconWrap');
+      const title = document.getElementById('confirmModalTitle');
+      const desc = document.getElementById('confirmModalDesc');
+      const cancelBtn = document.getElementById('confirmModalCancelBtn');
+      const confirmBtn = document.getElementById('confirmModalConfirmBtn');
+      const confirmText = document.getElementById('confirmModalConfirmText');
+
+      if (!overlay || !card) return;
+
+      if (closeConfirmTimeout) {
+        clearTimeout(closeConfirmTimeout);
+        closeConfirmTimeout = null;
       }
+
+      title.textContent = opts.title || (typeof window.t === 'function' ? window.t('resign_modal_title') : 'Maçtan Çekil');
+      desc.textContent = opts.message || (typeof window.t === 'function' ? window.t('resign_confirm_msg') : 'Maçı pes etmek istediğinize emin misiniz?');
+      confirmText.textContent = opts.confirmText || (typeof window.t === 'function' ? window.t('yes_resign') : 'Evet, Pes Et');
+
+      const cancelSpan = cancelBtn.querySelector('span');
+      if (cancelSpan) {
+        cancelSpan.textContent = opts.cancelText || (typeof window.t === 'function' ? window.t('cancel') : 'İptal');
+      }
+
+      const iconName = opts.type === 'draw' ? 'handshake' : 'flag';
+      if (iconWrap) {
+        iconWrap.innerHTML = `<i data-lucide="${iconName}" id="confirmModalIcon"></i>`;
+      }
+
+      if (opts.type === 'draw') {
+        card.classList.add('draw-card');
+        if (iconWrap) iconWrap.className = 'confirm-modal-icon-wrap draw-theme';
+        confirmBtn.className = 'confirm-modal-btn btn-primary';
+      } else {
+        card.classList.remove('draw-card');
+        if (iconWrap) iconWrap.className = 'confirm-modal-icon-wrap danger-theme';
+        confirmBtn.className = 'confirm-modal-btn btn-danger';
+      }
+
+      if (window.lucide && window.lucide.createIcons) {
+        try { lucide.createIcons(); } catch (e) {}
+      }
+
+      activeConfirmCallback = opts.onConfirm || null;
+      activeCancelCallback = opts.onCancel || null;
+
+      overlay.style.display = 'flex';
+      requestAnimationFrame(() => {
+        overlay.classList.add('visible');
+      });
+
+      cancelBtn.onclick = () => {
+        const cancelCb = activeCancelCallback;
+        closeConfirmModal();
+        if (typeof cancelCb === 'function') cancelCb();
+      };
+
+      confirmBtn.onclick = () => {
+        const confirmCb = activeConfirmCallback;
+        closeConfirmModal();
+        if (typeof confirmCb === 'function') confirmCb();
+      };
+
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          const cancelCb = activeCancelCallback;
+          closeConfirmModal();
+          if (typeof cancelCb === 'function') cancelCb();
+        }
+      };
+    }
+
+    function closeConfirmModal() {
+      activeConfirmCallback = null;
+      activeCancelCallback = null;
+      const overlay = document.getElementById('confirmModalOverlay');
+      if (!overlay) return;
+      overlay.classList.remove('visible');
+      if (closeConfirmTimeout) clearTimeout(closeConfirmTimeout);
+      closeConfirmTimeout = setTimeout(() => {
+        if (!activeConfirmCallback) {
+          overlay.style.display = 'none';
+        }
+      }, 180);
+    }
+
+    // Keyboard support: Escape cancels, Enter confirms
+    document.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('confirmModalOverlay');
+      if (!overlay || overlay.style.display === 'none' || !overlay.classList.contains('visible')) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        const cancelCb = activeCancelCallback;
+        closeConfirmModal();
+        if (typeof cancelCb === 'function') cancelCb();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const confirmCb = activeConfirmCallback;
+        closeConfirmModal();
+        if (typeof confirmCb === 'function') confirmCb();
+      }
+    });
+
+    function takebackMove() {
+      if (gameOver || isReplay || isSpectator) return;
+      if (gameMode !== 'bot') {
+        showToast((typeof window.t === 'function' ? window.t('only_bot_takeback') : 'Takeback is only available in bot matches'), 'error');
+        return;
+      }
+      if (activeColor !== myColor) {
+        showToast((typeof window.t === 'function' ? window.t('wait_your_turn') : 'Wait for your turn'), 'info');
+        return;
+      }
+      const guestName = (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username) || null;
+      socket.emit('bot_takeback', { gameId: gameId, guestUsername: guestName });
+    }
+
+    function requestHint() {
+      if (gameOver || isReplay || isSpectator) return;
+      if (gameMode !== 'bot') {
+        showToast((typeof window.t === 'function' ? window.t('only_bot_hint') : 'Hint is only available in bot matches'), 'error');
+        return;
+      }
+      if (activeColor !== myColor) {
+        showToast((typeof window.t === 'function' ? window.t('wait_your_turn') : 'Wait for your turn'), 'info');
+        return;
+      }
+      showToast((typeof window.t === 'function' ? window.t('calculating_hint') : 'En iyi hamle hesaplanıyor...'), 'info');
+      const guestName = (typeof getGuestSession === 'function' && getGuestSession() && getGuestSession().username) || null;
+      socket.emit('bot_hint', { gameId: gameId, guestUsername: guestName });
+    }
+
+    function resignGame() {
+      if (gameOver || isReplay || isSpectator) return;
+      showConfirmModal({
+        type: 'resign',
+        title: (typeof window.t === 'function' ? window.t('resign_modal_title') : 'Maçtan Çekil'),
+        message: (typeof window.t === 'function' ? window.t('resign_confirm_msg') : 'Maçı pes etmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
+        confirmText: (typeof window.t === 'function' ? window.t('yes_resign') : 'Evet, Pes Et'),
+        cancelText: (typeof window.t === 'function' ? window.t('cancel') : 'İptal'),
+        onConfirm: () => {
+          socket.emit('resign', { gameId: gameId });
+          gameOver = true;
+        }
+      });
     }
 
     function toggleDraw() {
-      if (gameOver || isReplay) return;
+      if (gameOver || isReplay || isSpectator) return;
       const btn = document.getElementById('drawBtn');
 
       if (drawOffered) {
         socket.emit('cancel_draw', { gameId: gameId });
         if (btn) {
-          btn.innerHTML = '<i data-lucide="handshake"></i> <span>Draw</span>';
+          btn.innerHTML = '<i data-lucide="handshake"></i> <span>' + (typeof window.t === 'function' ? window.t('draw') : 'Draw') + '</span>';
           if (window.lucide) {
             try { lucide.createIcons(); } catch (e) {}
           }
         }
         drawOffered = false;
-        showToast('Draw offer cancelled', 'info');
+        showToast((typeof window.t === 'function' ? window.t('draw_cancelled', 'Draw offer cancelled') : 'Draw offer cancelled'), 'info');
       } else {
-        socket.emit('request_draw', { gameId: gameId });
-        if (btn) {
-          btn.innerHTML = '<i data-lucide="x"></i> <span>Cancel</span>';
-          if (window.lucide) {
-            try { lucide.createIcons(); } catch (e) {}
+        showConfirmModal({
+          type: 'draw',
+          title: (typeof window.t === 'function' ? window.t('draw_modal_title') : 'Beraberlik Teklif Et'),
+          message: (typeof window.t === 'function' ? window.t('draw_confirm_msg') : 'Rakibinize beraberlik teklif etmek istediğinize emin misiniz?'),
+          confirmText: (typeof window.t === 'function' ? window.t('yes_offer_draw') : 'Evet, Beraberlik Teklif Et'),
+          cancelText: (typeof window.t === 'function' ? window.t('cancel') : 'İptal'),
+          onConfirm: () => {
+            socket.emit('request_draw', { gameId: gameId });
+            if (btn) {
+              btn.innerHTML = '<i data-lucide="x"></i> <span>' + (typeof window.t === 'function' ? window.t('cancel') : 'Cancel') + '</span>';
+              if (window.lucide) {
+                try { lucide.createIcons(); } catch (e) {}
+              }
+            }
+            drawOffered = true;
+            showToast((typeof window.t === 'function' ? window.t('draw_offered_waiting', 'Draw offered — waiting...') : 'Draw offered — waiting...'), 'info');
           }
-        }
-        drawOffered = true;
-        showToast('Draw offered — waiting...', 'info');
+        });
       }
     }
 
@@ -1660,6 +2514,23 @@
       opponentClock.classList.toggle('active-clock', activeColor !== myColor);
       playerClock.classList.toggle('low-time', myTime <= 10000);
       opponentClock.classList.toggle('low-time', oppTime <= 10000);
+
+      // Warning alert & countdown ticks for the last 10 seconds of player's turn
+      if (!gameOver && !isReplay && !isSpectator && activeColor === myColor && myTime <= 10000 && myTime > 0) {
+        const sec = Math.ceil(myTime / 1000);
+        if (sec !== lastAlertedSecond && sec <= 10) {
+          if (typeof SoundManager !== 'undefined') {
+            if (sec === 10 || lastAlertedSecond === null) {
+              SoundManager.play('warning');
+            } else {
+              SoundManager.play('lowtime');
+            }
+          }
+          lastAlertedSecond = sec;
+        }
+      } else if (myTime > 10000 || activeColor !== myColor) {
+        lastAlertedSecond = null;
+      }
     }
 
     function formatClock(ms) {
@@ -1672,8 +2543,9 @@
     // ==================== Drag & Drop ====================
 
     function onDragStart(e, row, col) {
-      if (gameOver || isReplay) return;
+      if (gameOver || isReplay || isSpectator) return;
       if (myColor !== activeColor) return;
+      activeHint = null;
       const piece = boardState.board[row][col];
       if (!piece || piece.color !== myColor) return;
 
@@ -1741,7 +2613,7 @@
     }
 
     function onDragEnd(row, col) {
-      if (gameOver || isReplay) return;
+      if (gameOver || isReplay || isSpectator) return;
 
       if (dragPocketType !== null) {
         const piece = boardState.board[row][col];
@@ -1782,8 +2654,9 @@
     }
 
     function onPocketDragStart(e, type) {
-      if (gameOver || isReplay) return;
+      if (gameOver || isReplay || isSpectator) return;
       if (myColor !== activeColor) return;
+      activeHint = null;
       dragPocketType = type;
       dragFromRow = null;
       dragFromCol = null;

@@ -220,8 +220,8 @@
 
   <main class="main-content">
     <div class="join-card">
-      <h1>Join Private Game</h1>
-      <div id="joinStatus" class="join-status loading">Checking room...</div>
+      <h1 data-i18n="join_private_game">Join Private Game</h1>
+      <div id="joinStatus" class="join-status loading" data-i18n="checking_room">Checking room...</div>
       <div id="joinError" class="join-error"></div>
       <a href="lobby.html" class="btn-back" id="btnBack" style="display:none;" data-i18n="back_to_lobby">Back to Lobby</a>
     </div>
@@ -233,6 +233,7 @@
 <script src="js/auth.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/socket.js"></script>
+<script src="js/sound.js"></script>
 <script>
   let currentUser = null;
 
@@ -280,7 +281,7 @@
     const roomId = params.get('room');
 
     if (!roomId) {
-      showError('No room ID provided. Ask your friend for the correct link.');
+      showError(typeof window.t === 'function' ? window.t('no_room_id_provided') : 'No room ID provided. Ask your friend for the correct link.');
       return;
     }
 
@@ -291,25 +292,36 @@
   async function joinRoom(roomId) {
     const statusEl = document.getElementById('joinStatus');
 
+    let timeControlHtml = '';
     try {
       const res = await fetch(`/api/rooms/${roomId}`);
       const data = await res.json();
 
       if (!data.success) {
-        showError(data.message || 'Room not found or expired.');
+        showError(data.message || (typeof window.t === 'function' ? window.t('room_check_failed') : 'Room not found or expired.'));
         return;
       }
 
       if (data.room && data.room.has_joiner) {
-        showError('This room already has two players.');
+        showError(typeof window.t === 'function' ? window.t('room_has_two_players') : 'This room already has two players.');
         return;
       }
+
+      if (data.room && data.room.timeControl) {
+        const tcSec = Math.round(data.room.timeControl / 1000);
+        const tcText = tcSec === 60 ? (typeof window.t === 'function' ? window.t('bullet_1m') : '1+0 Bullet (60s)')
+          : (tcSec === 300 ? (typeof window.t === 'function' ? window.t('rapid_5m') : '5+0 Rapid (300s)')
+          : (typeof window.t === 'function' ? window.t('blitz_3m') : '3+0 Blitz (180s)'));
+        const tcLabel = typeof window.t === 'function' ? window.t('time_control', 'Time Control') : 'Time Control';
+        timeControlHtml = `<div class="room-tc-info" style="margin-top:8px;font-size:13px;color:var(--text-dim);">${tcLabel}: <strong style="color:var(--emerald);">${tcText}</strong></div>`;
+      }
     } catch (err) {
-      showError('Failed to check room. Please try again.');
+      showError(typeof window.t === 'function' ? window.t('room_check_failed') : 'Failed to check room. Please try again.');
       return;
     }
 
-    statusEl.textContent = 'Joining game...';
+    const joiningText = typeof window.t === 'function' ? window.t('joining_game', 'Joining game...') : 'Joining game...';
+    statusEl.innerHTML = `<div>${joiningText}</div>${timeControlHtml}`;
 
     if (!socket || !socket.connected) {
       await new Promise((resolve) => {
@@ -320,7 +332,12 @@
 
     socket.on('match_found', (data) => {
       sessionStorage.setItem('gameData', JSON.stringify(data));
-      window.location.href = 'game.html';
+      if (typeof SoundManager !== 'undefined') {
+        SoundManager.play('match');
+      }
+      setTimeout(() => {
+        window.location.href = 'game.html';
+      }, 350);
     });
 
     socket.on('error', (data) => {

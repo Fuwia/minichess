@@ -843,7 +843,8 @@
   function renderTiers(data) {
     const grid = document.getElementById('tierGrid');
     if (!data.tiers || !data.tiers.length) {
-      grid.innerHTML = '<div class="empty-state">No tier data available.</div>';
+      const emptyText = typeof window.t === 'function' ? window.t('no_tier_data') : 'No tier data available.';
+      grid.innerHTML = `<div class="empty-state" data-i18n="no_tier_data">${emptyText}</div>`;
       return;
     }
 

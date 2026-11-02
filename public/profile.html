@@ -606,7 +606,7 @@
           <div class="card" style="margin-bottom:12px;">
             <h3 style="font-size:16px;font-weight:600;margin-bottom:10px;" data-i18n="add_friend">Add Friend</h3>
             <div class="friend-form">
-              <input type="text" id="friendUsername" placeholder="Enter username..." data-i18n-ph="friend_username_placeholder">
+              <input type="text" id="friendUsername" placeholder="Enter username..." data-i18n-placeholder="friend_username_placeholder">
               <button id="addFriendBtn" onclick="addFriend()" data-i18n="send_request">Send Request</button>
             </div>
             <div id="addFriendStatus" class="friend-status"></div>
@@ -849,12 +849,15 @@
   function renderFriends(friends) {
     const c = document.getElementById('friendsList');
     if (!friends.length) {
+      const noFriendsTitle = (typeof window.t === 'function') ? window.t('no_friends') : 'No friends yet.';
+      const emptyFriendsDesc = (typeof window.t === 'function') ? window.t('empty_friends_desc') : 'Play matches or search for friends above to connect!';
+      const playMatchText = (typeof window.t === 'function') ? window.t('play_a_match') : 'Play a Match';
       c.innerHTML = `
         <div class="profile-empty-state">
           <div class="empty-state-icon"><i data-lucide="users"></i></div>
-          <div class="empty-state-title">No friends yet.</div>
-          <p class="empty-state-desc">Play matches or search for friends above to connect!</p>
-          <a href="lobby.html" class="btn-play-match-cta"><i data-lucide="swords"></i> Play a Match</a>
+          <div class="empty-state-title" data-i18n="no_friends">${noFriendsTitle}</div>
+          <p class="empty-state-desc" data-i18n="empty_friends_desc">${emptyFriendsDesc}</p>
+          <a href="lobby.html" class="btn-play-match-cta"><i data-lucide="swords"></i> <span data-i18n="play_a_match">${playMatchText}</span></a>
         </div>
       `;
       if (window.lucide) {
@@ -862,9 +865,10 @@
       }
       return;
     }
+    const removeText = (typeof window.t === 'function') ? window.t('remove') : 'Remove';
     c.innerHTML = friends.map(f => `<div class="friend-item">
       <div><a href="profile.html?username=${encodeURIComponent(escapeText(f.username))}" class="friend-name-link">${escapeText(f.username)}</a> <span class="friend-elo">${f.elo||'1200'} ELO</span></div>
-      <button class="btn-danger-sm" onclick="removeFriend(${f.id})">Remove</button>
+      <button class="btn-danger-sm" onclick="removeFriend(${f.id})">${removeText}</button>
     </div>`).join('');
   }
 
@@ -873,19 +877,26 @@
     const c = document.getElementById('pendingList');
     if (!pending.length) { card.style.display = 'none'; return; }
     card.style.display = 'block';
+    const acceptText = (typeof window.t === 'function') ? window.t('accept') : 'Accept';
+    const declineText = (typeof window.t === 'function') ? window.t('decline') : 'Decline';
     c.innerHTML = pending.map(p => `<div class="friend-item">
       <div><span class="friend-name-link">${escapeText(p.username)}</span> <span class="friend-elo">${p.elo||'1200'} ELO</span></div>
       <div style="display:flex;gap:6px;">
-        <button class="btn-accept-sm" onclick="acceptRequest(${p.id})">Accept</button>
-        <button class="btn-decline-sm" onclick="declineRequest(${p.id})">Decline</button>
+        <button class="btn-accept-sm" onclick="acceptRequest(${p.id})">${acceptText}</button>
+        <button class="btn-decline-sm" onclick="declineRequest(${p.id})">${declineText}</button>
       </div></div>`).join('');
   }
 
   async function addFriend() {
     const uname = document.getElementById('friendUsername').value.trim();
     const s = document.getElementById('addFriendStatus');
-    if (!uname) { s.textContent = 'Enter a username'; s.className = 'friend-status error'; return; }
-    s.textContent = 'Sending...'; s.className = 'friend-status';
+    if (!uname) {
+      s.textContent = (typeof window.t === 'function') ? window.t('enter_username_status') : 'Enter a username';
+      s.className = 'friend-status error';
+      return;
+    }
+    s.textContent = (typeof window.t === 'function') ? window.t('send_request_status') : 'Sending...';
+    s.className = 'friend-status';
     try {
       const r = await fetch('/api/friends/request', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({friendUsername:uname}) });
       const d = await r.json();
@@ -896,7 +907,12 @@
 
   async function acceptRequest(id) { await fetch('/api/friends/accept', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:id})}); await loadFriends(); }
   async function declineRequest(id) { await fetch('/api/friends/decline', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId:id})}); await loadFriends(); }
-  async function removeFriend(id) { if(!confirm('Remove?')) return; await fetch('/api/friends/remove', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({friendId:id})}); await loadFriends(); }
+  async function removeFriend(id) {
+    const confirmMsg = (typeof window.t === 'function') ? window.t('confirm_remove_friend') : 'Are you sure you want to remove this friend?';
+    if (!confirm(confirmMsg)) return;
+    await fetch('/api/friends/remove', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({friendId:id})});
+    await loadFriends();
+  }
 
   async function loadMatchHistoryPage(page) {
     matchPage = page;
@@ -912,12 +928,13 @@
       matchTotal = data.total || 0;
       if (!data.games || !data.games.length) {
         const noHistTitle = (typeof window.t === 'function') ? window.t('no_history') : 'No games played yet.';
+        const emptyHistDesc = (typeof window.t === 'function') ? window.t('empty_match_history_desc') : 'Jump into matchmaking or challenge bots to build your record!';
         const playMatchText = (typeof window.t === 'function') ? window.t('play_a_match') : 'Play a Match';
         document.getElementById('matchHistoryList').innerHTML = `
           <div class="profile-empty-state">
             <div class="empty-state-icon"><i data-lucide="swords"></i></div>
             <div class="empty-state-title" data-i18n="no_history">${noHistTitle}</div>
-            <p class="empty-state-desc">Jump into matchmaking or challenge bots to build your record!</p>
+            <p class="empty-state-desc" data-i18n="empty_match_history_desc">${emptyHistDesc}</p>
             <a href="lobby.html" class="btn-play-match-cta"><i data-lucide="play"></i> <span data-i18n="play_a_match">${playMatchText}</span></a>
           </div>
         `;
@@ -985,7 +1002,8 @@
     { id: 'elo_2000', icon: '<i data-lucide="crown"></i>', name: 'Grandmaster', desc: 'Reach 2000 ELO' },
     { id: 'social_butterfly', icon: '<i data-lucide="users"></i>', name: 'Social Butterfly', desc: 'Add a friend' },
     { id: 'big_spender', icon: '<i data-lucide="gem"></i>', name: 'Big Spender', desc: 'Buy an item from the shop' },
-    { id: 'fashionista', icon: '<i data-lucide="camera"></i>', name: 'Fashionista', desc: 'Change your avatar' }
+    { id: 'fashionista', icon: '<i data-lucide="camera"></i>', name: 'Fashionista', desc: 'Change your avatar' },
+    { id: 'streak_master', icon: '<i data-lucide="crown"></i>', name: 'Streak Master', desc: 'Complete 7-day login streak' }
   ];
 
   function renderAchievements(userData) {
@@ -1009,11 +1027,13 @@
     let html = '';
     for (const ach of ACHIEVEMENTS_DEF) {
       const isUnlocked = Array.isArray(unlocked) && unlocked.includes(ach.id);
+      const name = (typeof window.t === 'function') ? window.t(ach.id, ach.name) : ach.name;
+      const desc = (typeof window.t === 'function') ? window.t(ach.id + '_desc', ach.desc) : ach.desc;
       html += `
         <div class="achievement-badge ${isUnlocked ? 'unlocked' : ''}">
           <div class="achievement-icon">${ach.icon}</div>
-          <div class="achievement-name">${ach.name}</div>
-          <div class="achievement-desc">${ach.desc}</div>
+          <div class="achievement-name">${name}</div>
+          <div class="achievement-desc">${desc}</div>
         </div>
       `;
     }
