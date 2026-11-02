@@ -2,7 +2,7 @@
 
 <img src="public/img/logo.png" alt="MiniChess Logo" width="110" />
 
-# MiniChess — 6×6 Tactical Crazyhouse
+# MiniChess — 6×6 Tactical Crazyhouse (will do ui overhaul soon)
 
 **Fast-paced, competitive 6×6 Crazyhouse chess built for the web.**  
 Capture opponent pieces into your pocket, drop them back onto any empty square, and deliver lightning-fast checkmates.
